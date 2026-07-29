@@ -29,10 +29,11 @@ requirements supplied through hands-on play knowledge.
   moving on the overhead rail. A run must contain at least one prize ring and
   at least one empty ring.
 - The small ring is still a fire obstacle. Its narrow center-plane collision
-  burns the rider when the lion is below or above the opening. At the fixed
-  jump apex the rider fits inside a forgiving `144`-logical-unit vertical
-  opening. The ring is centered on the complete airborne sprite, and its flame
-  rim receives a foreground render pass so the traversal is visually clear.
+  burns the rider when the airborne lion is below or above the opening.
+  Running beneath a small ring without jumping is safe. At the fixed jump apex
+  the rider fits inside a forgiving `144`-logical-unit vertical opening. The
+  ring is centered on the complete airborne sprite, and only its lower near
+  arc receives a foreground render pass so the traversal is visually clear.
 - Exactly one fire pot is selected as the hidden-coin pot for each run.
 - The hidden coin can trigger only when Charlie returns to that pot and jumps
   over it while moving backward. A normal forward jump never reveals it.

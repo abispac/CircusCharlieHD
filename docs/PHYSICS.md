@@ -59,6 +59,10 @@ Measured motion targets:
 - Fast forward speed: `195 units/second`
 - Independent ring-rail speed: `65 units/second`
 - Combined fast ring approach: `260 units/second`
+- A ring begins its independent rail motion when its course section comes
+  within `900` logical units of the camera. Once activated it never pauses.
+  This preserves the late-stage sequence when the player waits or retries;
+  distant rings can no longer travel past Charlie while still offscreen.
 - Backtracking is a real negative velocity, not merely slower forward motion.
 - Jump: exact 64-entry source-pixel displacement table sampled at board rate
 - Peak displacement: `55 source pixels` / `137.5 logical units`
@@ -91,8 +95,9 @@ Current user-control model:
   stops, hides, or removes the moving ring itself.
 - Small rings use a `12`-logical-unit collision plane, thinner than the
   regular ring, plus a `144`-unit vertical safe opening. Contact outside that
-  opening burns both Charlie and the lion; a centered arcade jump passes and
-  collects the randomized prize.
+  opening while airborne burns both Charlie and the lion; running beneath the
+  suspended ring is safe. A centered arcade jump passes and collects the
+  randomized prize.
 - The single action button advances the measured, repeatable arcade jump
   table; holding the button does not alter height or duration.
 - Backtracking never turns Charlie or the lion around; they remain facing

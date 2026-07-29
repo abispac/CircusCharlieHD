@@ -24,6 +24,7 @@ constexpr float kTrackY = 282.0F;
 constexpr float kBackSpeed = -150.0F;
 constexpr float kForwardSpeed = 195.0F;
 constexpr float kRingRailSpeed = 65.0F;
+constexpr float kRingActivationLead = 900.0F;
 constexpr float kCourseLength = 6000.0F;
 constexpr float kGoalScreenX = 150.0F;
 constexpr float kPi = 3.14159265358979323846F;
@@ -64,8 +65,12 @@ constexpr int kCoinShowerFrames = 220;
 constexpr int kRewardCoinCount = 18;
 
 constexpr float railStartForIntercept(float playerWorldX) {
-  return playerWorldX *
-         (1.0F + kRingRailSpeed / kForwardSpeed);
+  // Rings begin travelling once they are kRingActivationLead units ahead of
+  // the camera. Compensate their start position so a full-speed player still
+  // meets each one at the authored course coordinate.
+  return playerWorldX +
+         (kRingActivationLead - 78.0F) * kRingRailSpeed /
+             (kForwardSpeed + kRingRailSpeed);
 }
 
 struct Options {
@@ -868,12 +873,17 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   const float ringTravel =
       kRingRailSpeed * static_cast<float>(kFixedDt);
   for (auto& hoop : game.hoops) {
-    if (!hoop.cleared) hoop.worldX -= ringTravel;
+    if (!hoop.cleared &&
+        hoop.worldX - game.cameraX <= kRingActivationLead) {
+      hoop.worldX -= ringTravel;
+    }
   }
   for (auto& ring : game.bonusRings) {
     // Passing through removes only the prize. The physical ring stays on its
     // ceiling rail and remains visible, matching the original arcade behavior.
-    ring.worldX -= ringTravel;
+    if (ring.worldX - game.cameraX <= kRingActivationLead) {
+      ring.worldX -= ringTravel;
+    }
   }
 
   if (jumpPressed && game.player.grounded) {
@@ -961,6 +971,10 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   }
 
   for (auto& ring : game.bonusRings) {
+    // In the arcade game Charlie can run safely beneath a small suspended
+    // ring. Its flame rim is tested only when the player commits to a jump.
+    if (game.player.grounded) continue;
+
     const float ringCenterY = kGroundY - ring.height;
     const float playerLeft =
         game.player.position.x - kLionCollisionLeft;
@@ -1328,7 +1342,18 @@ void drawHoopForeground(SDL_Renderer* renderer, const Hoop& hoop,
   const float ringBottom = hoop.openingBottom + 20.0F;
   const SDL_FRect ringDestination{x - 50.0F, ringTop, 100.0F,
                                   ringBottom - ringTop};
+  SDL_Rect previousClip{};
+  const SDL_bool hadClip = SDL_RenderIsClipEnabled(renderer);
+  SDL_RenderGetClipRect(renderer, &previousClip);
+  const SDL_Rect nearArcClip{
+      static_cast<int>(std::floor(x - 54.0F)),
+      static_cast<int>(std::floor(hoop.openingBottom - 23.0F)),
+      108,
+      static_cast<int>(std::ceil(ringBottom - hoop.openingBottom + 27.0F)),
+  };
+  SDL_RenderSetClipRect(renderer, &nearArcClip);
   SDL_RenderCopyF(renderer, hoopTexture, &ringSource, &ringDestination);
+  SDL_RenderSetClipRect(renderer, hadClip ? &previousClip : nullptr);
 }
 
 void drawBonusRingForegrounds(SDL_Renderer* renderer, const Game& game,
@@ -1350,24 +1375,60 @@ void drawBonusRingForegrounds(SDL_Renderer* renderer, const Game& game,
         ringCenterY - kBonusRingVisualHalfHeight,
         kBonusRingVisualHalfWidth * 2.0F,
         kBonusRingVisualHalfHeight * 2.0F};
-    // The transparent center leaves the characters visible while the flame
-    // edge crosses in front, making the passage read as movement through the
-    // hoop instead of a jump entirely in front of it.
+    SDL_Rect previousClip{};
+    const SDL_bool hadClip = SDL_RenderIsClipEnabled(renderer);
+    SDL_RenderGetClipRect(renderer, &previousClip);
+    const SDL_Rect nearArcClip{
+        static_cast<int>(std::floor(screenX - kBonusRingVisualHalfWidth - 4.0F)),
+        static_cast<int>(
+            std::floor(ringCenterY + kBonusRingVisualHalfHeight * 0.50F)),
+        static_cast<int>(std::ceil(kBonusRingVisualHalfWidth * 2.0F + 8.0F)),
+        static_cast<int>(
+            std::ceil(kBonusRingVisualHalfHeight * 0.50F + 4.0F)),
+    };
+    SDL_RenderSetClipRect(renderer, &nearArcClip);
+    // Only the lower near arc crosses in front of the rider. The upper and
+    // side flames remain behind, creating a readable through-the-hoop depth
+    // cue rather than placing the complete ring over the characters.
     SDL_RenderCopyF(renderer, propsTexture, &ringSource, &destination);
+    SDL_RenderSetClipRect(renderer, hadClip ? &previousClip : nullptr);
   }
+}
+
+void drawFloorPlaque(SDL_Renderer* renderer, float screenX,
+                     std::string_view label, bool start) {
+  const float width = start ? 74.0F : 58.0F;
+  const float left = screenX - width * 0.5F;
+  const float top = kGroundY - 31.0F;
+  const SDL_Color edge =
+      start ? color(255, 196, 48) : color(72, 218, 255);
+  const SDL_Color face =
+      start ? color(145, 25, 34) : color(22, 70, 145);
+
+  fillRect(renderer, left + 4.0F, top + 8.0F, width, 23.0F,
+           color(34, 17, 13, 145));
+  fillRect(renderer, left, top, width, 25.0F, edge);
+  fillRect(renderer, left + 3.0F, top + 3.0F, width - 6.0F, 19.0F, face);
+  fillRect(renderer, left + 6.0F, top + 5.0F, width - 12.0F, 2.0F,
+           start ? color(255, 232, 127) : color(135, 238, 255));
+  fillRect(renderer, left + 8.0F, top + 25.0F, 4.0F, 6.0F, edge);
+  fillRect(renderer, left + width - 12.0F, top + 25.0F, 4.0F, 6.0F, edge);
+  drawText(renderer, label, screenX, top + 7.0F, start ? 1.05F : 1.15F,
+           color(255, 244, 190), true);
 }
 
 void drawCourseMarkers(SDL_Renderer* renderer, const Game& game,
                        float cameraX) {
+  const float startX = 132.0F - cameraX;
+  if (startX > -80.0F && startX < kWorldWidth + 80.0F) {
+    drawFloorPlaque(renderer, startX, "START", true);
+  }
+
   for (const auto& marker : game.meterMarkers) {
     const float screenX = marker.worldX - cameraX;
     if (screenX < -60.0F || screenX > kWorldWidth + 60.0F) continue;
-    fillRect(renderer, screenX - 27.0F, kGroundY - 30.0F, 54.0F, 24.0F,
-             color(32, 192, 246));
-    fillRect(renderer, screenX - 23.0F, kGroundY - 26.0F, 46.0F, 16.0F,
-             color(31, 104, 181));
-    drawText(renderer, std::to_string(marker.meters) + "M", screenX,
-             kGroundY - 24.0F, 1.15F, color(255, 103, 34), true);
+    drawFloorPlaque(renderer, screenX,
+                    std::to_string(marker.meters) + "M", false);
   }
 
   const float goalX = kCourseLength - cameraX;
