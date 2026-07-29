@@ -2,7 +2,9 @@
 
 Clean-room native arcade prototype inspired by the timing and challenge style
 of early circus obstacle games. It does not emulate hardware, load ROMs, or
-contain extracted graphics, audio, program code, names, or logos.
+contain extracted graphics, program code, names, or logos. User-supplied
+soundtrack and effects are loaded only from the ignored local `assets/audio`
+folder and are not stored in this repository.
 
 The current milestone is a playable Stage 1 prototype with original
 hand-painted HD rider, arena, marquee, Ferris-wheel, and fire-hoop assets.
@@ -85,6 +87,20 @@ direction and the south face button jumps.
 
 The title screen and the opening gameplay overlay show these controls. They
 are not hidden in this file.
+
+## Local Event 1 audio
+
+The local build uses these standardized 48 kHz mono files:
+
+- `event1-stage.wav`: track 03, looped from the start of Event 1 through its
+  result sequence
+- `jump.wav`: track 08, restarted on every valid jump
+- `miss.wav` and `miss-2.wav`: tracks 07 and 09, started together on every
+  fire collision
+
+The game remains playable in silent fallback mode if a local audio asset is
+missing. These user-supplied files stay ignored so the repository cannot
+accidentally redistribute them.
 
 ## Capture a deterministic preview
 

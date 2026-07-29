@@ -4,3 +4,4 @@ cfg/
 *.user
 *.suo
 *.VC.db
+assets/audio/*.wav

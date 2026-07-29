@@ -89,6 +89,10 @@ Current user-control model:
   like the recorded arcade sequence instead of reading as two separate tests.
 - Passing through a small ring consumes its randomized prize once but never
   stops, hides, or removes the moving ring itself.
+- Small rings use an `18`-logical-unit collision plane, thinner than the
+  regular ring, plus a `110`-unit vertical safe opening. Contact outside that
+  opening burns both Charlie and the lion; a centered arcade jump passes and
+  collects the randomized prize.
 - The single action button advances the measured, repeatable arcade jump
   table; holding the button does not alter height or duration.
 - Backtracking never turns Charlie or the lion around; they remain facing

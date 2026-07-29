@@ -28,6 +28,10 @@ requirements supplied through hands-on play knowledge.
   through removes the prize only; the ring itself remains visible and keeps
   moving on the overhead rail. A run must contain at least one prize ring and
   at least one empty ring.
+- The small ring is still a fire obstacle. Its narrow center-plane collision
+  burns the rider when the lion is below or above the opening. At the fixed
+  jump apex the rider fits inside a forgiving `110`-logical-unit vertical
+  opening, allowing the prize to be collected without disabling the flame rim.
 - Exactly one fire pot is selected as the hidden-coin pot for each run.
 - The hidden coin can trigger only when Charlie returns to that pot and jumps
   over it while moving backward. A normal forward jump never reveals it.
@@ -62,3 +66,4 @@ than by putting a permanent money bag inside every small ring.
   both Charlie and the lion.
 - The retry panel is withheld until that animation completes, so the accident
   cannot be mistaken for either character simply disappearing.
+- Local tracks 07 and 09 start together at the collision frame.

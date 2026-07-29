@@ -51,6 +51,8 @@ constexpr float kLionCollisionTop = 58.0F;
 constexpr float kLionCollisionBottom = 7.0F;
 constexpr float kFirePotCollisionHalfWidth = 32.0F;
 constexpr float kFirePotClearance = 42.0F;
+constexpr float kBonusRingCollisionHalfWidth = 9.0F;
+constexpr float kBonusRingOpeningHalfHeight = 55.0F;
 constexpr int kCoinFlightFrames = 72;
 constexpr int kCrashBurnFrames = 72;
 constexpr int kGoalArrivalFrames = 90;
@@ -152,6 +154,8 @@ struct Game {
   bool perfectClear = false;
   bool hiddenCoinTriggered = false;
   bool timeScoreApplied = false;
+  std::uint32_t jumpAudioSerial = 0;
+  std::uint32_t crashAudioSerial = 0;
   std::uint32_t randomState = 0x6d2b79f5U;
   bool debug = false;
 };
@@ -174,6 +178,31 @@ struct Assets {
   SDL_Texture* props = nullptr;
   SDL_Texture* propsFlare = nullptr;
   SDL_Texture* bird = nullptr;
+};
+
+struct AudioClip {
+  SDL_AudioSpec spec{};
+  Uint8* data = nullptr;
+  Uint32 length = 0;
+};
+
+struct AudioVoice {
+  const AudioClip* clip = nullptr;
+  Uint32 position = 0;
+  int volume = SDL_MIX_MAXVOLUME;
+  bool loop = false;
+  bool active = false;
+};
+
+struct AudioEngine {
+  SDL_AudioDeviceID device = 0;
+  SDL_AudioSpec deviceSpec{};
+  AudioClip stageMusic;
+  AudioClip jump;
+  AudioClip miss;
+  AudioClip missTwo;
+  std::array<AudioVoice, 4> voices{};
+  bool available = false;
 };
 
 bool parseMode(std::string_view value, int& width, int& height) {
@@ -306,6 +335,137 @@ void destroyAssets(Assets& assets) {
   if (assets.propsFlare) SDL_DestroyTexture(assets.propsFlare);
   if (assets.bird) SDL_DestroyTexture(assets.bird);
   assets = {};
+}
+
+bool loadAudioAsset(const char* filename, AudioClip& clip) {
+  const std::string relativePath = std::string("assets/audio/") + filename;
+  if (SDL_LoadWAV(relativePath.c_str(), &clip.spec, &clip.data,
+                  &clip.length)) {
+    return true;
+  }
+
+  char* basePath = SDL_GetBasePath();
+  if (!basePath) return false;
+  const std::string executablePath =
+      std::string(basePath) + "assets/audio/" + filename;
+  SDL_free(basePath);
+  return SDL_LoadWAV(executablePath.c_str(), &clip.spec, &clip.data,
+                     &clip.length) != nullptr;
+}
+
+void audioCallback(void* userdata, Uint8* stream, int byteCount) {
+  auto& audio = *static_cast<AudioEngine*>(userdata);
+  SDL_memset(stream, 0, static_cast<size_t>(byteCount));
+
+  for (auto& voice : audio.voices) {
+    int outputOffset = 0;
+    while (voice.active && outputOffset < byteCount && voice.clip &&
+           voice.clip->data && voice.clip->length > 0) {
+      if (voice.position >= voice.clip->length) {
+        if (voice.loop) {
+          voice.position = 0;
+        } else {
+          voice.active = false;
+          break;
+        }
+      }
+      const Uint32 remaining = voice.clip->length - voice.position;
+      const Uint32 requested =
+          static_cast<Uint32>(byteCount - outputOffset);
+      const Uint32 mixedBytes = std::min(remaining, requested);
+      SDL_MixAudioFormat(
+          stream + outputOffset, voice.clip->data + voice.position,
+          audio.deviceSpec.format, mixedBytes, voice.volume);
+      voice.position += mixedBytes;
+      outputOffset += static_cast<int>(mixedBytes);
+    }
+  }
+}
+
+bool loadAudio(AudioEngine& audio) {
+  const bool loaded =
+      loadAudioAsset("event1-stage.wav", audio.stageMusic) &&
+      loadAudioAsset("jump.wav", audio.jump) &&
+      loadAudioAsset("miss.wav", audio.miss) &&
+      loadAudioAsset("miss-2.wav", audio.missTwo);
+  if (!loaded) {
+    std::cerr << "One or more audio assets could not be loaded: "
+              << SDL_GetError() << '\n';
+    return false;
+  }
+
+  const SDL_AudioSpec reference = audio.stageMusic.spec;
+  const auto matchesReference = [&reference](const AudioClip& clip) {
+    return clip.spec.freq == reference.freq &&
+           clip.spec.format == reference.format &&
+           clip.spec.channels == reference.channels;
+  };
+  if (!matchesReference(audio.jump) || !matchesReference(audio.miss) ||
+      !matchesReference(audio.missTwo)) {
+    std::cerr << "Audio assets do not share one PCM format.\n";
+    return false;
+  }
+
+  SDL_AudioSpec desired = reference;
+  desired.samples = 1024;
+  desired.callback = audioCallback;
+  desired.userdata = &audio;
+  audio.device = SDL_OpenAudioDevice(nullptr, 0, &desired,
+                                     &audio.deviceSpec, 0);
+  if (audio.device == 0) {
+    std::cerr << "Audio device could not be opened: " << SDL_GetError()
+              << '\n';
+    return false;
+  }
+  audio.available = true;
+  SDL_PauseAudioDevice(audio.device, 0);
+  return true;
+}
+
+void setAudioVoice(AudioEngine& audio, size_t voiceIndex,
+                   const AudioClip& clip, int volume, bool loop) {
+  if (!audio.available || voiceIndex >= audio.voices.size() || !clip.data) {
+    return;
+  }
+  SDL_LockAudioDevice(audio.device);
+  audio.voices[voiceIndex] =
+      AudioVoice{&clip, 0, volume, loop, true};
+  SDL_UnlockAudioDevice(audio.device);
+}
+
+void playStageMusic(AudioEngine& audio) {
+  setAudioVoice(audio, 0, audio.stageMusic,
+                static_cast<int>(SDL_MIX_MAXVOLUME * 0.58F), true);
+}
+
+void stopStageMusic(AudioEngine& audio) {
+  if (!audio.available) return;
+  SDL_LockAudioDevice(audio.device);
+  audio.voices[0].active = false;
+  SDL_UnlockAudioDevice(audio.device);
+}
+
+void playJumpSound(AudioEngine& audio) {
+  setAudioVoice(audio, 1, audio.jump, SDL_MIX_MAXVOLUME, false);
+}
+
+void playMissSounds(AudioEngine& audio) {
+  setAudioVoice(audio, 2, audio.miss,
+                static_cast<int>(SDL_MIX_MAXVOLUME * 0.90F), false);
+  setAudioVoice(audio, 3, audio.missTwo,
+                static_cast<int>(SDL_MIX_MAXVOLUME * 0.90F), false);
+}
+
+void destroyAudio(AudioEngine& audio) {
+  if (audio.device != 0) {
+    SDL_PauseAudioDevice(audio.device, 1);
+    SDL_CloseAudioDevice(audio.device);
+  }
+  if (audio.stageMusic.data) SDL_FreeWAV(audio.stageMusic.data);
+  if (audio.jump.data) SDL_FreeWAV(audio.jump.data);
+  if (audio.miss.data) SDL_FreeWAV(audio.miss.data);
+  if (audio.missTwo.data) SDL_FreeWAV(audio.missTwo.data);
+  audio = {};
 }
 
 void fillRect(SDL_Renderer* renderer, float x, float y, float width,
@@ -593,6 +753,18 @@ bool overlapsHoop(const Player& player, const Hoop& hoop) {
   return !withinOpening;
 }
 
+void crashPlayer(Game& game) {
+  if (game.scene != Scene::Playing) return;
+  game.player.alive = false;
+  game.player.runSpeed = 0.0F;
+  game.player.verticalVelocity = 0.0F;
+  game.scene = Scene::Crashed;
+  game.crashFrame = 0;
+  game.deathOccurred = true;
+  ++game.crashAudioSerial;
+  --game.lives;
+}
+
 float firePotCoinY(const FirePot& firePot) {
   const float progress = std::clamp(
       static_cast<float>(firePot.coinFrame) /
@@ -706,6 +878,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     game.player.grounded = false;
     game.player.jumpFrame = 0;
     game.player.verticalVelocity = 0.0F;
+    ++game.jumpAudioSerial;
   }
 
   if (!game.player.grounded) {
@@ -739,11 +912,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
       game.score += 100;
     }
     if (!hoop.cleared && overlapsHoop(game.player, hoop)) {
-      game.player.alive = false;
-      game.scene = Scene::Crashed;
-      game.crashFrame = 0;
-      game.deathOccurred = true;
-      --game.lives;
+      crashPlayer(game);
       return;
     }
   }
@@ -784,21 +953,41 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     if (std::abs(game.player.position.x - firePot.worldX) <
             kFirePotCollisionHalfWidth &&
         game.player.position.y > kGroundY - kFirePotClearance) {
-      game.player.alive = false;
-      game.scene = Scene::Crashed;
-      game.crashFrame = 0;
-      game.deathOccurred = true;
-      --game.lives;
+      crashPlayer(game);
       return;
     }
   }
 
   for (auto& ring : game.bonusRings) {
     const float ringCenterY = kGroundY - ring.height;
-    const float riderCenterY = game.player.position.y - 45.0F;
-    if (!ring.collected &&
-        std::abs(game.player.position.x - ring.worldX) < 52.0F &&
-        std::abs(riderCenterY - ringCenterY) < 62.0F) {
+    const float playerLeft =
+        game.player.position.x - kLionCollisionLeft;
+    const float playerRight =
+        game.player.position.x + kLionCollisionRight;
+    const float ringLeft =
+        ring.worldX - kBonusRingCollisionHalfWidth;
+    const float ringRight =
+        ring.worldX + kBonusRingCollisionHalfWidth;
+    const bool crossingRing =
+        playerRight >= ringLeft && playerLeft <= ringRight;
+    if (!crossingRing) continue;
+
+    const float playerTop =
+        game.player.position.y - kLionCollisionTop;
+    const float playerBottom =
+        game.player.position.y - kLionCollisionBottom;
+    // The art stays roughly three-quarters the regular ring's visible size,
+    // while the flame collision uses only a thin center plane. This preserves
+    // a generous opening at the fixed jump apex without making the rim inert.
+    const bool safelyInside =
+        playerTop > ringCenterY - kBonusRingOpeningHalfHeight &&
+        playerBottom < ringCenterY + kBonusRingOpeningHalfHeight;
+    if (!safelyInside) {
+      crashPlayer(game);
+      return;
+    }
+
+    if (!ring.collected) {
       ring.collected = true;
       game.score += ring.containsPrize ? 500 : 200;
       if (ring.containsPrize) ++game.prizeBagsCollected;
@@ -1644,6 +1833,8 @@ int main(int argc, char** argv) {
   }
   SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
   Assets assets = loadAssets(renderer);
+  AudioEngine audio;
+  loadAudio(audio);
 
   SDL_GameController* controller = nullptr;
   for (int index = 0; index < SDL_NumJoysticks(); ++index) {
@@ -1714,6 +1905,7 @@ int main(int argc, char** argv) {
   if (!surface.texture) {
     std::cerr << "Render target creation failed: " << SDL_GetError() << '\n';
     if (controller) SDL_GameControllerClose(controller);
+    destroyAudio(audio);
     destroyAssets(assets);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -1725,6 +1917,9 @@ int main(int argc, char** argv) {
   bool running = true;
   bool fullscreen = options.fullscreen;
   bool jumpQueued = false;
+  bool stageMusicPlaying = false;
+  std::uint32_t observedJumpAudioSerial = game.jumpAudioSerial;
+  std::uint32_t observedCrashAudioSerial = game.crashAudioSerial;
   double accumulator = 0.0;
   const Uint64 frequency = SDL_GetPerformanceFrequency();
   Uint64 previousCounter = SDL_GetPerformanceCounter();
@@ -1832,6 +2027,25 @@ int main(int argc, char** argv) {
       accumulator -= kFixedDt;
     }
 
+    const bool shouldPlayStageMusic =
+        game.scene != Scene::Title && game.scene != Scene::Complete;
+    if (shouldPlayStageMusic != stageMusicPlaying) {
+      if (shouldPlayStageMusic) {
+        playStageMusic(audio);
+      } else {
+        stopStageMusic(audio);
+      }
+      stageMusicPlaying = shouldPlayStageMusic;
+    }
+    if (observedJumpAudioSerial != game.jumpAudioSerial) {
+      playJumpSound(audio);
+      observedJumpAudioSerial = game.jumpAudioSerial;
+    }
+    if (observedCrashAudioSerial != game.crashAudioSerial) {
+      playMissSounds(audio);
+      observedCrashAudioSerial = game.crashAudioSerial;
+    }
+
     const double timeSeconds =
         static_cast<double>(currentCounter - startCounter) /
         static_cast<double>(frequency);
@@ -1869,6 +2083,7 @@ int main(int argc, char** argv) {
 
   if (surface.texture) SDL_DestroyTexture(surface.texture);
   if (controller) SDL_GameControllerClose(controller);
+  destroyAudio(audio);
   destroyAssets(assets);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
