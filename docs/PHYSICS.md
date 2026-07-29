@@ -24,31 +24,68 @@ An automated reference trace was made locally from a legally supplied ROM.
 The trace only records input timing and on-screen positions; no ROM graphics,
 audio, or code are included in this project.
 
-- The fast approach moves a ring by approximately `2 source pixels/frame`.
-- At `480` logical pixels across, that is approximately `260 units/second`.
-- The first visual trace estimated a high arc, but hands-on testing showed that
-  scaling it directly made the HD lion clear the ring center and strike the
-  upper rim.
-- The current HD collision-tuned arc reaches approximately `59 logical units`
-  over about `76 frames`, placing the lion inside the fire-ring opening.
+- With the lion idle, the first fire ring travels approximately `123` source
+  pixels over `240` frames, or about `0.51 source pixels/frame`.
+- At `480` logical pixels across, the independent ceiling-rail motion is
+  approximately `65 units/second`.
+- Fast forward movement adds approximately `195 units/second`, preserving the
+  combined `260 units/second` approach target.
+- A controlled single-jump trace identifies a fixed 64-sample displacement
+  table: 63 frame intervals from takeoff to landing, or approximately
+  `1.0395 seconds`.
+- The apex is exactly `55` upright source pixels above ground and lasts four
+  samples. At the 640-pixel logical height this is `137.5 logical units`.
+- A two-frame tap and a held button produce the same fixed jump. Difficulty
+  must therefore be tuned through faithful obstacle timing and collision
+  geometry, not by changing the jump arc.
+- Charlie and the lion use a six-tile composite: `48 × 32` source pixels. The
+  visible grounded pose is approximately `47 × 28` source pixels, which maps
+  to approximately `101 × 70` pixels on the `480 × 640` logical canvas.
+- In the same grounded reference frame, the ceiling tube is approximately
+  `92` source pixels above the rider's floor contact. The first ring spans
+  roughly `80` to `16` source pixels above that contact, with its usable
+  opening approximately `74` to `24` source pixels above it.
+- The first measured HD placement was raised by a further `20` logical pixels
+  after hands-on collision testing. The rail is at logical `y = 282`; the
+  first opening runs from logical `y = 327` to `y = 452`. This aligns the
+  lion's collision body with the opening at the fixed jump apex. The long
+  decorative pole in the HD source image is cropped out so the ring rides
+  close beneath the tube like the arcade assembly.
 - The rider remains near the left `15–17%` of the playfield after scrolling
   begins.
 
 Measured motion targets:
 
-- Fast forward speed: `260 units/second`
+- Fast forward speed: `195 units/second`
+- Independent ring-rail speed: `65 units/second`
+- Combined fast ring approach: `260 units/second`
 - Backtracking is a real negative velocity, not merely slower forward motion.
-- Jump impulse: `-188 units/second`
-- Gravity: `300 units/second²`
+- Jump: exact 64-entry source-pixel displacement table sampled at board rate
+- Peak displacement: `55 source pixels` / `137.5 logical units`
+- Takeoff-to-landing time: `63 frames` / approximately `1.0395 seconds`
 - Ground height: `532 logical units`
-- Lion collision box: intentionally smaller than the artwork
+- Ceiling tube height: `282 logical units`
+- Lion collision box: follows the lion's body rather than the transparent
+  margins, mane, tail, or Charlie's upper-body artwork
+- Floor fire-pot collision uses a `32`-unit half-width and requires `42` units
+  of vertical clearance, leaving a broad safe interval within the jump arc.
+- Fire animation follows the original two-state cadence: the renderer swaps
+  between slim and fuller flame silhouettes every `6` original frames. It does
+  not layer procedural particles or free-moving flame triangles over the art.
 
 Current user-control model:
 
-- Right accelerates toward `260 units/second`.
+- Right accelerates toward `195 units/second`; the incoming ring supplies the
+  remaining `65 units/second` of relative approach.
 - Left accelerates toward `-150 units/second`.
 - Releasing both directions decelerates to a stop.
-- The single action button produces one repeatable arcade jump arc.
+- Large and small fire rings continue moving along the overhead rail even when
+  the lion is stopped or reversing.
+- Large rings use approximately `476` logical units of separation. A small
+  ring follows the second large ring by approximately `493` logical units,
+  matching the corresponding `222`- and `230`-source-pixel trace distances.
+- The single action button advances the measured, repeatable arcade jump
+  table; holding the button does not alter height or duration.
 - Backtracking never turns Charlie or the lion around; they remain facing
   forward and move or jump in reverse.
 

@@ -1,4 +1,5 @@
 build/
+cfg/
 .DS_Store
 *.user
 *.suo

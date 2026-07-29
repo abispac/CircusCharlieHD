@@ -9,6 +9,9 @@ local screen = machine.screens[":screen"]
 local mode = os.getenv("CIRCUS_AUTOPLAY_MODE") or "attract"
 local romset = os.getenv("CIRCUS_ROMSET") or "circusc"
 local maximum_frames = tonumber(os.getenv("CIRCUS_AUTOPLAY_FRAMES") or "6000")
+local snapshot_first = tonumber(os.getenv("CIRCUS_SNAPSHOT_FIRST") or "1")
+local snapshot_last = tonumber(os.getenv("CIRCUS_SNAPSHOT_LAST") or tostring(maximum_frames))
+local snapshot_every = tonumber(os.getenv("CIRCUS_SNAPSHOT_EVERY") or "120")
 local output_prefix = "/tmp/" .. romset .. "-" .. mode
 local trace = assert(io.open(output_prefix .. "-trace.csv", "w"))
 
@@ -47,16 +50,25 @@ local function scripted_inputs()
   set_button(right, false)
   set_button(jump, false)
 
-  if mode == "stage1_probe" then
+  if string.sub(mode, 1, 7) == "stage1_" then
     set_button(left, active(1140, 1210))
-    set_button(jump, active(1220, 1228))
-    set_button(right, active(1320, 2700))
-    set_button(jump,
-      active(1560, 1564) or
-      active(1740, 1752) or
-      active(1940, 1944) or
-      active(2140, 2152) or
-      active(2380, 2384))
+    set_button(right, active(1320, 1560))
+    set_button(jump, active(1560, 1564))
+    if mode == "stage1_probe" then
+      set_button(right, active(1320, 2700))
+      set_button(jump,
+        active(1560, 1564) or
+        active(1740, 1752) or
+        active(1940, 1944) or
+        active(2140, 2152) or
+        active(2380, 2384))
+    elseif mode == "stage1_jump_tap" then
+      set_button(right, active(1320, 1560) or active(1840, 2050))
+      set_button(jump, active(1560, 1564) or active(1860, 1862))
+    elseif mode == "stage1_jump_hold" then
+      set_button(right, active(1320, 1560) or active(1840, 2050))
+      set_button(jump, active(1560, 1564) or active(1860, 1884))
+    end
   end
 end
 
@@ -147,7 +159,8 @@ emu.register_frame_done(function()
 
   write_trace()
 
-  if frame == 1 or frame % 120 == 0 then
+  if frame >= snapshot_first and frame <= snapshot_last and
+      ((frame - snapshot_first) % snapshot_every == 0) then
     capture()
   end
 

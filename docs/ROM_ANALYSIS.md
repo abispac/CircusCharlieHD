@@ -65,6 +65,9 @@ The decrypted disassembly currently confirms:
 - Right input produces the fastest forward approach.
 - Left input can return the rider toward the start and must be represented as
   real backtracking.
+- In a player-driven Event 1 idle trace, the first ring moved approximately
+  `123` upright source pixels over `240` frames while the lion remained at its
+  start anchor. Fire-ring motion is therefore independent of lion movement.
 - Jump behavior is edge-triggered in the input routine and uses a distinct
   airborne state in the actor structure.
 
@@ -77,6 +80,9 @@ every control untouched so the original program's deterministic demonstration
 is the driver and ground truth.
 In `stage1_probe` mode it inserts a coin, selects the first event, then applies
 a repeatable movement and jump schedule for controlled comparisons.
+The `stage1_jump_tap` and `stage1_jump_hold` modes isolate one jump and support
+configurable per-frame screenshots through `CIRCUS_SNAPSHOT_FIRST`,
+`CIRCUS_SNAPSHOT_LAST`, and `CIRCUS_SNAPSHOT_EVERY`.
 
 The capture also takes a native-resolution screenshot every 120 frames. MAME's
 `-aviwrite` option can record the exact same run, keeping video, inputs, and RAM
@@ -100,12 +106,22 @@ sprite slots and state transitions. `stage1_probe` supplies real active-low
 coin, start, selection, direction, and jump inputs for controlled player-driven
 comparisons.
 
+## Recovered Event 1 rider labels
+
+- Sprite slots `0x25f0–0x2640` form Charlie and the lion as a six-tile,
+  `48 × 32` source-pixel composite.
+- Their vertical source coordinate produces a symmetric 64-sample jump table.
+  The peak displacement is `55` source pixels and the complete takeoff to
+  landing interval is `63` board frames.
+- A two-frame tap and a held jump are identical, confirming a fixed jump.
+- Grounded visible artwork occupies approximately `47 × 28` source pixels.
+- In the controlled grounded frame, the rider floor contact is near source
+  `y = 232`, the ceiling tube near `y = 140`, and the first ring spans
+  approximately source `y = 152–216`. These relative coordinates drive the
+  HD rail and ring placement.
+
 ## Next labels to recover
 
-The next trace pass will identify:
-
-- Actor X/Y position and subpixel velocity
-- Short-jump versus held-jump behavior
 - Camera threshold and backtracking limit
 - Ring movement independent of camera movement
 - Collision boxes for lion, hoop rim, fire pots, and collectible bags
