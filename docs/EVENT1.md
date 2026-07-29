@@ -30,7 +30,7 @@ requirements supplied through hands-on play knowledge.
   at least one empty ring.
 - The small ring is still a fire obstacle. Its narrow center-plane collision
   burns the rider when the lion is below or above the opening. At the fixed
-  jump apex the rider fits inside a forgiving `110`-logical-unit vertical
+  jump apex the rider fits inside a forgiving `120`-logical-unit vertical
   opening, allowing the prize to be collected without disabling the flame rim.
 - Exactly one fire pot is selected as the hidden-coin pot for each run.
 - The hidden coin can trigger only when Charlie returns to that pot and jumps
@@ -67,3 +67,5 @@ than by putting a permanent money bag inside every small ring.
 - The retry panel is withheld until that animation completes, so the accident
   cannot be mistaken for either character simply disappearing.
 - Local tracks 07 and 09 start together at the collision frame.
+- Event 1 music stops at that same collision frame and restarts from its
+  beginning only after Charlie respawns.

@@ -52,7 +52,7 @@ constexpr float kLionCollisionBottom = 7.0F;
 constexpr float kFirePotCollisionHalfWidth = 32.0F;
 constexpr float kFirePotClearance = 42.0F;
 constexpr float kBonusRingCollisionHalfWidth = 9.0F;
-constexpr float kBonusRingOpeningHalfHeight = 55.0F;
+constexpr float kBonusRingOpeningHalfHeight = 60.0F;
 constexpr int kCoinFlightFrames = 72;
 constexpr int kCrashBurnFrames = 72;
 constexpr int kGoalArrivalFrames = 90;
@@ -1291,8 +1291,8 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
          ringCenterY - 55.0F, color(119, 101, 73));
     // These are pass-through bonus rings, not vanishing pickups. Their larger
     // opening reads clearly around the full lion-and-rider silhouette.
-    const SDL_FRect ringDestination{screenX - 82.5F, ringCenterY - 99.0F,
-                                    165.0F, 198.0F};
+    const SDL_FRect ringDestination{screenX - 90.0F, ringCenterY - 108.0F,
+                                    180.0F, 216.0F};
     SDL_RenderCopyF(renderer, propsTexture, &bonusRingSource,
                     &ringDestination);
     if (ring.containsPrize && !ring.collected) {
@@ -2028,7 +2028,8 @@ int main(int argc, char** argv) {
     }
 
     const bool shouldPlayStageMusic =
-        game.scene != Scene::Title && game.scene != Scene::Complete;
+        game.scene != Scene::Title && game.scene != Scene::Crashed &&
+        game.scene != Scene::Complete;
     if (shouldPlayStageMusic != stageMusicPlaying) {
       if (shouldPlayStageMusic) {
         playStageMusic(audio);

@@ -92,8 +92,8 @@ are not hidden in this file.
 
 The local build uses these standardized 48 kHz mono files:
 
-- `event1-stage.wav`: track 03, looped from the start of Event 1 through its
-  result sequence
+- `event1-stage.wav`: track 03, looped during Event 1, stopped immediately on
+  a miss, and restarted from the beginning when Charlie respawns
 - `jump.wav`: track 08, restarted on every valid jump
 - `miss.wav` and `miss-2.wav`: tracks 07 and 09, started together on every
   fire collision
