@@ -21,8 +21,8 @@ constexpr double kBoardRefresh =
 constexpr double kFixedDt = 1.0 / kBoardRefresh;
 constexpr float kGroundY = 532.0F;
 constexpr float kTrackY = 344.0F;
-constexpr float kGravity = 550.0F;
-constexpr float kJumpImpulse = -365.0F;
+constexpr float kGravity = 300.0F;
+constexpr float kJumpImpulse = -188.0F;
 constexpr float kBackSpeed = -150.0F;
 constexpr float kForwardSpeed = 260.0F;
 constexpr float kCourseLength = 4100.0F;
@@ -416,7 +416,7 @@ bool overlapsHoop(const Player& player, const Hoop& hoop) {
 }
 
 void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
-                bool jumpHeld, float controllerAxis) {
+                float controllerAxis) {
   if (game.scene != Scene::Playing) return;
   if (game.instructionFrames > 0) --game.instructionFrames;
 
@@ -432,7 +432,6 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   float targetSpeed = 0.0F;
   if (moveLeft != moveRight) {
     targetSpeed = moveLeft ? kBackSpeed : kForwardSpeed;
-    game.player.facingRight = moveRight;
   }
   game.player.runSpeed +=
       (targetSpeed - game.player.runSpeed) * static_cast<float>(kFixedDt) *
@@ -457,9 +456,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
 
   if (!game.player.grounded) {
     game.player.verticalVelocity +=
-        kGravity * (jumpHeld && game.player.verticalVelocity < 0.0F ? 0.58F
-                                                                   : 1.0F) *
-        static_cast<float>(kFixedDt);
+        kGravity * static_cast<float>(kFixedDt);
     game.player.position.y +=
         game.player.verticalVelocity * static_cast<float>(kFixedDt);
     if (game.player.position.y >= kGroundY) {
@@ -1140,14 +1137,9 @@ int main(int argc, char** argv) {
         controllerAxis = 1.0F;
       }
     }
-    const bool jumpHeld =
-        keyboard[SDL_SCANCODE_SPACE] || keyboard[SDL_SCANCODE_Z] ||
-        (controller &&
-         SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_A));
-
     bool jumpForStep = jumpQueued;
     while (accumulator >= kFixedDt) {
-      updateGame(game, keyboard, jumpForStep, jumpHeld, controllerAxis);
+      updateGame(game, keyboard, jumpForStep, controllerAxis);
       jumpForStep = false;
       jumpQueued = false;
       accumulator -= kFixedDt;

@@ -8,6 +8,8 @@ All production art, animation, audio, and source code will be newly authored.
 
 - Charlie is visibly a clown and rides a lion.
 - Two-way horizontal control produces real forward/backward movement.
+- Backtracking keeps Charlie and the lion facing forward, matching the arcade
+  reverse-travel pose instead of flipping the artwork.
 - One jump button controls the lion's leap.
 - Fire rings hang from moving hardware connected to the ceiling tube/track.
 - Large and small ring openings require distinct jump timing.
@@ -88,3 +90,14 @@ All production art, animation, audio, and source code will be newly authored.
 - Selectable-event and linear-progression rulesets.
 - Difficulty waves that change speed and obstacle timing without changing
   core input response.
+
+## HD arcade presentation
+
+- Recreate the complete boot and title presentation with newly drawn HD art.
+- Include the multicolor star transitions between the title, demos, and
+  ranking screens.
+- Recreate the score-ranking/high-score screen and initials flow.
+- Add a deterministic attract-mode demo that demonstrates multiple events.
+- Preserve the selectable-event introduction and event difficulty grid.
+- Include the original-style crash, game-over, event-clear, and celebration
+  pacing without copying ROM graphics or audio.

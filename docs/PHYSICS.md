@@ -26,10 +26,11 @@ audio, or code are included in this project.
 
 - The fast approach moves a ring by approximately `2 source pixels/frame`.
 - At `480` logical pixels across, that is approximately `260 units/second`.
-- The jump reaches its apex roughly `40 frames` after takeoff.
-- A complete unobstructed jump lasts approximately `80 frames`, or `1.32 s`.
-- The measured jump height is approximately `47 source pixels`, which maps to
-  about `118 logical units` in the portrait playfield.
+- The first visual trace estimated a high arc, but hands-on testing showed that
+  scaling it directly made the HD lion clear the ring center and strike the
+  upper rim.
+- The current HD collision-tuned arc reaches approximately `59 logical units`
+  over about `76 frames`, placing the lion inside the fire-ring opening.
 - The rider remains near the left `15–17%` of the playfield after scrolling
   begins.
 
@@ -37,8 +38,8 @@ Measured motion targets:
 
 - Fast forward speed: `260 units/second`
 - Backtracking is a real negative velocity, not merely slower forward motion.
-- Jump impulse: `-365 units/second`
-- Gravity: `550 units/second²`
+- Jump impulse: `-188 units/second`
+- Gravity: `300 units/second²`
 - Ground height: `532 logical units`
 - Lion collision box: intentionally smaller than the artwork
 
@@ -47,8 +48,9 @@ Current user-control model:
 - Right accelerates toward `260 units/second`.
 - Left accelerates toward `-150 units/second`.
 - Releasing both directions decelerates to a stop.
-- Holding the jump button reduces gravity during ascent to create a higher
-  jump; tapping produces the lower arc.
+- The single action button produces one repeatable arcade jump arc.
+- Backtracking never turns Charlie or the lion around; they remain facing
+  forward and move or jump in reverse.
 
 This corrects the first prototype, where left only selected a slower positive
 speed and therefore never let the player backtrack.

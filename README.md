@@ -68,8 +68,7 @@ cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
 - `Left` / `A`: move or backtrack left
 - `Right` / `D`: move right
 - Release horizontal input: stop
-- Tap `Space`, `Z`, or arcade button 1: short jump
-- Hold the jump button: higher jump
+- `Space`, `Z`, or arcade button 1: jump
 - `R`: restart event
 - `F1`: physics/debug overlay
 - `F11`: toggle fullscreen
