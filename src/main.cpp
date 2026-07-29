@@ -51,8 +51,10 @@ constexpr float kLionCollisionTop = 58.0F;
 constexpr float kLionCollisionBottom = 7.0F;
 constexpr float kFirePotCollisionHalfWidth = 32.0F;
 constexpr float kFirePotClearance = 42.0F;
-constexpr float kBonusRingCollisionHalfWidth = 9.0F;
-constexpr float kBonusRingOpeningHalfHeight = 60.0F;
+constexpr float kBonusRingCollisionHalfWidth = 6.0F;
+constexpr float kBonusRingOpeningHalfHeight = 72.0F;
+constexpr float kBonusRingVisualHalfWidth = 96.0F;
+constexpr float kBonusRingVisualHalfHeight = 115.0F;
 constexpr int kCoinFlightFrames = 72;
 constexpr int kCrashBurnFrames = 72;
 constexpr int kGoalArrivalFrames = 90;
@@ -670,11 +672,11 @@ void resetCourse(Game& game) {
       {5820.0F},
   };
   game.bonusRings = {
-      {railStartForIntercept(1360.0F), 182.0F, false, false},
-      {railStartForIntercept(3100.0F), 182.0F, false, false},
-      {railStartForIntercept(3500.0F), 182.0F, false, false},
-      {railStartForIntercept(4650.0F), 182.0F, false, false},
-      {railStartForIntercept(5250.0F), 182.0F, false, false},
+      {railStartForIntercept(1360.0F), 152.0F, false, false},
+      {railStartForIntercept(3100.0F), 152.0F, false, false},
+      {railStartForIntercept(3500.0F), 152.0F, false, false},
+      {railStartForIntercept(4650.0F), 152.0F, false, false},
+      {railStartForIntercept(5250.0F), 152.0F, false, false},
   };
   game.meterMarkers = {
       {260.0F, 60}, {1180.0F, 50}, {2100.0F, 40},
@@ -976,9 +978,9 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         game.player.position.y - kLionCollisionTop;
     const float playerBottom =
         game.player.position.y - kLionCollisionBottom;
-    // The art stays roughly three-quarters the regular ring's visible size,
-    // while the flame collision uses only a thin center plane. This preserves
-    // a generous opening at the fixed jump apex without making the rim inert.
+    // The collision plane is intentionally thin: the original fixed jump only
+    // has to be centered as the rider crosses the hoop, not for the entire
+    // width of the lion. The opening follows the rendered rider/lion pose.
     const bool safelyInside =
         playerTop > ringCenterY - kBonusRingOpeningHalfHeight &&
         playerBottom < ringCenterY + kBonusRingOpeningHalfHeight;
@@ -1291,8 +1293,11 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
          ringCenterY - 55.0F, color(119, 101, 73));
     // These are pass-through bonus rings, not vanishing pickups. Their larger
     // opening reads clearly around the full lion-and-rider silhouette.
-    const SDL_FRect ringDestination{screenX - 90.0F, ringCenterY - 108.0F,
-                                    180.0F, 216.0F};
+    const SDL_FRect ringDestination{
+        screenX - kBonusRingVisualHalfWidth,
+        ringCenterY - kBonusRingVisualHalfHeight,
+        kBonusRingVisualHalfWidth * 2.0F,
+        kBonusRingVisualHalfHeight * 2.0F};
     SDL_RenderCopyF(renderer, propsTexture, &bonusRingSource,
                     &ringDestination);
     if (ring.containsPrize && !ring.collected) {
@@ -1300,6 +1305,55 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
                                      44.0F, 88.0F};
       SDL_RenderCopyF(renderer, propsTexture, &bagSource, &bagDestination);
     }
+  }
+}
+
+void drawHoopForeground(SDL_Renderer* renderer, const Hoop& hoop,
+                        float cameraX, SDL_Texture* hoopTexture) {
+  if (!hoopTexture || hoop.cleared) return;
+  const float x = hoop.worldX - cameraX;
+  if (x < -80.0F || x > kWorldWidth + 80.0F) return;
+
+  int textureWidth = 0;
+  int textureHeight = 0;
+  SDL_QueryTexture(hoopTexture, nullptr, nullptr, &textureWidth,
+                   &textureHeight);
+  const SDL_Rect ringSource{
+      0,
+      static_cast<int>(textureHeight * (500.0F / 1774.0F)),
+      textureWidth,
+      static_cast<int>(textureHeight * (1120.0F / 1774.0F)),
+  };
+  const float ringTop = hoop.openingTop - 25.0F;
+  const float ringBottom = hoop.openingBottom + 20.0F;
+  const SDL_FRect ringDestination{x - 50.0F, ringTop, 100.0F,
+                                  ringBottom - ringTop};
+  SDL_RenderCopyF(renderer, hoopTexture, &ringSource, &ringDestination);
+}
+
+void drawBonusRingForegrounds(SDL_Renderer* renderer, const Game& game,
+                              float cameraX, SDL_Texture* propsTexture) {
+  if (!propsTexture) return;
+  int textureWidth = 0;
+  int textureHeight = 0;
+  SDL_QueryTexture(propsTexture, nullptr, nullptr, &textureWidth,
+                   &textureHeight);
+  const int cellWidth = textureWidth / 3;
+  const SDL_Rect ringSource{cellWidth * 2, 0, cellWidth, textureHeight};
+
+  for (const auto& ring : game.bonusRings) {
+    const float screenX = ring.worldX - cameraX;
+    if (screenX < -110.0F || screenX > kWorldWidth + 110.0F) continue;
+    const float ringCenterY = kGroundY - ring.height;
+    const SDL_FRect destination{
+        screenX - kBonusRingVisualHalfWidth,
+        ringCenterY - kBonusRingVisualHalfHeight,
+        kBonusRingVisualHalfWidth * 2.0F,
+        kBonusRingVisualHalfHeight * 2.0F};
+    // The transparent center leaves the characters visible while the flame
+    // edge crosses in front, making the passage read as movement through the
+    // hoop instead of a jump entirely in front of it.
+    SDL_RenderCopyF(renderer, propsTexture, &ringSource, &destination);
   }
 }
 
@@ -1711,6 +1765,10 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
                      game.player.alive, lowDetail, assets.rider,
                      game.player.runSpeed, game.player.verticalVelocity,
                      game.player.grounded, game.player.facingRight);
+    for (const auto& hoop : game.hoops) {
+      drawHoopForeground(renderer, hoop, camera, hoopFrame);
+    }
+    drawBonusRingForegrounds(renderer, game, camera, propsFrame);
     if (game.scene == Scene::Crashed &&
         game.crashFrame < kCrashBurnFrames) {
       drawBurningRider(renderer, playerWorldX - camera, playerY, propsFrame,
@@ -1860,6 +1918,7 @@ int main(int argc, char** argv) {
       game.player.verticalVelocity = 0.0F;
       game.cameraX = game.player.position.x - 78.0F;
       game.previousCameraX = game.cameraX;
+      for (auto& hoop : game.hoops) hoop.cleared = true;
       game.bonusRings.front().worldX = game.player.position.x;
       game.bonusRings.front().containsPrize = true;
       game.bonusRings.front().collected = true;
