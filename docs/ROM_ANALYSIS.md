@@ -83,6 +83,9 @@ a repeatable movement and jump schedule for controlled comparisons.
 The `stage1_jump_tap` and `stage1_jump_hold` modes isolate one jump and support
 configurable per-frame screenshots through `CIRCUS_SNAPSHOT_FIRST`,
 `CIRCUS_SNAPSHOT_LAST`, and `CIRCUS_SNAPSHOT_EVERY`.
+`stage1_crash` supplies a matched no-jump collision run. `stage2_idle` and
+`stage2_crash` select the monkey event and provide matched stationary and
+walk-into-monkey runs.
 
 The capture also takes a native-resolution screenshot every 120 frames. MAME's
 `-aviwrite` option can record the exact same run, keeping video, inputs, and RAM
@@ -105,6 +108,25 @@ program drives its own internal demo. The trace still records all resulting
 sprite slots and state transitions. `stage1_probe` supplies real active-low
 coin, start, selection, direction, and jump inputs for controlled player-driven
 comparisons.
+
+## Private audio-reference method
+
+MAME reports two `SN76489A` generators at `1,789,772 Hz`, an 8-bit R-2R DAC,
+and a discrete-sound stage mixed to one mono output. Its `-wavwrite` option
+records that mix at 48 kHz.
+
+The same cold-boot input schedule is captured twice, changing only the
+specific action under study. Phase-subtracting those matched recordings
+removes most deterministic stage music and exposes the sound-effect envelope:
+
+- `stage1_jump_tap` minus `stage1_crash` isolates the short descending jump
+  tone before the no-jump run reaches the first collision.
+- `stage2_crash` minus `stage2_idle` isolates the first monkey-contact effect.
+- The later Event 1 difference window supplies the collision/burn reference.
+
+ROM-derived WAV files remain outside this repository as private references.
+Only timing, envelope, and pitch observations may guide newly synthesized
+production audio.
 
 ## Recovered Event 1 rider labels
 

@@ -54,7 +54,10 @@ local function scripted_inputs()
     set_button(left, active(1140, 1210))
     set_button(right, active(1320, 1560))
     set_button(jump, active(1560, 1564))
-    if mode == "stage1_probe" then
+    if mode == "stage1_crash" then
+      set_button(right, active(1320, 2050))
+      set_button(jump, false)
+    elseif mode == "stage1_probe" then
       set_button(right, active(1320, 2700))
       set_button(jump,
         active(1560, 1564) or
@@ -69,6 +72,15 @@ local function scripted_inputs()
       set_button(right, active(1320, 1560) or active(1840, 2050))
       set_button(jump, active(1560, 1564) or active(1860, 1884))
     end
+  elseif string.sub(mode, 1, 7) == "stage2_" then
+    -- Move once from Event 1 to Event 2 and confirm. The crash variant then
+    -- walks into the first monkey; the idle variant provides a matched music
+    -- recording so the contact effect can be isolated by subtraction.
+    set_button(right, active(1140, 1148))
+    if mode == "stage2_crash" then
+      set_button(right, active(1140, 1148) or active(1750, 2800))
+    end
+    set_button(jump, active(1560, 1564))
   end
 end
 
