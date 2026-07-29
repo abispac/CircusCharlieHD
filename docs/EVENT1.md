@@ -21,13 +21,18 @@ requirements supplied through hands-on play knowledge.
 - The goal is a striped pedestal with a `GOAL` plaque. Charlie stops on it
   while the crowd flashes `GREAT` and `FAROUT`.
 
-## Random bonuses
+## Hidden and random bonuses
 
-- A small ring is always collectible, but its prize contents are randomized.
-  A run must contain at least one prize ring and at least one empty ring.
-- Each fire pot gets one random chance to release a single coin when Charlie
-  jumps over it. The coin follows one short arc and disappears after landing.
-  Catching it awards bonus points; a pot can never spawn repeatedly.
+- A small ring is always passable, but its prize contents are randomized.
+  Its opening is sized around the complete lion-and-rider silhouette. Passing
+  through removes the prize only; the ring itself remains visible and keeps
+  moving on the overhead rail. A run must contain at least one prize ring and
+  at least one empty ring.
+- Exactly one fire pot is selected as the hidden-coin pot for each run.
+- The hidden coin can trigger only when Charlie returns to that pot and jumps
+  over it while moving backward. A normal forward jump never reveals it.
+- The coin follows one short arc and disappears after landing. Catching it
+  awards bonus points, and the event can never spawn a second hidden coin.
 
 ## Perfect Event 1 reward
 
@@ -50,3 +55,10 @@ than by putting a permanent money bag inside every small ring.
   `3499–3000=3000`, `2999–2500=2000`, `2499–2000=1000`,
   `1999–1500=800`, `1499–1001=600`, `1000–500=400`, and
   `499–0=200`.
+
+## Crash presentation
+
+- A fire collision first plays a dedicated burn beat with flames covering
+  both Charlie and the lion.
+- The retry panel is withheld until that animation completes, so the accident
+  cannot be mistaken for either character simply disappearing.

@@ -84,10 +84,17 @@ Current user-control model:
 - Large rings use approximately `476` logical units of separation. A small
   ring follows the second large ring by approximately `493` logical units,
   matching the corresponding `222`- and `230`-source-pixel trace distances.
+- The late double-ring test deliberately compresses the two centers to about
+  `67` logical units after rail compensation, so the flames visually overlap
+  like the recorded arcade sequence instead of reading as two separate tests.
+- Passing through a small ring consumes its randomized prize once but never
+  stops, hides, or removes the moving ring itself.
 - The single action button advances the measured, repeatable arcade jump
   table; holding the button does not alter height or duration.
 - Backtracking never turns Charlie or the lion around; they remain facing
   forward and move or jump in reverse.
+- Only the one secretly selected fire pot can reveal a coin, and only during
+  a backward jump. Forward jumps and every other pot leave the secret dormant.
 
 This corrects the first prototype, where left only selected a slower positive
 speed and therefore never let the player backtrack.

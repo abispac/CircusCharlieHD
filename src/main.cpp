@@ -27,6 +27,11 @@ constexpr float kRingRailSpeed = 65.0F;
 constexpr float kCourseLength = 6000.0F;
 constexpr float kGoalScreenX = 150.0F;
 constexpr float kPi = 3.14159265358979323846F;
+constexpr float kMarqueeHeight = 105.0F;
+constexpr float kHudTop = kMarqueeHeight;
+constexpr float kHudHeight = 90.0F;
+constexpr float kArenaTop = kHudTop + kHudHeight;
+constexpr float kCrowdTop = 310.0F;
 constexpr float kBigHoopOpeningTop = kGroundY - 205.0F;
 constexpr float kBigHoopOpeningBottom = kGroundY - 80.0F;
 constexpr float kSourceToLogicalY =
@@ -47,6 +52,7 @@ constexpr float kLionCollisionBottom = 7.0F;
 constexpr float kFirePotCollisionHalfWidth = 32.0F;
 constexpr float kFirePotClearance = 42.0F;
 constexpr int kCoinFlightFrames = 72;
+constexpr int kCrashBurnFrames = 72;
 constexpr int kGoalArrivalFrames = 90;
 constexpr int kBirdArrivalFrames = 170;
 constexpr int kBagOpenFrames = 45;
@@ -136,12 +142,15 @@ struct Game {
   int instructionFrames = 0;
   int goalFrame = 0;
   int tallyFrame = 0;
+  int crashFrame = 0;
   int clearBonus = 0;
   int rewardCoinsAwarded = 0;
   int prizeBagsAvailable = 0;
   int prizeBagsCollected = 0;
+  int hiddenCoinPotIndex = -1;
   bool deathOccurred = false;
   bool perfectClear = false;
+  bool hiddenCoinTriggered = false;
   bool timeScoreApplied = false;
   std::uint32_t randomState = 0x6d2b79f5U;
   bool debug = false;
@@ -156,6 +165,9 @@ struct RenderSurface {
 
 struct Assets {
   SDL_Texture* arena = nullptr;
+  SDL_Texture* marquee = nullptr;
+  SDL_Texture* ferrisWheel = nullptr;
+  SDL_Texture* ferrisGondola = nullptr;
   SDL_Texture* rider = nullptr;
   SDL_Texture* hoop = nullptr;
   SDL_Texture* hoopFlare = nullptr;
@@ -187,7 +199,7 @@ void printUsage() {
       << "  --fullscreen\n"
       << "  --debug\n"
       << "  --capture FILE.png\n"
-      << "  --capture-scene gameplay|goal|tally\n";
+      << "  --capture-scene gameplay|ring|crash|goal|tally\n";
 }
 
 std::optional<Options> parseOptions(int argc, char** argv) {
@@ -203,9 +215,12 @@ std::optional<Options> parseOptions(int argc, char** argv) {
     } else if (argument == "--capture-scene" && index + 1 < argc) {
       options.captureScene = argv[++index];
       if (options.captureScene != "gameplay" &&
+          options.captureScene != "ring" &&
+          options.captureScene != "crash" &&
           options.captureScene != "goal" &&
           options.captureScene != "tally") {
-        std::cerr << "Capture scene must be gameplay, goal, or tally.\n";
+        std::cerr
+            << "Capture scene must be gameplay, ring, crash, goal, or tally.\n";
         return std::nullopt;
       }
     } else if (argument == "--mode" && index + 1 < argc) {
@@ -259,13 +274,17 @@ SDL_Texture* loadAsset(SDL_Renderer* renderer, const char* filename) {
 Assets loadAssets(SDL_Renderer* renderer) {
   Assets assets;
   assets.arena = loadAsset(renderer, "stage1-arena.png");
-  assets.rider = loadAsset(renderer, "stage1-rider-sheet.png");
+  assets.marquee = loadAsset(renderer, "stage1-marquee-v2.png");
+  assets.ferrisWheel = loadAsset(renderer, "stage1-ferris-wheel.png");
+  assets.ferrisGondola = loadAsset(renderer, "stage1-ferris-gondola.png");
+  assets.rider = loadAsset(renderer, "stage1-rider-sheet-v2.png");
   assets.hoop = loadAsset(renderer, "stage1-hoop.png");
   assets.hoopFlare = loadAsset(renderer, "stage1-hoop-flare.png");
   assets.props = loadAsset(renderer, "stage1-props.png");
   assets.propsFlare = loadAsset(renderer, "stage1-props-flare.png");
   assets.bird = loadAsset(renderer, "stage1-bird-sheet.png");
-  if (!assets.arena || !assets.rider || !assets.hoop ||
+  if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
+      !assets.ferrisGondola || !assets.rider || !assets.hoop ||
       !assets.hoopFlare || !assets.props || !assets.propsFlare ||
       !assets.bird) {
     std::cerr << "Some HD assets could not be loaded; vector fallbacks remain "
@@ -277,6 +296,9 @@ Assets loadAssets(SDL_Renderer* renderer) {
 
 void destroyAssets(Assets& assets) {
   if (assets.arena) SDL_DestroyTexture(assets.arena);
+  if (assets.marquee) SDL_DestroyTexture(assets.marquee);
+  if (assets.ferrisWheel) SDL_DestroyTexture(assets.ferrisWheel);
+  if (assets.ferrisGondola) SDL_DestroyTexture(assets.ferrisGondola);
   if (assets.rider) SDL_DestroyTexture(assets.rider);
   if (assets.hoop) SDL_DestroyTexture(assets.hoop);
   if (assets.hoopFlare) SDL_DestroyTexture(assets.hoopFlare);
@@ -437,12 +459,15 @@ void resetCourse(Game& game) {
   game.bonus = 6000;
   game.goalFrame = 0;
   game.tallyFrame = 0;
+  game.crashFrame = 0;
   game.clearBonus = 0;
   game.rewardCoinsAwarded = 0;
   game.prizeBagsAvailable = 0;
   game.prizeBagsCollected = 0;
+  game.hiddenCoinPotIndex = -1;
   game.deathOccurred = false;
   game.perfectClear = false;
+  game.hiddenCoinTriggered = false;
   game.timeScoreApplied = false;
 
   // Event 1 is laid out in the same difficulty progression visible in the
@@ -463,7 +488,7 @@ void resetCourse(Game& game) {
        kBigHoopOpeningTop, false},
       {railStartForIntercept(3940.0F), kBigHoopOpeningBottom,
        kBigHoopOpeningTop, false},
-      {railStartForIntercept(4050.0F), kBigHoopOpeningBottom,
+      {railStartForIntercept(3990.0F), kBigHoopOpeningBottom,
        kBigHoopOpeningTop, false},
       {railStartForIntercept(4480.0F), kBigHoopOpeningBottom,
        kBigHoopOpeningTop, false},
@@ -495,6 +520,8 @@ void resetCourse(Game& game) {
       {260.0F, 60}, {1180.0F, 50}, {2100.0F, 40},
       {3040.0F, 30}, {3980.0F, 20}, {4920.0F, 10},
   };
+  game.hiddenCoinPotIndex =
+      static_cast<int>(nextRandom(game) % game.firePots.size());
 
   int prizeCount = 0;
   for (auto& ring : game.bonusRings) {
@@ -532,6 +559,7 @@ void restartAfterCrash(Game& game) {
   game.player.jumpFrame = -1;
   game.player.grounded = true;
   game.player.alive = true;
+  game.crashFrame = 0;
   game.cameraX = std::max(0.0F, game.player.position.x - 78.0F);
   game.previousCameraX = game.cameraX;
   game.instructionFrames = 180;
@@ -575,6 +603,16 @@ float firePotCoinY(const FirePot& firePot) {
 
 void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
                 float controllerAxis) {
+  if (game.scene == Scene::Crashed) {
+    game.player.previous = game.player.position;
+    game.previousCameraX = game.cameraX;
+    game.player.runSpeed = 0.0F;
+    game.player.verticalVelocity = 0.0F;
+    game.crashFrame =
+        std::min(game.crashFrame + 1, kCrashBurnFrames);
+    return;
+  }
+
   if (game.scene == Scene::Goal) {
     game.player.previous = game.player.position;
     game.previousCameraX = game.cameraX;
@@ -659,7 +697,9 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     if (!hoop.cleared) hoop.worldX -= ringTravel;
   }
   for (auto& ring : game.bonusRings) {
-    if (!ring.collected) ring.worldX -= ringTravel;
+    // Passing through removes only the prize. The physical ring stays on its
+    // ceiling rail and remains visible, matching the original arcade behavior.
+    ring.worldX -= ringTravel;
   }
 
   if (jumpPressed && game.player.grounded) {
@@ -701,20 +741,29 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     if (!hoop.cleared && overlapsHoop(game.player, hoop)) {
       game.player.alive = false;
       game.scene = Scene::Crashed;
+      game.crashFrame = 0;
       game.deathOccurred = true;
       --game.lives;
       return;
     }
   }
 
-  for (auto& firePot : game.firePots) {
+  for (size_t firePotIndex = 0; firePotIndex < game.firePots.size();
+       ++firePotIndex) {
+    auto& firePot = game.firePots[firePotIndex];
     const float potDistance =
         game.player.position.x - firePot.worldX;
-    if (!firePot.coinChanceResolved && !game.player.grounded &&
-        potDistance > -62.0F && potDistance < 20.0F) {
+    const bool backwardJump =
+        !game.player.grounded && game.player.runSpeed < -20.0F;
+    const bool isHiddenCoinPot =
+        static_cast<int>(firePotIndex) == game.hiddenCoinPotIndex;
+    if (isHiddenCoinPot && !game.hiddenCoinTriggered &&
+        !firePot.coinChanceResolved && backwardJump &&
+        potDistance > -20.0F && potDistance < 62.0F) {
       firePot.coinChanceResolved = true;
-      firePot.coinActive = nextRandom(game) % 3U == 0U;
+      firePot.coinActive = true;
       firePot.coinFrame = 0;
+      game.hiddenCoinTriggered = true;
     }
 
     if (firePot.coinActive) {
@@ -737,6 +786,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         game.player.position.y > kGroundY - kFirePotClearance) {
       game.player.alive = false;
       game.scene = Scene::Crashed;
+      game.crashFrame = 0;
       game.deathOccurred = true;
       --game.lives;
       return;
@@ -837,73 +887,126 @@ void drawCeilingTrack(SDL_Renderer* renderer, float cameraX) {
   }
 }
 
-void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
-                  SDL_Texture* arenaTexture) {
-  if (arenaTexture) {
-    const SDL_FRect destination{0.0F, 0.0F, static_cast<float>(kWorldWidth),
-                                static_cast<float>(kWorldHeight)};
-    SDL_RenderCopyF(renderer, arenaTexture, nullptr, &destination);
-    drawCeilingTrack(renderer, cameraX);
-    return;
-  }
+void drawFerrisWheel(SDL_Renderer* renderer, SDL_Texture* wheelTexture,
+                     SDL_Texture* gondolaTexture, double timeSeconds) {
+  if (!wheelTexture || !gondolaTexture) return;
 
+  constexpr float centerX = 424.0F;
+  constexpr float centerY = 55.0F;
+  constexpr float wheelSize = 96.0F;
+  constexpr float gondolaRadius = 39.0F;
+  constexpr int gondolaCount = 10;
+  const float angleDegrees =
+      std::fmod(static_cast<float>(timeSeconds) * 10.0F, 360.0F);
+  const float angleRadians = angleDegrees * kPi / 180.0F;
+
+  const SDL_FRect wheelDestination{
+      centerX - wheelSize * 0.5F,
+      centerY - wheelSize * 0.5F,
+      wheelSize,
+      wheelSize,
+  };
+  SDL_RenderCopyExF(renderer, wheelTexture, nullptr, &wheelDestination,
+                    angleDegrees, nullptr, SDL_FLIP_NONE);
+
+  // The wheel rotates, but gravity keeps every passenger gondola upright.
+  // Drawing them independently preserves the original marquee's readable
+  // animation instead of spinning the cabins upside down with the rim.
+  for (int index = 0; index < gondolaCount; ++index) {
+    const float theta =
+        angleRadians +
+        static_cast<float>(index) * 2.0F * kPi /
+            static_cast<float>(gondolaCount);
+    const float x = centerX + std::cos(theta) * gondolaRadius;
+    const float y = centerY + std::sin(theta) * gondolaRadius;
+    const SDL_FRect gondolaDestination{x - 7.5F, y - 5.0F, 15.0F, 22.5F};
+    SDL_RenderCopyF(renderer, gondolaTexture, nullptr,
+                    &gondolaDestination);
+  }
+}
+
+void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
+                  const Assets& assets, double timeSeconds) {
   fillRect(renderer, 0.0F, 0.0F, kWorldWidth, kWorldHeight,
            color(5, 18, 51));
 
-  const float farScroll = std::fmod(cameraX * 0.08F, 260.0F);
-  if (!lowDetail) {
-    for (int index = 0; index < 34; ++index) {
-      const float x =
-          std::fmod(static_cast<float>(index * 79) - farScroll + 520.0F,
-                    520.0F) -
-          20.0F;
-      const float y = 25.0F + static_cast<float>((index * 47) % 245);
-      filledCircle(renderer, x, y, index % 5 == 0 ? 1.5F : 0.8F,
-                   color(170, 215, 255));
+  // Original layer model: the zeppelin/tent crown, wheel, and black score
+  // panel stay fixed. Only the lower arena wall, crowd, floor, and meter
+  // markers travel with Charlie.
+  if (assets.marquee) {
+    const SDL_FRect marqueeDestination{
+        0.0F, 0.0F, static_cast<float>(kWorldWidth), kMarqueeHeight};
+    SDL_RenderCopyF(renderer, assets.marquee, nullptr,
+                    &marqueeDestination);
+  } else {
+    if (!lowDetail) {
+      for (int index = 0; index < 24; ++index) {
+        const float x =
+            std::fmod(static_cast<float>(index * 79), 520.0F) - 20.0F;
+        const float y = 8.0F + static_cast<float>((index * 47) % 92);
+        filledCircle(renderer, x, y, index % 5 == 0 ? 1.5F : 0.8F,
+                     color(170, 215, 255));
+      }
     }
+    fillRect(renderer, 0.0F, kMarqueeHeight - 8.0F, kWorldWidth, 8.0F,
+             color(118, 22, 38));
   }
+  drawFerrisWheel(renderer, assets.ferrisWheel, assets.ferrisGondola,
+                  timeSeconds);
 
-  const float tentScroll = std::fmod(cameraX * 0.2F, 340.0F);
-  for (int tent = -1; tent < 3; ++tent) {
-    const float center = static_cast<float>(tent * 340) - tentScroll + 145.0F;
-    const std::array<SDL_Vertex, 3> roof{{
-        {{center - 155.0F, 355.0F}, color(92, 17, 35), {0, 0}},
-        {{center, 165.0F}, color(196, 47, 46), {0, 0}},
-        {{center + 155.0F, 355.0F}, color(92, 17, 35), {0, 0}},
-    }};
-    SDL_RenderGeometry(renderer, nullptr, roof.data(),
-                       static_cast<int>(roof.size()), nullptr, 0);
-    line(renderer, center, 148.0F, center, 185.0F, color(230, 174, 52));
-    fillRect(renderer, center, 146.0F, 38.0F, 10.0F, color(176, 34, 41));
-  }
-
-  fillRect(renderer, 0.0F, 352.0F, kWorldWidth, 125.0F, color(24, 25, 45));
-  const float crowdScroll = std::fmod(cameraX * 0.34F, 23.0F);
-  for (int row = 0; row < (lowDetail ? 3 : 5); ++row) {
-    for (int column = -1; column < 23; ++column) {
-      const float x = static_cast<float>(column * 23) - crowdScroll +
-                      static_cast<float>((row % 2) * 9);
-      const float y = 372.0F + static_cast<float>(row * 21);
-      filledCircle(renderer, x, y, 5.0F, color(45 + row * 8, 50, 72));
+  if (assets.arena) {
+    int textureWidth = 0;
+    int textureHeight = 0;
+    SDL_QueryTexture(assets.arena, nullptr, nullptr, &textureWidth,
+                     &textureHeight);
+    const int sourceTop = static_cast<int>(
+        static_cast<float>(textureHeight) * kCrowdTop /
+        static_cast<float>(kWorldHeight));
+    const SDL_Rect source{0, sourceTop, textureWidth,
+                          textureHeight - sourceTop};
+    const float tileWidth = static_cast<float>(kWorldWidth);
+    const float scroll = std::fmod(cameraX, tileWidth);
+    for (int tile = -1; tile <= 1; ++tile) {
+      const SDL_FRect destination{
+          static_cast<float>(tile) * tileWidth - scroll,
+          kCrowdTop,
+          tileWidth,
+          static_cast<float>(kWorldHeight) - kCrowdTop,
+      };
+      SDL_RenderCopyF(renderer, assets.arena, &source, &destination);
     }
+  } else {
+    fillRect(renderer, 0.0F, kArenaTop, kWorldWidth,
+             kWorldHeight - kArenaTop, color(24, 25, 45));
+    const float crowdScroll = std::fmod(cameraX, 23.0F);
+    for (int row = 0; row < (lowDetail ? 3 : 5); ++row) {
+      for (int column = -1; column < 23; ++column) {
+        const float x = static_cast<float>(column * 23) - crowdScroll +
+                        static_cast<float>((row % 2) * 9);
+        const float y = 310.0F + static_cast<float>(row * 21);
+        filledCircle(renderer, x, y, 5.0F,
+                     color(45 + row * 8, 50, 72));
+      }
+    }
+    fillRect(renderer, 0.0F, 462.0F, kWorldWidth, 12.0F,
+             color(112, 23, 37));
+    fillRect(renderer, 0.0F, 474.0F, kWorldWidth, 68.0F,
+             color(190, 126, 52));
+    for (int stripe = 0; stripe < kWorldWidth / 28 + 2; ++stripe) {
+      const float x = static_cast<float>(stripe * 28) -
+                      std::fmod(cameraX, 28.0F);
+      line(renderer, x, 478.0F, x - 22.0F, 537.0F,
+           color(211, 151, 72));
+    }
+    fillRect(renderer, 0.0F, kGroundY, kWorldWidth, 108.0F,
+             color(89, 35, 30));
+    fillRect(renderer, 0.0F, kGroundY, kWorldWidth, 5.0F,
+             color(245, 183, 79));
   }
 
-  fillRect(renderer, 0.0F, 462.0F, kWorldWidth, 12.0F, color(112, 23, 37));
-
-  // Stage 1 obstacle hardware: a fixed overhead pipe/track carries the
-  // moving fire-ring hangers. It is part of gameplay, not decorative scenery.
+  // This gameplay rail belongs to the scrolling arena, while every fire ring
+  // also has its own measured independent motion along it.
   drawCeilingTrack(renderer, cameraX);
-
-  fillRect(renderer, 0.0F, 474.0F, kWorldWidth, 68.0F, color(190, 126, 52));
-  for (int stripe = 0; stripe < kWorldWidth / 28 + 2; ++stripe) {
-    const float x = static_cast<float>(stripe * 28) -
-                    std::fmod(cameraX * 0.7F, 28.0F);
-    line(renderer, x, 478.0F, x - 22.0F, 537.0F, color(211, 151, 72));
-  }
-  fillRect(renderer, 0.0F, kGroundY, kWorldWidth, 108.0F,
-           color(89, 35, 30));
-  fillRect(renderer, 0.0F, kGroundY, kWorldWidth, 5.0F,
-           color(245, 183, 79));
 }
 
 void drawHoop(SDL_Renderer* renderer, const Hoop& hoop, float cameraX,
@@ -992,19 +1095,20 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
   }
 
   for (const auto& ring : game.bonusRings) {
-    if (ring.collected) continue;
     const float screenX = ring.worldX - cameraX;
-    if (screenX < -80.0F || screenX > kWorldWidth + 80.0F) continue;
+    if (screenX < -100.0F || screenX > kWorldWidth + 100.0F) continue;
     const float ringCenterY = kGroundY - ring.height;
     line(renderer, screenX, kTrackY + 5.0F, screenX,
-         ringCenterY - 42.0F, color(119, 101, 73));
-    const SDL_FRect ringDestination{screenX - 65.0F, ringCenterY - 78.0F,
-                                    130.0F, 156.0F};
+         ringCenterY - 55.0F, color(119, 101, 73));
+    // These are pass-through bonus rings, not vanishing pickups. Their larger
+    // opening reads clearly around the full lion-and-rider silhouette.
+    const SDL_FRect ringDestination{screenX - 82.5F, ringCenterY - 99.0F,
+                                    165.0F, 198.0F};
     SDL_RenderCopyF(renderer, propsTexture, &bonusRingSource,
                     &ringDestination);
-    if (ring.containsPrize) {
-      const SDL_FRect bagDestination{screenX - 21.0F, ringCenterY - 42.0F,
-                                     42.0F, 84.0F};
+    if (ring.containsPrize && !ring.collected) {
+      const SDL_FRect bagDestination{screenX - 22.0F, ringCenterY - 44.0F,
+                                     44.0F, 88.0F};
       SDL_RenderCopyF(renderer, propsTexture, &bagSource, &bagDestination);
     }
   }
@@ -1151,8 +1255,8 @@ void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
         kSpriteHeight,
     };
 
-    SDL_SetTextureColorMod(riderTexture, alive ? 255 : 125,
-                          alive ? 255 : 125, alive ? 255 : 125);
+    SDL_SetTextureColorMod(riderTexture, 255, alive ? 255 : 128,
+                          alive ? 255 : 58);
     SDL_RenderCopyExF(renderer, riderTexture, &source, &destination, 0.0,
                       nullptr,
                       facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
@@ -1226,37 +1330,83 @@ void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
   }
 }
 
+void drawBurningRider(SDL_Renderer* renderer, float screenX, float groundY,
+                      SDL_Texture* propsTexture, int crashFrame) {
+  if (!propsTexture) return;
+
+  int textureWidth = 0;
+  int textureHeight = 0;
+  SDL_QueryTexture(propsTexture, nullptr, nullptr, &textureWidth,
+                   &textureHeight);
+  const int cellWidth = textureWidth / 3;
+  // Crop only the living flame from the first prop cell, leaving its floor
+  // cauldron behind. Three overlapping copies engulf Charlie and the lion as
+  // one crash animation rather than making either character simply vanish.
+  const SDL_Rect flameSource{
+      static_cast<int>(cellWidth * 0.34F),
+      static_cast<int>(textureHeight * 0.15F),
+      static_cast<int>(cellWidth * 0.56F),
+      static_cast<int>(textureHeight * 0.47F),
+  };
+  const float arrival =
+      std::clamp(static_cast<float>(crashFrame) / 10.0F, 0.15F, 1.0F);
+  const float flicker = ((crashFrame / 5) & 1) == 0 ? 0.0F : 5.0F;
+  SDL_SetTextureAlphaMod(
+      propsTexture, static_cast<Uint8>(100.0F + arrival * 45.0F));
+
+  const SDL_FRect lionRear{
+      screenX - 58.0F, groundY - 94.0F - flicker * 0.35F,
+      70.0F * arrival, 100.0F * arrival};
+  const SDL_FRect lionFront{
+      screenX - 3.0F, groundY - 121.0F + flicker * 0.25F,
+      77.0F * arrival, 129.0F * arrival};
+  const SDL_FRect charlie{
+      screenX - 28.0F, groundY - 165.0F - flicker,
+      61.0F * arrival, 116.0F * arrival};
+  SDL_RenderCopyExF(renderer, propsTexture, &flameSource, &lionRear, 0.0,
+                    nullptr, SDL_FLIP_HORIZONTAL);
+  SDL_RenderCopyF(renderer, propsTexture, &flameSource, &lionFront);
+  SDL_RenderCopyExF(renderer, propsTexture, &flameSource, &charlie, 0.0,
+                    nullptr, SDL_FLIP_HORIZONTAL);
+  SDL_SetTextureAlphaMod(propsTexture, 255);
+}
+
 void drawHud(SDL_Renderer* renderer, const Game& game) {
-  fillRect(renderer, 0.0F, 0.0F, kWorldWidth, 90.0F, color(0, 0, 0, 248));
+  fillRect(renderer, 0.0F, kHudTop, kWorldWidth, kHudHeight,
+           color(0, 0, 0, 248));
 
-  drawText(renderer, "1UP", 12.0F, 8.0F, 1.25F, color(255, 230, 34));
-  drawText(renderer, std::to_string(game.score), 12.0F, 28.0F, 1.65F,
-           color(255, 255, 255));
+  drawText(renderer, "1UP", 12.0F, kHudTop + 8.0F, 1.25F,
+           color(255, 230, 34));
+  drawText(renderer, std::to_string(game.score), 12.0F, kHudTop + 28.0F,
+           1.65F, color(255, 255, 255));
 
-  drawText(renderer, "HIGH SCORE", kWorldWidth * 0.5F, 8.0F, 1.25F,
-           color(245, 70, 37), true);
+  drawText(renderer, "HIGH SCORE", kWorldWidth * 0.5F, kHudTop + 8.0F,
+           1.25F, color(245, 70, 37), true);
   drawText(renderer, std::to_string(std::max(19830, game.score)),
-           kWorldWidth * 0.5F, 28.0F, 1.65F, color(51, 213, 57), true);
+           kWorldWidth * 0.5F, kHudTop + 28.0F, 1.65F,
+           color(51, 213, 57), true);
 
-  drawText(renderer, "LIVES " + std::to_string(game.lives), 388.0F, 8.0F,
-           1.2F, color(255, 255, 255));
-  drawText(renderer, "CREDIT 00", 379.0F, 29.0F, 1.15F,
+  drawText(renderer, "LIVES " + std::to_string(game.lives), 388.0F,
+           kHudTop + 8.0F, 1.2F, color(255, 255, 255));
+  drawText(renderer, "CREDIT 00", 379.0F, kHudTop + 29.0F, 1.15F,
            color(70, 202, 255));
 
   const int secondsRemaining = static_cast<int>(
       std::ceil(static_cast<double>(game.bonus) / kBoardRefresh));
   drawText(renderer, "TIME " + std::to_string(secondsRemaining), 12.0F,
-           59.0F, 1.2F, color(95, 221, 255));
+           kHudTop + 59.0F, 1.2F, color(95, 221, 255));
   drawText(renderer, "BONUS " + std::to_string(game.bonus),
-           kWorldWidth * 0.5F, 59.0F, 1.2F, color(255, 255, 255), true);
-  drawText(renderer, "EVENT 1", 399.0F, 59.0F, 1.15F,
+           kWorldWidth * 0.5F, kHudTop + 59.0F, 1.2F,
+           color(255, 255, 255), true);
+  drawText(renderer, "EVENT 1", 399.0F, kHudTop + 59.0F, 1.15F,
            color(255, 227, 119));
 
   const std::array<SDL_Color, 4> bulbs{
       color(255, 57, 41), color(255, 224, 42), color(47, 207, 75),
       color(60, 98, 255)};
   for (int index = 0; index < 60; ++index) {
-    fillRect(renderer, static_cast<float>(index * 8), 84.0F, 4.0F, 4.0F,
+    fillRect(renderer, static_cast<float>(index * 8), kHudTop + 84.0F,
+             4.0F, 4.0F,
              bulbs[static_cast<size_t>(index % bulbs.size())]);
   }
 }
@@ -1314,22 +1464,23 @@ void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
 
 void drawDebug(SDL_Renderer* renderer, const Game& game,
                const RenderSurface& surface) {
-  fillRect(renderer, 8.0F, 96.0F, 246.0F, 77.0F, color(0, 0, 0, 200));
-  drawText(renderer, "FIXED 60.606 HZ", 15.0F, 103.0F, 1.4F,
+  fillRect(renderer, 8.0F, kArenaTop + 6.0F, 246.0F, 77.0F,
+           color(0, 0, 0, 200));
+  drawText(renderer, "FIXED 60.606 HZ", 15.0F, kArenaTop + 13.0F, 1.4F,
            color(93, 224, 255));
   drawText(renderer, "SPEED " + std::to_string(static_cast<int>(
                                    std::lround(game.player.runSpeed))),
-           15.0F, 120.0F, 1.4F, color(255, 255, 255));
+           15.0F, kArenaTop + 30.0F, 1.4F, color(255, 255, 255));
   drawText(renderer, "JUMP " + std::to_string(static_cast<int>(
                                   std::lround(kGroundY -
                                               game.player.position.y))),
-           15.0F, 137.0F, 1.4F, color(255, 255, 255));
+           15.0F, kArenaTop + 47.0F, 1.4F, color(255, 255, 255));
   drawText(renderer,
            "RAIL " + std::to_string(static_cast<int>(
                          std::lround(kRingRailSpeed))) +
                " RENDER " + std::to_string(surface.width) + "X" +
                std::to_string(surface.height),
-           15.0F, 154.0F, 1.05F, color(255, 255, 255));
+           15.0F, kArenaTop + 64.0F, 1.05F, color(255, 255, 255));
 }
 
 void renderScene(SDL_Renderer* renderer, const Game& game,
@@ -1350,7 +1501,7 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
       flareFrame && assets.hoopFlare ? assets.hoopFlare : assets.hoop;
   SDL_Texture* propsFrame =
       flareFrame && assets.propsFlare ? assets.propsFlare : assets.props;
-  drawBackdrop(renderer, camera, lowDetail, assets.arena);
+  drawBackdrop(renderer, camera, lowDetail, assets, timeSeconds);
   drawCourseMarkers(renderer, game, camera);
 
   for (const auto& hoop : game.hoops) {
@@ -1371,28 +1522,39 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
                      game.player.alive, lowDetail, assets.rider,
                      game.player.runSpeed, game.player.verticalVelocity,
                      game.player.grounded, game.player.facingRight);
-    drawHud(renderer, game);
+    if (game.scene == Scene::Crashed &&
+        game.crashFrame < kCrashBurnFrames) {
+      drawBurningRider(renderer, playerWorldX - camera, playerY, propsFrame,
+                       game.crashFrame);
+      // Redraw the heat-tinted rider over the fire bed so both Charlie and the
+      // lion remain readable while the flames surround and cross their edges.
+      drawLionAndRider(renderer, playerWorldX - camera, playerY, timeSeconds,
+                       false, lowDetail, assets.rider, 0.0F, 0.0F, true,
+                       game.player.facingRight);
+    }
     if (game.scene == Scene::Goal) {
       drawGoalPresentation(renderer, game, assets.bird);
     }
   }
+  drawHud(renderer, game);
 
   if (game.scene == Scene::Title) {
-    fillRect(renderer, 33.0F, 158.0F, 414.0F, 270.0F,
+    fillRect(renderer, 33.0F, 210.0F, 414.0F, 270.0F,
              color(3, 9, 29, 225));
-    drawText(renderer, "BIG TOP", kWorldWidth * 0.5F, 194.0F, 6.0F,
+    drawText(renderer, "BIG TOP", kWorldWidth * 0.5F, 246.0F, 6.0F,
              color(255, 202, 56), true);
-    drawText(renderer, "RUN", kWorldWidth * 0.5F, 253.0F, 8.0F,
+    drawText(renderer, "RUN", kWorldWidth * 0.5F, 305.0F, 8.0F,
              color(225, 52, 54), true);
     drawText(renderer, "NATIVE ARCADE PROTOTYPE", kWorldWidth * 0.5F,
-             319.0F, 1.6F, color(160, 211, 255), true);
-    drawText(renderer, "LEFT RIGHT MOVE LION", kWorldWidth * 0.5F, 347.0F,
+             371.0F, 1.6F, color(160, 211, 255), true);
+    drawText(renderer, "LEFT RIGHT MOVE LION", kWorldWidth * 0.5F, 399.0F,
              1.5F, color(255, 255, 255), true);
-    drawText(renderer, "SPACE OR Z JUMP", kWorldWidth * 0.5F, 370.0F,
+    drawText(renderer, "SPACE OR Z JUMP", kWorldWidth * 0.5F, 422.0F,
              1.5F, color(255, 255, 255), true);
-    drawText(renderer, "PRESS ENTER OR 1", kWorldWidth * 0.5F, 397.0F,
+    drawText(renderer, "PRESS ENTER OR 1", kWorldWidth * 0.5F, 449.0F,
              2.0F, color(255, 255, 255), true);
-  } else if (game.scene == Scene::Crashed) {
+  } else if (game.scene == Scene::Crashed &&
+             game.crashFrame >= kCrashBurnFrames) {
     fillRect(renderer, 55.0F, 220.0F, 370.0F, 134.0F, color(33, 5, 8, 232));
     drawText(renderer, "MISSED THE HOOP", kWorldWidth * 0.5F, 246.0F, 2.4F,
              color(255, 96, 64), true);
@@ -1401,10 +1563,13 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
   }
 
   if (game.scene == Scene::Playing && game.instructionFrames > 0) {
-    fillRect(renderer, 61.0F, 104.0F, 358.0F, 66.0F, color(2, 8, 23, 218));
-    drawText(renderer, "LEFT RIGHT MOVE LION", kWorldWidth * 0.5F, 117.0F,
+    fillRect(renderer, 61.0F, kArenaTop + 12.0F, 358.0F, 66.0F,
+             color(2, 8, 23, 218));
+    drawText(renderer, "LEFT RIGHT MOVE LION", kWorldWidth * 0.5F,
+             kArenaTop + 25.0F,
              1.6F, color(255, 227, 119), true);
-    drawText(renderer, "SPACE OR Z JUMP", kWorldWidth * 0.5F, 143.0F,
+    drawText(renderer, "SPACE OR Z JUMP", kWorldWidth * 0.5F,
+             kArenaTop + 51.0F,
              1.7F, color(255, 255, 255), true);
   }
 
@@ -1496,7 +1661,28 @@ int main(int argc, char** argv) {
   if (!options.capturePath.empty()) {
     startGame(game);
     game.instructionFrames = 0;
-    if (options.captureScene == "goal") {
+    if (options.captureScene == "ring") {
+      game.player.position = {800.0F, kGroundY - 137.0F};
+      game.player.previous = game.player.position;
+      game.player.grounded = false;
+      game.player.jumpFrame = 31;
+      game.player.verticalVelocity = 0.0F;
+      game.cameraX = game.player.position.x - 78.0F;
+      game.previousCameraX = game.cameraX;
+      game.bonusRings.front().worldX = game.player.position.x;
+      game.bonusRings.front().containsPrize = true;
+      game.bonusRings.front().collected = true;
+    } else if (options.captureScene == "crash") {
+      game.scene = Scene::Crashed;
+      game.player.position = {800.0F, kGroundY};
+      game.player.previous = game.player.position;
+      game.player.alive = false;
+      game.player.grounded = true;
+      game.player.runSpeed = 0.0F;
+      game.cameraX = game.player.position.x - 78.0F;
+      game.previousCameraX = game.cameraX;
+      game.crashFrame = 34;
+    } else if (options.captureScene == "goal") {
       game.scene = Scene::Goal;
       game.player.position = {kCourseLength, kGroundY - 18.0F};
       game.player.previous = game.player.position;
@@ -1608,7 +1794,8 @@ int main(int argc, char** argv) {
       }
     }
 
-    if (jumpQueued && game.scene == Scene::Crashed) {
+    if (jumpQueued && game.scene == Scene::Crashed &&
+        game.crashFrame >= kCrashBurnFrames) {
       restartAfterCrash(game);
       jumpQueued = false;
     }

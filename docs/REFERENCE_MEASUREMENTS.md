@@ -49,6 +49,12 @@ sequence and gives the native collision model a repeatable test case.
 
 ## Visual construction notes
 
+- The zeppelin, central tent crown, and Ferris-wheel position stay fixed in the
+  upper marquee. The Ferris wheel animates in place.
+- The black score/lives/time/credit panel and its colored border bulbs remain
+  fixed directly below that marquee.
+- The lower arena wall and crowd scroll with the course, independently from
+  the fixed upper presentation.
 - The fire ring is suspended immediately below a horizontal ceiling track.
 - Its hanger moves with the ring; the ring does not rise from a floor stand.
 - Charlie is a clown with white face paint, red hair and nose, a bright coat,

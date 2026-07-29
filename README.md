@@ -5,8 +5,10 @@ of early circus obstacle games. It does not emulate hardware, load ROMs, or
 contain extracted graphics, audio, program code, names, or logos.
 
 The current milestone is a playable Stage 1 prototype with original
-hand-painted HD rider, arena, and fire-hoop assets. Vector rendering remains
-only as a fallback if an asset cannot be loaded.
+hand-painted HD rider, arena, marquee, Ferris-wheel, and fire-hoop assets.
+The friendly blond Charlie rider uses a six-pose sheet while retaining the
+original HD lion artwork. Vector rendering remains only as a fallback if an
+asset cannot be loaded.
 
 ## Display design
 
@@ -14,6 +16,10 @@ only as a fallback if an asset cannot be loaded.
 - Exact fixed simulation cadence: approximately `60.606060 Hz`, matching the
   documented original board timing.
 - Rendering resolution is dynamic. The logical units do not limit art detail.
+- The upper zeppelin/tent marquee and black score panel remain fixed.
+- The Ferris wheel rotates in place while its gondolas stay upright.
+- The lower arena wall, crowd, floor, distance signs, and goal scroll with
+  Charlie.
 - Modern landscape displays pillarbox the portrait playfield.
 - A vertically mounted CRT can use a landscape signal and rotate the final
   frame in software.
@@ -86,6 +92,9 @@ are not hidden in this file.
 cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
 ./build/big_top_run --mode 480x640 --capture /tmp/big-top-preview.png
 ```
+
+Pass `--capture-scene ring` or `--capture-scene crash` to inspect those
+animation states; `goal` and `tally` are also available.
 
 ## Reference analysis
 
