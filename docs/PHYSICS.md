@@ -33,18 +33,25 @@ audio, or code are included in this project.
 - The rider remains near the left `15–17%` of the playfield after scrolling
   begins.
 
-Values now used by the Stage 1 prototype:
+Measured motion targets:
 
-- Slow speed: `120 units/second`
-- Cruise speed: `185 units/second`
-- Fast speed: `260 units/second`
+- Fast forward speed: `260 units/second`
+- Backtracking is a real negative velocity, not merely slower forward motion.
 - Jump impulse: `-365 units/second`
 - Gravity: `550 units/second²`
 - Ground height: `532 logical units`
 - Lion collision box: intentionally smaller than the artwork
 
-The resulting jump has a calculated apex of `121 logical units` at
-approximately `40.2 frames`, closely matching the observed baseline.
+Current user-control model:
+
+- Right accelerates toward `260 units/second`.
+- Left accelerates toward `-150 units/second`.
+- Releasing both directions decelerates to a stop.
+- Holding the jump button reduces gravity during ascent to create a higher
+  jump; tapping produces the lower arc.
+
+This corrects the first prototype, where left only selected a slower positive
+speed and therefore never let the player backtrack.
 
 The debug overlay exposes cadence, velocity, jump height, and output
 resolution. The replayable MAME input trace in `tools/capture_reference.lua`

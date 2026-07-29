@@ -1,4 +1,5 @@
 #include <SDL.h>
+#include <SDL_image.h>
 
 #include <algorithm>
 #include <array>
@@ -22,9 +23,8 @@ constexpr float kGroundY = 532.0F;
 constexpr float kTrackY = 344.0F;
 constexpr float kGravity = 550.0F;
 constexpr float kJumpImpulse = -365.0F;
-constexpr float kSlowSpeed = 120.0F;
-constexpr float kCruiseSpeed = 185.0F;
-constexpr float kFastSpeed = 260.0F;
+constexpr float kBackSpeed = -150.0F;
+constexpr float kForwardSpeed = 260.0F;
 constexpr float kCourseLength = 4100.0F;
 constexpr float kPi = 3.14159265358979323846F;
 
@@ -34,6 +34,8 @@ struct Options {
   int rotation = 0;
   bool fullscreen = false;
   bool debug = false;
+  bool showHelp = false;
+  std::string capturePath;
 };
 
 struct Vec2 {
@@ -48,13 +50,24 @@ struct Hoop {
   bool cleared = false;
 };
 
+struct FirePot {
+  float worldX = 0.0F;
+};
+
+struct MoneyBag {
+  float worldX = 0.0F;
+  float height = 0.0F;
+  bool collected = false;
+};
+
 struct Player {
   Vec2 position{78.0F, kGroundY};
   Vec2 previous = position;
   float verticalVelocity = 0.0F;
-  float runSpeed = kCruiseSpeed;
+  float runSpeed = 0.0F;
   bool grounded = true;
   bool alive = true;
+  bool facingRight = true;
 };
 
 enum class Scene {
@@ -68,10 +81,14 @@ struct Game {
   Scene scene = Scene::Title;
   Player player;
   std::vector<Hoop> hoops;
+  std::vector<FirePot> firePots;
+  std::vector<MoneyBag> moneyBags;
   float cameraX = 0.0F;
   float previousCameraX = 0.0F;
   int score = 0;
   int lives = 3;
+  int bonus = 6000;
+  int instructionFrames = 0;
   bool debug = false;
 };
 
@@ -80,6 +97,13 @@ struct RenderSurface {
   int width = 0;
   int height = 0;
   SDL_Rect destination{0, 0, 0, 0};
+};
+
+struct Assets {
+  SDL_Texture* arena = nullptr;
+  SDL_Texture* rider = nullptr;
+  SDL_Texture* hoop = nullptr;
+  SDL_Texture* props = nullptr;
 };
 
 bool parseMode(std::string_view value, int& width, int& height) {
@@ -103,7 +127,8 @@ void printUsage() {
       << "  --mode WIDTHxHEIGHT\n"
       << "  --rotate 0|90|270\n"
       << "  --fullscreen\n"
-      << "  --debug\n";
+      << "  --debug\n"
+      << "  --capture FILE.png\n";
 }
 
 std::optional<Options> parseOptions(int argc, char** argv) {
@@ -114,6 +139,8 @@ std::optional<Options> parseOptions(int argc, char** argv) {
       options.fullscreen = true;
     } else if (argument == "--debug") {
       options.debug = true;
+    } else if (argument == "--capture" && index + 1 < argc) {
+      options.capturePath = argv[++index];
     } else if (argument == "--mode" && index + 1 < argc) {
       if (!parseMode(argv[++index], options.width, options.height)) {
         std::cerr << "Invalid display mode.\n";
@@ -128,7 +155,7 @@ std::optional<Options> parseOptions(int argc, char** argv) {
       }
     } else if (argument == "--help" || argument == "-h") {
       printUsage();
-      return std::nullopt;
+      options.showHelp = true;
     } else {
       std::cerr << "Unknown option: " << argument << '\n';
       return std::nullopt;
@@ -143,6 +170,45 @@ SDL_Color color(Uint8 red, Uint8 green, Uint8 blue, Uint8 alpha = 255) {
 
 void setColor(SDL_Renderer* renderer, SDL_Color value) {
   SDL_SetRenderDrawColor(renderer, value.r, value.g, value.b, value.a);
+}
+
+SDL_Texture* loadAsset(SDL_Renderer* renderer, const char* filename) {
+  const std::string relativePath = std::string("assets/") + filename;
+  if (SDL_Texture* texture = IMG_LoadTexture(renderer, relativePath.c_str())) {
+    SDL_SetTextureScaleMode(texture, SDL_ScaleModeLinear);
+    return texture;
+  }
+
+  char* basePath = SDL_GetBasePath();
+  if (!basePath) return nullptr;
+  const std::string executablePath =
+      std::string(basePath) + "assets/" + filename;
+  SDL_free(basePath);
+  SDL_Texture* texture = IMG_LoadTexture(renderer, executablePath.c_str());
+  if (texture) SDL_SetTextureScaleMode(texture, SDL_ScaleModeLinear);
+  return texture;
+}
+
+Assets loadAssets(SDL_Renderer* renderer) {
+  Assets assets;
+  assets.arena = loadAsset(renderer, "stage1-arena.png");
+  assets.rider = loadAsset(renderer, "stage1-rider-sheet.png");
+  assets.hoop = loadAsset(renderer, "stage1-hoop.png");
+  assets.props = loadAsset(renderer, "stage1-props.png");
+  if (!assets.arena || !assets.rider || !assets.hoop || !assets.props) {
+    std::cerr << "Some HD assets could not be loaded; vector fallbacks remain "
+                 "available. SDL_image: "
+              << IMG_GetError() << '\n';
+  }
+  return assets;
+}
+
+void destroyAssets(Assets& assets) {
+  if (assets.arena) SDL_DestroyTexture(assets.arena);
+  if (assets.rider) SDL_DestroyTexture(assets.rider);
+  if (assets.hoop) SDL_DestroyTexture(assets.hoop);
+  if (assets.props) SDL_DestroyTexture(assets.props);
+  assets = {};
 }
 
 void fillRect(SDL_Renderer* renderer, float x, float y, float width,
@@ -282,6 +348,7 @@ void resetCourse(Game& game) {
   game.cameraX = 0.0F;
   game.previousCameraX = 0.0F;
   game.score = 0;
+  game.bonus = 6000;
   game.hoops = {
       {560.0F, kGroundY - 18.0F, kGroundY - 150.0F, false},
       {890.0F, kGroundY - 18.0F, kGroundY - 138.0F, false},
@@ -293,12 +360,26 @@ void resetCourse(Game& game) {
       {3100.0F, kGroundY - 18.0F, kGroundY - 142.0F, false},
       {3480.0F, kGroundY - 18.0F, kGroundY - 154.0F, false},
   };
+  game.firePots = {
+      {735.0F},
+      {1395.0F},
+      {2115.0F},
+      {2935.0F},
+      {3290.0F},
+  };
+  game.moneyBags = {
+      {1045.0F, 105.0F, false},
+      {1760.0F, 145.0F, false},
+      {2500.0F, 115.0F, false},
+      {3690.0F, 150.0F, false},
+  };
 }
 
 void startGame(Game& game) {
   game.scene = Scene::Playing;
   game.lives = 3;
   resetCourse(game);
+  game.instructionFrames = 420;
 }
 
 void restartAfterCrash(Game& game) {
@@ -307,11 +388,16 @@ void restartAfterCrash(Game& game) {
     return;
   }
   game.scene = Scene::Playing;
+  game.player.position.x = std::max(78.0F, game.player.position.x - 145.0F);
   game.player.position.y = kGroundY;
   game.player.previous = game.player.position;
   game.player.verticalVelocity = 0.0F;
+  game.player.runSpeed = 0.0F;
   game.player.grounded = true;
   game.player.alive = true;
+  game.cameraX = std::max(0.0F, game.player.position.x - 78.0F);
+  game.previousCameraX = game.cameraX;
+  game.instructionFrames = 180;
 }
 
 bool overlapsHoop(const Player& player, const Hoop& hoop) {
@@ -330,23 +416,37 @@ bool overlapsHoop(const Player& player, const Hoop& hoop) {
 }
 
 void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
-                float controllerAxis) {
+                bool jumpHeld, float controllerAxis) {
   if (game.scene != Scene::Playing) return;
+  if (game.instructionFrames > 0) --game.instructionFrames;
 
   game.player.previous = game.player.position;
   game.previousCameraX = game.cameraX;
 
-  const bool slow = keyboard[SDL_SCANCODE_LEFT] ||
-                    keyboard[SDL_SCANCODE_A] || controllerAxis < -0.35F;
-  const bool fast = keyboard[SDL_SCANCODE_RIGHT] ||
-                    keyboard[SDL_SCANCODE_D] || controllerAxis > 0.35F;
-  const float targetSpeed =
-      slow ? kSlowSpeed : (fast ? kFastSpeed : kCruiseSpeed);
+  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
+                        keyboard[SDL_SCANCODE_A] ||
+                        controllerAxis < -0.35F;
+  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
+                         keyboard[SDL_SCANCODE_D] ||
+                         controllerAxis > 0.35F;
+  float targetSpeed = 0.0F;
+  if (moveLeft != moveRight) {
+    targetSpeed = moveLeft ? kBackSpeed : kForwardSpeed;
+    game.player.facingRight = moveRight;
+  }
   game.player.runSpeed +=
-      (targetSpeed - game.player.runSpeed) * static_cast<float>(kFixedDt) * 8.0F;
+      (targetSpeed - game.player.runSpeed) * static_cast<float>(kFixedDt) *
+      (targetSpeed == 0.0F ? 12.0F : 9.0F);
+  if (std::abs(game.player.runSpeed) < 0.5F && targetSpeed == 0.0F) {
+    game.player.runSpeed = 0.0F;
+  }
 
   game.player.position.x +=
       game.player.runSpeed * static_cast<float>(kFixedDt);
+  if (game.player.position.x < 78.0F) {
+    game.player.position.x = 78.0F;
+    game.player.runSpeed = std::max(0.0F, game.player.runSpeed);
+  }
   game.cameraX =
       std::max(0.0F, game.player.position.x - 78.0F);
 
@@ -357,7 +457,9 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
 
   if (!game.player.grounded) {
     game.player.verticalVelocity +=
-        kGravity * static_cast<float>(kFixedDt);
+        kGravity * (jumpHeld && game.player.verticalVelocity < 0.0F ? 0.58F
+                                                                   : 1.0F) *
+        static_cast<float>(kFixedDt);
     game.player.position.y +=
         game.player.verticalVelocity * static_cast<float>(kFixedDt);
     if (game.player.position.y >= kGroundY) {
@@ -380,10 +482,32 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     }
   }
 
+  for (const auto& firePot : game.firePots) {
+    if (std::abs(game.player.position.x - firePot.worldX) < 42.0F &&
+        game.player.position.y > kGroundY - 72.0F) {
+      game.player.alive = false;
+      game.scene = Scene::Crashed;
+      --game.lives;
+      return;
+    }
+  }
+
+  for (auto& bag : game.moneyBags) {
+    const float bagCenterY = kGroundY - bag.height;
+    const float riderCenterY = game.player.position.y - 45.0F;
+    if (!bag.collected &&
+        std::abs(game.player.position.x - bag.worldX) < 52.0F &&
+        std::abs(riderCenterY - bagCenterY) < 62.0F) {
+      bag.collected = true;
+      game.score += 500;
+    }
+  }
+
+  if (game.bonus > 0) --game.bonus;
   game.score =
       std::max(game.score, static_cast<int>(game.player.position.x / 10.0F));
   if (game.player.position.x >= kCourseLength) {
-    game.score += 1000;
+    game.score += 1000 + game.bonus;
     game.scene = Scene::Complete;
   }
 }
@@ -434,7 +558,29 @@ RenderSurface buildRenderSurface(SDL_Renderer* renderer, SDL_Window* window,
   return surface;
 }
 
-void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail) {
+void drawCeilingTrack(SDL_Renderer* renderer, float cameraX) {
+  fillRect(renderer, 0.0F, kTrackY, kWorldWidth, 8.0F,
+           color(104, 117, 133));
+  fillRect(renderer, 0.0F, kTrackY + 2.0F, kWorldWidth, 2.0F,
+           color(214, 222, 226));
+  for (int clamp = -1; clamp < 14; ++clamp) {
+    const float x = static_cast<float>(clamp * 42) -
+                    std::fmod(cameraX, 42.0F);
+    fillRect(renderer, x, kTrackY - 6.0F, 8.0F, 18.0F,
+             color(70, 76, 88));
+  }
+}
+
+void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
+                  SDL_Texture* arenaTexture) {
+  if (arenaTexture) {
+    const SDL_FRect destination{0.0F, 0.0F, static_cast<float>(kWorldWidth),
+                                static_cast<float>(kWorldHeight)};
+    SDL_RenderCopyF(renderer, arenaTexture, nullptr, &destination);
+    drawCeilingTrack(renderer, cameraX);
+    return;
+  }
+
   fillRect(renderer, 0.0F, 0.0F, kWorldWidth, kWorldHeight,
            color(5, 18, 51));
 
@@ -480,16 +626,7 @@ void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail) {
 
   // Stage 1 obstacle hardware: a fixed overhead pipe/track carries the
   // moving fire-ring hangers. It is part of gameplay, not decorative scenery.
-  fillRect(renderer, 0.0F, kTrackY, kWorldWidth, 8.0F,
-           color(104, 117, 133));
-  fillRect(renderer, 0.0F, kTrackY + 2.0F, kWorldWidth, 2.0F,
-           color(214, 222, 226));
-  for (int clamp = -1; clamp < 14; ++clamp) {
-    const float x = static_cast<float>(clamp * 42) -
-                    std::fmod(cameraX, 42.0F);
-    fillRect(renderer, x, kTrackY - 6.0F, 8.0F, 18.0F,
-             color(70, 76, 88));
-  }
+  drawCeilingTrack(renderer, cameraX);
 
   fillRect(renderer, 0.0F, 474.0F, kWorldWidth, 68.0F, color(190, 126, 52));
   for (int stripe = 0; stripe < kWorldWidth / 28 + 2; ++stripe) {
@@ -504,11 +641,19 @@ void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail) {
 }
 
 void drawHoop(SDL_Renderer* renderer, const Hoop& hoop, float cameraX,
-              double timeSeconds, bool lowDetail) {
+              double timeSeconds, bool lowDetail, SDL_Texture* hoopTexture) {
   const float x = hoop.worldX - cameraX;
   if (x < -80.0F || x > kWorldWidth + 80.0F || hoop.cleared) return;
   const float centerY = (hoop.openingTop + hoop.openingBottom) * 0.5F;
   const float radiusY = (hoop.openingBottom - hoop.openingTop) * 0.5F;
+
+  if (hoopTexture) {
+    const float top = kTrackY - 10.0F;
+    const float bottom = hoop.openingBottom + 19.0F;
+    const SDL_FRect destination{x - 51.0F, top, 102.0F, bottom - top};
+    SDL_RenderCopyF(renderer, hoopTexture, nullptr, &destination);
+    return;
+  }
 
   // Each ring travels with a hanger riding the ceiling track. This preserves
   // the recognizable Stage 1 mechanical detail instead of using floor stands.
@@ -538,8 +683,87 @@ void drawHoop(SDL_Renderer* renderer, const Hoop& hoop, float cameraX,
   }
 }
 
+void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
+                    SDL_Texture* propsTexture) {
+  if (!propsTexture) return;
+  int textureWidth = 0;
+  int textureHeight = 0;
+  SDL_QueryTexture(propsTexture, nullptr, nullptr, &textureWidth,
+                   &textureHeight);
+  const int cellWidth = textureWidth / 3;
+  const SDL_Rect fireSource{0, 0, cellWidth, textureHeight};
+  const SDL_Rect bagSource{cellWidth, 0, cellWidth, textureHeight};
+  const SDL_Rect bonusRingSource{cellWidth * 2, 0, cellWidth, textureHeight};
+
+  for (const auto& firePot : game.firePots) {
+    const float screenX = firePot.worldX - cameraX;
+    if (screenX < -80.0F || screenX > kWorldWidth + 80.0F) continue;
+    const SDL_FRect destination{screenX - 31.0F, kGroundY - 102.0F, 62.0F,
+                                124.0F};
+    SDL_RenderCopyF(renderer, propsTexture, &fireSource, &destination);
+  }
+
+  for (const auto& bag : game.moneyBags) {
+    if (bag.collected) continue;
+    const float screenX = bag.worldX - cameraX;
+    if (screenX < -80.0F || screenX > kWorldWidth + 80.0F) continue;
+    const float ringCenterY = kGroundY - bag.height;
+    line(renderer, screenX, kTrackY + 5.0F, screenX,
+         ringCenterY - 42.0F, color(119, 101, 73));
+    const SDL_FRect ringDestination{screenX - 65.0F, ringCenterY - 78.0F,
+                                    130.0F, 156.0F};
+    SDL_RenderCopyF(renderer, propsTexture, &bonusRingSource,
+                    &ringDestination);
+    const SDL_FRect bagDestination{screenX - 26.0F, ringCenterY - 52.0F,
+                                   52.0F, 104.0F};
+    SDL_RenderCopyF(renderer, propsTexture, &bagSource, &bagDestination);
+  }
+}
+
 void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
-                      double timeSeconds, bool alive, bool lowDetail) {
+                      double timeSeconds, bool alive, bool lowDetail,
+                      SDL_Texture* riderTexture, float runSpeed,
+                      float verticalVelocity, bool grounded,
+                      bool facingRight) {
+  if (riderTexture) {
+    int textureWidth = 0;
+    int textureHeight = 0;
+    SDL_QueryTexture(riderTexture, nullptr, nullptr, &textureWidth,
+                     &textureHeight);
+    const int cellWidth = textureWidth / 3;
+    const int cellHeight = textureHeight / 2;
+
+    int frame = 0;
+    if (!grounded) {
+      frame = verticalVelocity < -90.0F
+                  ? 3
+                  : (verticalVelocity < 95.0F ? 4 : 5);
+    } else if (std::abs(runSpeed) > 5.0F) {
+      frame = 1 + (static_cast<int>(timeSeconds * 8.0) & 1);
+    }
+
+    const SDL_Rect source{(frame % 3) * cellWidth, (frame / 3) * cellHeight,
+                          cellWidth, cellHeight};
+    constexpr float kSpriteSize = 132.0F;
+    constexpr std::array<float, 6> kAnchorCorrection{
+        17.0F, 17.0F, 17.0F, 27.0F, 58.0F, 26.0F};
+    const SDL_FRect destination{
+        screenX - kSpriteSize * 0.5F,
+        groundY - kSpriteSize +
+            kAnchorCorrection[static_cast<size_t>(frame)],
+        kSpriteSize,
+        kSpriteSize,
+    };
+
+    SDL_SetTextureColorMod(riderTexture, alive ? 255 : 125,
+                          alive ? 255 : 125, alive ? 255 : 125);
+    SDL_RenderCopyExF(renderer, riderTexture, &source, &destination, 0.0,
+                      nullptr,
+                      facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
+    SDL_SetTextureColorMod(riderTexture, 255, 255, 255);
+    return;
+  }
+
   const float runPhase =
       std::sin(static_cast<float>(timeSeconds * (alive ? 14.0 : 2.0)));
   const SDL_Color gold = alive ? color(221, 151, 55) : color(122, 92, 72);
@@ -607,11 +831,23 @@ void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
 }
 
 void drawHud(SDL_Renderer* renderer, const Game& game) {
-  fillRect(renderer, 0.0F, 0.0F, kWorldWidth, 31.0F, color(4, 8, 20, 235));
-  drawText(renderer, "SCORE " + std::to_string(game.score), 12.0F, 10.0F,
-           2.0F, color(255, 214, 75));
-  drawText(renderer, "LIVES " + std::to_string(game.lives), 342.0F, 10.0F,
-           2.0F, color(255, 255, 255));
+  fillRect(renderer, 0.0F, 0.0F, kWorldWidth, 51.0F, color(4, 8, 20, 238));
+  drawText(renderer, "SCORE " + std::to_string(game.score), 9.0F, 8.0F,
+           1.5F, color(255, 214, 75));
+  drawText(renderer, "BONUS " + std::to_string(game.bonus),
+           kWorldWidth * 0.5F, 8.0F, 1.45F, color(255, 255, 255), true);
+  drawText(renderer, "LIVES " + std::to_string(game.lives), 374.0F, 8.0F,
+           1.45F, color(255, 255, 255));
+  const float progress =
+      std::clamp((game.player.position.x - 78.0F) /
+                     (kCourseLength - 78.0F),
+                 0.0F, 1.0F);
+  const int metersRemaining =
+      static_cast<int>(std::ceil((1.0F - progress) * 60.0F));
+  drawText(renderer, "DIST " + std::to_string(metersRemaining) + "M", 9.0F,
+           31.0F, 1.2F, color(111, 224, 255));
+  drawText(renderer, "EVENT 1", 399.0F, 31.0F, 1.2F,
+           color(255, 227, 119));
 }
 
 void drawDebug(SDL_Renderer* renderer, const Game& game,
@@ -633,17 +869,18 @@ void drawDebug(SDL_Renderer* renderer, const Game& game,
 }
 
 void renderScene(SDL_Renderer* renderer, const Game& game,
-                 const RenderSurface& surface, double timeSeconds,
-                 double interpolation) {
+                 const RenderSurface& surface, const Assets& assets,
+                 double timeSeconds, double interpolation) {
   const bool lowDetail = surface.height <= 320;
   const float camera =
       game.previousCameraX +
       (game.cameraX - game.previousCameraX) * static_cast<float>(interpolation);
-  drawBackdrop(renderer, camera, lowDetail);
+  drawBackdrop(renderer, camera, lowDetail, assets.arena);
 
   for (const auto& hoop : game.hoops) {
-    drawHoop(renderer, hoop, camera, timeSeconds, lowDetail);
+    drawHoop(renderer, hoop, camera, timeSeconds, lowDetail, assets.hoop);
   }
+  drawStageProps(renderer, game, camera, assets.props);
 
   if (game.scene != Scene::Title) {
     const float playerWorldX =
@@ -655,25 +892,32 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
         (game.player.position.y - game.player.previous.y) *
             static_cast<float>(interpolation);
     drawLionAndRider(renderer, playerWorldX - camera, playerY, timeSeconds,
-                     game.player.alive, lowDetail);
+                     game.player.alive, lowDetail, assets.rider,
+                     game.player.runSpeed, game.player.verticalVelocity,
+                     game.player.grounded, game.player.facingRight);
     drawHud(renderer, game);
   }
 
   if (game.scene == Scene::Title) {
-    fillRect(renderer, 33.0F, 158.0F, 414.0F, 238.0F, color(3, 9, 29, 225));
+    fillRect(renderer, 33.0F, 158.0F, 414.0F, 270.0F,
+             color(3, 9, 29, 225));
     drawText(renderer, "BIG TOP", kWorldWidth * 0.5F, 194.0F, 6.0F,
              color(255, 202, 56), true);
     drawText(renderer, "RUN", kWorldWidth * 0.5F, 253.0F, 8.0F,
              color(225, 52, 54), true);
     drawText(renderer, "NATIVE ARCADE PROTOTYPE", kWorldWidth * 0.5F,
-             334.0F, 1.6F, color(160, 211, 255), true);
-    drawText(renderer, "PRESS ENTER OR 1", kWorldWidth * 0.5F, 365.0F,
+             319.0F, 1.6F, color(160, 211, 255), true);
+    drawText(renderer, "LEFT RIGHT MOVE LION", kWorldWidth * 0.5F, 347.0F,
+             1.5F, color(255, 255, 255), true);
+    drawText(renderer, "SPACE OR Z JUMP", kWorldWidth * 0.5F, 370.0F,
+             1.5F, color(255, 255, 255), true);
+    drawText(renderer, "PRESS ENTER OR 1", kWorldWidth * 0.5F, 397.0F,
              2.0F, color(255, 255, 255), true);
   } else if (game.scene == Scene::Crashed) {
     fillRect(renderer, 55.0F, 220.0F, 370.0F, 134.0F, color(33, 5, 8, 232));
     drawText(renderer, "MISSED THE HOOP", kWorldWidth * 0.5F, 246.0F, 2.4F,
              color(255, 96, 64), true);
-    drawText(renderer, "PRESS JUMP TO RETRY", kWorldWidth * 0.5F, 300.0F,
+    drawText(renderer, "SPACE OR Z TO RETRY", kWorldWidth * 0.5F, 300.0F,
              1.8F, color(255, 255, 255), true);
   } else if (game.scene == Scene::Complete) {
     fillRect(renderer, 48.0F, 218.0F, 384.0F, 140.0F, color(4, 35, 24, 232));
@@ -683,11 +927,36 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
              color(255, 255, 255), true);
   }
 
+  if (game.scene == Scene::Playing && game.instructionFrames > 0) {
+    fillRect(renderer, 61.0F, 63.0F, 358.0F, 66.0F, color(2, 8, 23, 218));
+    drawText(renderer, "LEFT RIGHT MOVE LION", kWorldWidth * 0.5F, 76.0F,
+             1.6F, color(255, 227, 119), true);
+    drawText(renderer, "SPACE OR Z JUMP", kWorldWidth * 0.5F, 102.0F,
+             1.7F, color(255, 255, 255), true);
+  }
+
   if (game.debug) drawDebug(renderer, game, surface);
 }
 
 void setFullscreen(SDL_Window* window, bool enabled) {
   SDL_SetWindowFullscreen(window, enabled ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+}
+
+bool captureRenderer(SDL_Renderer* renderer, const std::string& path) {
+  int width = 0;
+  int height = 0;
+  SDL_GetRendererOutputSize(renderer, &width, &height);
+  SDL_Surface* screenshot =
+      SDL_CreateRGBSurfaceWithFormat(0, width, height, 32,
+                                     SDL_PIXELFORMAT_RGBA32);
+  if (!screenshot) return false;
+  const bool readSucceeded =
+      SDL_RenderReadPixels(renderer, nullptr, SDL_PIXELFORMAT_RGBA32,
+                           screenshot->pixels, screenshot->pitch) == 0;
+  const bool saveSucceeded =
+      readSucceeded && IMG_SavePNG(screenshot, path.c_str()) == 0;
+  SDL_FreeSurface(screenshot);
+  return saveSucceeded;
 }
 
 }  // namespace
@@ -696,10 +965,15 @@ int main(int argc, char** argv) {
   const auto parsedOptions = parseOptions(argc, argv);
   if (!parsedOptions) return argc > 1 ? 1 : 0;
   const Options options = *parsedOptions;
+  if (options.showHelp) return 0;
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0) {
     std::cerr << "SDL initialization failed: " << SDL_GetError() << '\n';
     return 1;
+  }
+  if ((IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG) == 0) {
+    std::cerr << "PNG support initialization failed: " << IMG_GetError()
+              << '\n';
   }
 
   const Uint32 windowFlags =
@@ -710,6 +984,7 @@ int main(int argc, char** argv) {
       options.width, options.height, windowFlags);
   if (!window) {
     std::cerr << "Window creation failed: " << SDL_GetError() << '\n';
+    IMG_Quit();
     SDL_Quit();
     return 1;
   }
@@ -725,10 +1000,12 @@ int main(int argc, char** argv) {
   if (!renderer) {
     std::cerr << "Renderer creation failed: " << SDL_GetError() << '\n';
     SDL_DestroyWindow(window);
+    IMG_Quit();
     SDL_Quit();
     return 1;
   }
   SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+  Assets assets = loadAssets(renderer);
 
   SDL_GameController* controller = nullptr;
   for (int index = 0; index < SDL_NumJoysticks(); ++index) {
@@ -741,13 +1018,23 @@ int main(int argc, char** argv) {
   Game game;
   game.debug = options.debug;
   resetCourse(game);
+  if (!options.capturePath.empty()) {
+    startGame(game);
+    game.instructionFrames = 0;
+    game.player.position.x = 800.0F;
+    game.player.previous = game.player.position;
+    game.cameraX = game.player.position.x - 78.0F;
+    game.previousCameraX = game.cameraX;
+  }
   RenderSurface surface =
       buildRenderSurface(renderer, window, options.rotation, {});
   if (!surface.texture) {
     std::cerr << "Render target creation failed: " << SDL_GetError() << '\n';
     if (controller) SDL_GameControllerClose(controller);
+    destroyAssets(assets);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    IMG_Quit();
     SDL_Quit();
     return 1;
   }
@@ -807,6 +1094,7 @@ int main(int argc, char** argv) {
           case SDLK_r:
             resetCourse(game);
             game.scene = Scene::Playing;
+            game.instructionFrames = 180;
             break;
           case SDLK_F1:
             game.debug = !game.debug;
@@ -844,11 +1132,22 @@ int main(int argc, char** argv) {
               SDL_GameControllerGetAxis(controller,
                                         SDL_CONTROLLER_AXIS_LEFTX)) /
           32767.0F;
+      if (SDL_GameControllerGetButton(controller,
+                                      SDL_CONTROLLER_BUTTON_DPAD_LEFT)) {
+        controllerAxis = -1.0F;
+      } else if (SDL_GameControllerGetButton(
+                     controller, SDL_CONTROLLER_BUTTON_DPAD_RIGHT)) {
+        controllerAxis = 1.0F;
+      }
     }
+    const bool jumpHeld =
+        keyboard[SDL_SCANCODE_SPACE] || keyboard[SDL_SCANCODE_Z] ||
+        (controller &&
+         SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_A));
 
     bool jumpForStep = jumpQueued;
     while (accumulator >= kFixedDt) {
-      updateGame(game, keyboard, jumpForStep, controllerAxis);
+      updateGame(game, keyboard, jumpForStep, jumpHeld, controllerAxis);
       jumpForStep = false;
       jumpQueued = false;
       accumulator -= kFixedDt;
@@ -864,7 +1163,7 @@ int main(int argc, char** argv) {
     SDL_RenderSetScale(renderer,
                        static_cast<float>(surface.width) / kWorldWidth,
                        static_cast<float>(surface.height) / kWorldHeight);
-    renderScene(renderer, game, surface, timeSeconds, interpolation);
+    renderScene(renderer, game, surface, assets, timeSeconds, interpolation);
 
     SDL_RenderSetScale(renderer, 1.0F, 1.0F);
     SDL_SetRenderTarget(renderer, nullptr);
@@ -873,6 +1172,12 @@ int main(int argc, char** argv) {
     SDL_RenderCopyEx(renderer, surface.texture, nullptr, &surface.destination,
                      static_cast<double>(options.rotation), nullptr,
                      SDL_FLIP_NONE);
+    if (!options.capturePath.empty()) {
+      if (!captureRenderer(renderer, options.capturePath)) {
+        std::cerr << "Screenshot capture failed: " << IMG_GetError() << '\n';
+      }
+      running = false;
+    }
     SDL_RenderPresent(renderer);
 
     SDL_SetWindowTitle(
@@ -885,8 +1190,10 @@ int main(int argc, char** argv) {
 
   if (surface.texture) SDL_DestroyTexture(surface.texture);
   if (controller) SDL_GameControllerClose(controller);
+  destroyAssets(assets);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
+  IMG_Quit();
   SDL_Quit();
   return 0;
 }
