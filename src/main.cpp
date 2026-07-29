@@ -19,11 +19,12 @@ constexpr double kBoardRefresh =
     6144000.0 / (384.0 * 264.0);  // 60.606060...
 constexpr double kFixedDt = 1.0 / kBoardRefresh;
 constexpr float kGroundY = 532.0F;
-constexpr float kGravity = 1080.0F;
-constexpr float kJumpImpulse = -430.0F;
-constexpr float kSlowSpeed = 72.0F;
-constexpr float kCruiseSpeed = 112.0F;
-constexpr float kFastSpeed = 166.0F;
+constexpr float kTrackY = 344.0F;
+constexpr float kGravity = 550.0F;
+constexpr float kJumpImpulse = -365.0F;
+constexpr float kSlowSpeed = 120.0F;
+constexpr float kCruiseSpeed = 185.0F;
+constexpr float kFastSpeed = 260.0F;
 constexpr float kCourseLength = 4100.0F;
 constexpr float kPi = 3.14159265358979323846F;
 
@@ -48,7 +49,7 @@ struct Hoop {
 };
 
 struct Player {
-  Vec2 position{120.0F, kGroundY};
+  Vec2 position{78.0F, kGroundY};
   Vec2 previous = position;
   float verticalVelocity = 0.0F;
   float runSpeed = kCruiseSpeed;
@@ -347,7 +348,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   game.player.position.x +=
       game.player.runSpeed * static_cast<float>(kFixedDt);
   game.cameraX =
-      std::max(0.0F, game.player.position.x - 124.0F);
+      std::max(0.0F, game.player.position.x - 78.0F);
 
   if (jumpPressed && game.player.grounded) {
     game.player.grounded = false;
@@ -479,12 +480,15 @@ void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail) {
 
   // Stage 1 obstacle hardware: a fixed overhead pipe/track carries the
   // moving fire-ring hangers. It is part of gameplay, not decorative scenery.
-  fillRect(renderer, 0.0F, 70.0F, kWorldWidth, 8.0F, color(104, 117, 133));
-  fillRect(renderer, 0.0F, 72.0F, kWorldWidth, 2.0F, color(214, 222, 226));
+  fillRect(renderer, 0.0F, kTrackY, kWorldWidth, 8.0F,
+           color(104, 117, 133));
+  fillRect(renderer, 0.0F, kTrackY + 2.0F, kWorldWidth, 2.0F,
+           color(214, 222, 226));
   for (int clamp = -1; clamp < 14; ++clamp) {
     const float x = static_cast<float>(clamp * 42) -
                     std::fmod(cameraX, 42.0F);
-    fillRect(renderer, x, 64.0F, 8.0F, 18.0F, color(70, 76, 88));
+    fillRect(renderer, x, kTrackY - 6.0F, 8.0F, 18.0F,
+             color(70, 76, 88));
   }
 
   fillRect(renderer, 0.0F, 474.0F, kWorldWidth, 68.0F, color(190, 126, 52));
@@ -508,9 +512,9 @@ void drawHoop(SDL_Renderer* renderer, const Hoop& hoop, float cameraX,
 
   // Each ring travels with a hanger riding the ceiling track. This preserves
   // the recognizable Stage 1 mechanical detail instead of using floor stands.
-  fillRect(renderer, x - 5.0F, 74.0F, 10.0F,
-           hoop.openingTop - 74.0F, color(91, 101, 116));
-  fillRect(renderer, x - 12.0F, 68.0F, 24.0F, 14.0F,
+  fillRect(renderer, x - 5.0F, kTrackY + 4.0F, 10.0F,
+           hoop.openingTop - kTrackY - 4.0F, color(91, 101, 116));
+  fillRect(renderer, x - 12.0F, kTrackY - 2.0F, 24.0F, 14.0F,
            color(58, 66, 81));
   fillRect(renderer, x - 8.0F, hoop.openingTop - 5.0F, 16.0F, 11.0F,
            color(119, 44, 34));
