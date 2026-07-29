@@ -4,6 +4,14 @@ The supplied ROM is used only as a clean-room behavioral reference. No ROM
 bytes, decrypted program, graphics, sound, text, palette data, or temporary
 screenshots are committed to this repository.
 
+Both supplied arcade sets verify successfully in MAME:
+
+- `circusc`: level-select version
+- `circusc4`: no-level-select version
+
+They share the same board driver but use different main program ROMs. Behavior
+that differs between them will be measured separately rather than assumed.
+
 ## Region layout
 
 MAME identifies the set as a Konami GX380 board:
