@@ -70,9 +70,11 @@ constexpr float kCoinArcHeight = 151.0F;
 constexpr int kCrashBurnFrames = 72;
 constexpr int kGoalArrivalFrames = 90;
 constexpr int kBirdArrivalFrames = 170;
-constexpr int kBagOpenFrames = 45;
+constexpr int kBagDropFrames = 45;
+constexpr int kBirdExitFrames = 36;
 constexpr int kCoinShowerFrames = 220;
 constexpr int kRewardCoinCount = 18;
+constexpr float kStrideAnimationSpeedScale = 0.85F;
 
 constexpr float railStartForIntercept(float playerWorldX) {
   // Rings begin travelling once they are kRingActivationLead units ahead of
@@ -202,6 +204,7 @@ struct Assets {
   SDL_Texture* props = nullptr;
   SDL_Texture* propsFlare = nullptr;
   SDL_Texture* bird = nullptr;
+  SDL_Texture* rewardBag = nullptr;
   SDL_Texture* charlieLife = nullptr;
   SDL_Texture* goalPlatform = nullptr;
   SDL_Texture* finishRider = nullptr;
@@ -219,6 +222,7 @@ struct AudioVoice {
   int volume = SDL_MIX_MAXVOLUME;
   bool loop = false;
   bool active = false;
+  Uint32 playbackStep = 1;
 };
 
 struct AudioEngine {
@@ -340,12 +344,13 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.marquee = loadAsset(renderer, "stage1-marquee-v2.png");
   assets.ferrisWheel = loadAsset(renderer, "stage1-ferris-wheel.png");
   assets.ferrisGondola = loadAsset(renderer, "stage1-ferris-gondola.png");
-  assets.rider = loadAsset(renderer, "stage1-rider-sheet-v6.png");
+  assets.rider = loadAsset(renderer, "stage1-rider-sheet-v7.png");
   assets.hoop = loadAsset(renderer, "stage1-hoop.png");
   assets.hoopFlare = loadAsset(renderer, "stage1-hoop-flare.png");
   assets.props = loadAsset(renderer, "stage1-props.png");
   assets.propsFlare = loadAsset(renderer, "stage1-props-flare.png");
   assets.bird = loadAsset(renderer, "stage1-bird-sheet.png");
+  assets.rewardBag = loadAsset(renderer, "stage1-reward-bag.png");
   assets.charlieLife = loadAsset(renderer, "stage1-charlie-life-v2.png");
   assets.goalPlatform = loadAsset(renderer, "stage1-goal-platform-v4.png");
   assets.finishRider =
@@ -353,8 +358,8 @@ Assets loadAssets(SDL_Renderer* renderer) {
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.rider || !assets.hoop ||
       !assets.hoopFlare || !assets.props || !assets.propsFlare ||
-      !assets.bird || !assets.charlieLife || !assets.goalPlatform ||
-      !assets.finishRider) {
+      !assets.bird || !assets.rewardBag || !assets.charlieLife ||
+      !assets.goalPlatform || !assets.finishRider) {
     std::cerr << "Some HD assets could not be loaded; vector fallbacks remain "
                  "available. SDL_image: "
               << IMG_GetError() << '\n';
@@ -373,6 +378,7 @@ void destroyAssets(Assets& assets) {
   if (assets.props) SDL_DestroyTexture(assets.props);
   if (assets.propsFlare) SDL_DestroyTexture(assets.propsFlare);
   if (assets.bird) SDL_DestroyTexture(assets.bird);
+  if (assets.rewardBag) SDL_DestroyTexture(assets.rewardBag);
   if (assets.charlieLife) SDL_DestroyTexture(assets.charlieLife);
   if (assets.goalPlatform) SDL_DestroyTexture(assets.goalPlatform);
   if (assets.finishRider) SDL_DestroyTexture(assets.finishRider);
@@ -398,6 +404,10 @@ bool loadAudioAsset(const char* filename, AudioClip& clip) {
 void audioCallback(void* userdata, Uint8* stream, int byteCount) {
   auto& audio = *static_cast<AudioEngine*>(userdata);
   SDL_memset(stream, 0, static_cast<size_t>(byteCount));
+  const Uint32 frameBytes =
+      static_cast<Uint32>(SDL_AUDIO_BITSIZE(audio.deviceSpec.format) / 8) *
+      audio.deviceSpec.channels;
+  std::array<Uint8, 8192> steppedBuffer{};
 
   for (auto& voice : audio.voices) {
     int outputOffset = 0;
@@ -411,6 +421,36 @@ void audioCallback(void* userdata, Uint8* stream, int byteCount) {
           break;
         }
       }
+      if (voice.playbackStep > 1 && frameBytes > 0) {
+        const Uint32 requested =
+            static_cast<Uint32>(byteCount - outputOffset);
+        const Uint32 frameCapacity = std::min(
+            requested / frameBytes,
+            static_cast<Uint32>(steppedBuffer.size()) / frameBytes);
+        Uint32 copiedFrames = 0;
+        while (copiedFrames < frameCapacity && voice.active) {
+          if (voice.position + frameBytes > voice.clip->length) {
+            if (voice.loop) {
+              voice.position = 0;
+            } else {
+              voice.active = false;
+              break;
+            }
+          }
+          SDL_memcpy(steppedBuffer.data() + copiedFrames * frameBytes,
+                     voice.clip->data + voice.position, frameBytes);
+          voice.position += frameBytes * voice.playbackStep;
+          ++copiedFrames;
+        }
+        const Uint32 mixedBytes = copiedFrames * frameBytes;
+        if (mixedBytes == 0) break;
+        SDL_MixAudioFormat(stream + outputOffset, steppedBuffer.data(),
+                           audio.deviceSpec.format, mixedBytes,
+                           voice.volume);
+        outputOffset += static_cast<int>(mixedBytes);
+        continue;
+      }
+
       const Uint32 remaining = voice.clip->length - voice.position;
       const Uint32 requested =
           static_cast<Uint32>(byteCount - outputOffset);
@@ -487,13 +527,24 @@ void setAudioVoice(AudioEngine& audio, size_t voiceIndex,
   }
   SDL_LockAudioDevice(audio.device);
   audio.voices[voiceIndex] =
-      AudioVoice{&clip, 0, volume, loop, true};
+      AudioVoice{&clip, 0, volume, loop, true, 1};
   SDL_UnlockAudioDevice(audio.device);
 }
 
-void playStageMusic(AudioEngine& audio) {
+void setStageMusicFast(AudioEngine& audio, bool fast) {
+  if (!audio.available) return;
+  SDL_LockAudioDevice(audio.device);
+  auto& musicVoice = audio.voices[0];
+  if (musicVoice.active && musicVoice.clip == &audio.stageMusic) {
+    musicVoice.playbackStep = fast ? 2U : 1U;
+  }
+  SDL_UnlockAudioDevice(audio.device);
+}
+
+void playStageMusic(AudioEngine& audio, bool fast) {
   setAudioVoice(audio, 0, audio.stageMusic,
                 static_cast<int>(SDL_MIX_MAXVOLUME * 0.58F), true);
+  setStageMusicFast(audio, fast);
 }
 
 void stopStageMusic(AudioEngine& audio) {
@@ -761,8 +812,12 @@ void resetCourse(Game& game) {
       // old 4260 lane at common play speeds. Leaving that pot in place creates
       // the impossible hoop-over-fire combination seen in playtesting.
       {4860.0F},
-      {5430.0F},
-      {5820.0F},
+      // The original final approach puts one pot beneath the last hoop and a
+      // second pot almost against the goal platform. At the native fixed-jump
+      // distance, these centers permit two distinct jumps, with the second
+      // jump descending directly onto the padded platform.
+      {5650.0F},
+      {5870.0F},
   };
   game.bonusRings = {
       {railStartForIntercept(1360.0F), 152.0F, false, false},
@@ -911,7 +966,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     ++game.goalFrame;
 
     const int showerStart =
-        kGoalArrivalFrames + kBirdArrivalFrames + kBagOpenFrames;
+        kGoalArrivalFrames + kBirdArrivalFrames + kBagDropFrames;
     if (game.perfectClear && game.goalFrame >= showerStart) {
       const int targetCoinCount = std::clamp(
           (game.goalFrame - showerStart) / 10, 0, kRewardCoinCount);
@@ -1689,7 +1744,9 @@ void drawCoin(SDL_Renderer* renderer, float x, float y, float squash = 1.0F) {
 }
 
 void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
-                          SDL_Texture* birdTexture) {
+                          SDL_Texture* birdTexture,
+                          SDL_Texture* rewardBagTexture,
+                          SDL_Texture* propsTexture) {
   const SDL_Color cheerColor =
       ((game.goalFrame / 12) & 1) == 0 ? color(255, 93, 36)
                                        : color(87, 219, 255);
@@ -1725,10 +1782,10 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
   if (!game.perfectClear) return;
 
   const int birdStart = kGoalArrivalFrames;
-  const int bagOpenStart = birdStart + kBirdArrivalFrames;
-  const int showerStart = bagOpenStart + kBagOpenFrames;
+  const int bagDropStart = birdStart + kBirdArrivalFrames;
+  const int showerStart = bagDropStart + kBagDropFrames;
   if (birdTexture && game.goalFrame >= birdStart &&
-      game.goalFrame < showerStart + 70) {
+      game.goalFrame < bagDropStart + kBirdExitFrames) {
     int textureWidth = 0;
     int textureHeight = 0;
     SDL_QueryTexture(birdTexture, nullptr, nullptr, &textureWidth,
@@ -1736,21 +1793,19 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
     const int cellWidth = textureWidth / 4;
     int cell = 0;
     float birdX = 0.0F;
-    if (game.goalFrame < bagOpenStart) {
+    if (game.goalFrame < bagDropStart) {
       const float progress = std::clamp(
           static_cast<float>(game.goalFrame - birdStart) /
               static_cast<float>(kBirdArrivalFrames),
           0.0F, 1.0F);
       birdX = 510.0F + (kGoalScreenX - 510.0F) * progress;
       cell = (game.goalFrame / 8) & 1;
-    } else if (game.goalFrame < showerStart + 20) {
-      birdX = kGoalScreenX;
-      cell = 2;
     } else {
       const float exitProgress = std::clamp(
-          static_cast<float>(game.goalFrame - showerStart - 20) / 50.0F,
+          static_cast<float>(game.goalFrame - bagDropStart) /
+              static_cast<float>(kBirdExitFrames),
           0.0F, 1.0F);
-      birdX = kGoalScreenX - exitProgress * 180.0F;
+      birdX = kGoalScreenX - exitProgress * 220.0F;
       cell = 3;
     }
     const SDL_Rect source{cell * cellWidth, 0, cellWidth, textureHeight};
@@ -1759,16 +1814,55 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
     SDL_RenderCopyF(renderer, birdTexture, &source, &destination);
   }
 
+  constexpr float kRewardBagX = kGoalScreenX;
+  constexpr float kRewardBagRestY = 305.0F;
+  float rewardBagY = kRewardBagRestY;
+  const bool showRewardBag = game.goalFrame >= bagDropStart;
+  if (showRewardBag && game.goalFrame < showerStart) {
+    const float dropProgress = std::clamp(
+        static_cast<float>(game.goalFrame - bagDropStart) /
+            static_cast<float>(kBagDropFrames),
+        0.0F, 1.0F);
+    const float easedDrop = dropProgress * dropProgress;
+    rewardBagY = 263.0F + (kRewardBagRestY - 263.0F) * easedDrop;
+  }
+
   if (game.goalFrame >= showerStart) {
     for (int index = 0; index < kRewardCoinCount; ++index) {
       const int localFrame = game.goalFrame - showerStart - index * 10;
       if (localFrame < 0 || localFrame >= 105) continue;
       const float lane =
           static_cast<float>((index * 37) % 91) - 45.0F;
-      const float x = kGoalScreenX + lane * 0.55F;
-      const float y = 300.0F + static_cast<float>(localFrame) * 2.15F;
+      const float spread = std::clamp(
+          static_cast<float>(localFrame) / 32.0F, 0.0F, 1.0F);
+      const float x = kRewardBagX + lane * 0.55F * spread;
+      const float y = kRewardBagRestY + 30.0F +
+                      static_cast<float>(localFrame) * 2.05F;
       drawCoin(renderer, x, y,
                std::abs(std::sin(static_cast<float>(localFrame) * 0.24F)));
+    }
+  }
+
+  if (showRewardBag) {
+    if (rewardBagTexture) {
+      const SDL_FRect bagDestination{kRewardBagX - 24.0F,
+                                     rewardBagY - 30.0F, 48.0F, 59.0F};
+      SDL_RenderCopyF(renderer, rewardBagTexture, nullptr, &bagDestination);
+    } else if (propsTexture) {
+      int textureWidth = 0;
+      int textureHeight = 0;
+      SDL_QueryTexture(propsTexture, nullptr, nullptr, &textureWidth,
+                       &textureHeight);
+      const int cellWidth = textureWidth / 3;
+      const SDL_Rect bagSource{cellWidth, 0, cellWidth, textureHeight};
+      const SDL_FRect bagDestination{kRewardBagX - 25.0F,
+                                     rewardBagY - 35.0F, 50.0F, 100.0F};
+      SDL_RenderCopyF(renderer, propsTexture, &bagSource, &bagDestination);
+    } else {
+      ellipse(renderer, kRewardBagX, rewardBagY + 10.0F, 18.0F, 24.0F,
+              color(223, 158, 39), 4);
+      fillRect(renderer, kRewardBagX - 12.0F, rewardBagY - 16.0F, 24.0F,
+               7.0F, color(118, 68, 21));
     }
   }
 }
@@ -1796,7 +1890,9 @@ void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
       // Cycling all three grounded poses preserves that cadence while making
       // a complete stride slower and more readable than the old two-frame
       // toggle.
-      frame = static_cast<int>(timeSeconds * (kBoardRefresh / 7.5)) % 3;
+      frame = static_cast<int>(timeSeconds * (kBoardRefresh / 7.5) *
+                               kStrideAnimationSpeedScale) %
+              3;
     }
 
     const SDL_Rect source{(frame % 3) * cellWidth, (frame / 3) * cellHeight,
@@ -2146,7 +2242,8 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
                        game.player.facingRight);
     }
     if (game.scene == Scene::Goal) {
-      drawGoalPresentation(renderer, game, assets.bird);
+      drawGoalPresentation(renderer, game, assets.bird, assets.rewardBag,
+                           assets.props);
     }
   }
   drawHud(renderer, game, assets.charlieLife);
@@ -2307,7 +2404,8 @@ int main(int argc, char** argv) {
       game.cameraX = kCourseLength - kGoalScreenX;
       game.previousCameraX = game.cameraX;
       game.perfectClear = true;
-      game.goalFrame = kGoalArrivalFrames + 85;
+      game.goalFrame = kGoalArrivalFrames + kBirdArrivalFrames +
+                       kBagDropFrames + 30;
       for (auto& hoop : game.hoops) hoop.cleared = true;
       for (auto& ring : game.bonusRings) ring.collected = true;
     } else if (options.captureScene == "tally") {
@@ -2350,6 +2448,7 @@ int main(int argc, char** argv) {
   bool fullscreen = options.fullscreen;
   bool jumpQueued = false;
   bool stageMusicPlaying = false;
+  bool stageMusicFast = false;
   std::uint32_t observedJumpAudioSerial = game.jumpAudioSerial;
   std::uint32_t observedCrashAudioSerial = game.crashAudioSerial;
   std::uint32_t observedExtraCharlieAudioSerial =
@@ -2466,13 +2565,21 @@ int main(int argc, char** argv) {
     }
 
     const bool shouldPlayStageMusic = game.scene == Scene::Playing;
+    const bool shouldUseFastStageMusic =
+        shouldPlayStageMusic && game.bonus <= 999;
     if (shouldPlayStageMusic != stageMusicPlaying) {
       if (shouldPlayStageMusic) {
-        playStageMusic(audio);
+        playStageMusic(audio, shouldUseFastStageMusic);
+        stageMusicFast = shouldUseFastStageMusic;
       } else {
         stopStageMusic(audio);
+        stageMusicFast = false;
       }
       stageMusicPlaying = shouldPlayStageMusic;
+    } else if (shouldPlayStageMusic &&
+               shouldUseFastStageMusic != stageMusicFast) {
+      setStageMusicFast(audio, shouldUseFastStageMusic);
+      stageMusicFast = shouldUseFastStageMusic;
     }
     if (observedJumpAudioSerial != game.jumpAudioSerial) {
       playJumpSound(audio);
@@ -2501,7 +2608,7 @@ int main(int argc, char** argv) {
       observedScene = game.scene;
     }
     const int showerStart =
-        kGoalArrivalFrames + kBirdArrivalFrames + kBagOpenFrames;
+        kGoalArrivalFrames + kBirdArrivalFrames + kBagDropFrames;
     if (game.scene == Scene::Goal && game.perfectClear &&
         observedGoalFrame < showerStart && game.goalFrame >= showerStart) {
       playBirdCoinDrop(audio);

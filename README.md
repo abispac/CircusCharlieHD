@@ -94,7 +94,8 @@ The local build uses these standardized 48 kHz mono files:
 
 - `event1-stage.wav`: track 03, looped during Event 1, stopped immediately on
   a miss or goal arrival, and restarted from the beginning when Charlie
-  respawns
+  respawns. Its playback switches to the arcade-style double-speed warning
+  as soon as the Zeppelin bonus reaches `0999`.
 - `jump.wav`: track 08, restarted on every valid jump
 - `miss.wav` and `miss-2.wav`: tracks 07 and 09, started together on every
   fire collision
