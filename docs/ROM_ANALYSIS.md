@@ -173,6 +173,8 @@ sound. This timing is implemented as a pending launch after the reverse jump,
 not as an immediate mid-jump pickup. The captured coin is near its apex about
 50 frames after launch; the native 96-frame flight therefore reaches its peak
 at frame 48 and passes Charlie on its descending half at the measured catch.
+Its 151-logical-unit height is 35 percent taller than the initial prototype
+arc, matching the more pronounced launch visible during gameplay review.
 
 ## Event 1 obstacle fairness invariant
 

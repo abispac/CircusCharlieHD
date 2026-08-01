@@ -66,6 +66,7 @@ constexpr float kBonusRingVisualHalfHeight = 115.0F;
 // launch and catches it on the descending half at frame 66. A 96-frame arc
 // matches both measurements and still returns visibly to the pot when missed.
 constexpr int kCoinFlightFrames = 96;
+constexpr float kCoinArcHeight = 151.0F;
 constexpr int kCrashBurnFrames = 72;
 constexpr int kGoalArrivalFrames = 90;
 constexpr int kBirdArrivalFrames = 170;
@@ -865,7 +866,7 @@ float firePotCoinY(const FirePot& firePot) {
       static_cast<float>(firePot.coinFrame) /
           static_cast<float>(kCoinFlightFrames),
       0.0F, 1.0F);
-  return kGroundY - 30.0F - std::sin(progress * kPi) * 112.0F;
+  return kGroundY - 30.0F - std::sin(progress * kPi) * kCoinArcHeight;
 }
 
 void finishStage(Game& game) {
