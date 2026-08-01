@@ -56,6 +56,7 @@ constexpr float kLionCollisionTop = 58.0F;
 constexpr float kLionCollisionBottom = 7.0F;
 constexpr float kFirePotCollisionHalfWidth = 32.0F;
 constexpr float kFirePotClearance = 42.0F;
+constexpr float kHoopPotSafetyDistance = 76.0F;
 constexpr float kBigRingVisualHalfWidth = 24.0F;
 constexpr float kBonusRingCollisionHalfWidth = 6.0F;
 constexpr float kBonusRingOpeningHalfHeight = 72.0F;
@@ -755,7 +756,9 @@ void resetCourse(Game& game) {
       {2920.0F},
       {3300.0F},
       {3650.0F},
-      {4260.0F},
+      // The delayed second member of the close double-hoop set occupies the
+      // old 4260 lane at common play speeds. Leaving that pot in place creates
+      // the impossible hoop-over-fire combination seen in playtesting.
       {4860.0F},
       {5430.0F},
       {5820.0F},
@@ -1057,14 +1060,19 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     }
   }
 
-  for (size_t firePotIndex = 0; firePotIndex < game.firePots.size();
-       ++firePotIndex) {
-    auto& firePot = game.firePots[firePotIndex];
+  for (auto& firePot : game.firePots) {
     const float potDistance =
         game.player.position.x - firePot.worldX;
+    const bool sharesHoopLane = std::any_of(
+        game.hoops.begin(), game.hoops.end(),
+        [&firePot](const Hoop& hoop) {
+          return std::abs(hoop.worldX - firePot.worldX) <
+                 kHoopPotSafetyDistance;
+        });
     const bool backwardJump =
         !game.player.grounded && game.player.runSpeed < -20.0F;
-    if (!game.hiddenCoinTriggered && !firePot.coinChanceResolved &&
+    if (!sharesHoopLane && !game.hiddenCoinTriggered &&
+        !firePot.coinChanceResolved &&
         backwardJump && potDistance > -20.0F && potDistance < 62.0F) {
       firePot.coinChanceResolved = true;
       const bool revealCoin = nextRandom(game) % 3U == 0U;
@@ -1109,7 +1117,8 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
       }
     }
 
-    if (std::abs(game.player.position.x - firePot.worldX) <
+    if (!sharesHoopLane &&
+        std::abs(game.player.position.x - firePot.worldX) <
             kFirePotCollisionHalfWidth &&
         game.player.position.y > kGroundY - kFirePotClearance) {
       crashPlayer(game);

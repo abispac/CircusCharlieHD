@@ -153,16 +153,15 @@ that invokes it. This produces authentic private reference clips without
 mistakenly treating arbitrary ROM byte ranges as PCM audio.
 
 `tools/capture_sound_ids.lua` automates that command sweep. The clean isolated
-sweep confirms hexadecimal command `0x41` (decimal `65`) as the coin-insert
-sound. It must not be reused for money bags, hidden bonus coins, or the extra
-Charlie. Captured WAV output and command logs remain private and are written
-outside the repository.
+sweep confirms hexadecimal command `0x41` (decimal `65`) as the coin sound.
+The original game also uses it when the extra Charlie is collected; it is not
+used for money bags or hidden fire-pot coins. Captured WAV output and command
+logs remain private and are written outside the repository.
 
 Auditioning the isolated command catalog confirms `0x49` (decimal `73`) as
-the shared money-bag and extra-Charlie reward effect. The native game keeps
-those as independent event channels even though they currently use the same
-verified arcade command, preventing later sound assignments from affecting
-unrelated rewards.
+the money-bag reward effect. The native game keeps money bags, the extra
+Charlie, and hidden coins as independent event channels so later sound
+assignments cannot affect unrelated rewards.
 
 The deterministic `circusc4` attract trace also captures the complete hidden
 fire-pot coin interaction. A reverse jump begins at frame `2775`; command
@@ -174,6 +173,16 @@ sound. This timing is implemented as a pending launch after the reverse jump,
 not as an immediate mid-jump pickup. The captured coin is near its apex about
 50 frames after launch; the native 96-frame flight therefore reaches its peak
 at frame 48 and passes Charlie on its descending half at the measured catch.
+
+## Event 1 obstacle fairness invariant
+
+The close double-hoop sequence remains intact, but its old `4260` floor-fire
+slot is deliberately empty. Because the two hoops begin rail motion at
+different activation times, the trailing hoop occupies that lane at common
+play speeds and made the combined obstacle impossible. A runtime safety check
+also makes any floor pot non-lethal while a moving hoop is within 76 logical
+units, protecting slower and backtracking play without weakening ordinary
+double hoops or ordinary fire-pot jumps.
 
 ## Recovered Event 1 rider labels
 

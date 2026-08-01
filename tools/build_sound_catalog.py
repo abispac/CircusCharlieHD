@@ -19,9 +19,9 @@ KNOWN_LABELS = {
     0x16: "Aerial-bar music",
     0x17: "Miss music",
     0x1D: "Event-selection music",
-    0x41: "Credit / coin insert",
+    0x41: "Credit / extra Charlie",
     0x47: "Jump",
-    0x49: "Money bag / extra Charlie",
+    0x49: "Money bag",
     0x4F: "Miss effect component",
     0x50: "Fire-pot coin launch / collection",
 }
