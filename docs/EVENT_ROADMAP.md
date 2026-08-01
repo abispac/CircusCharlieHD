@@ -16,12 +16,18 @@ All production art, animation, audio, and source code will be newly authored.
 - Fire pots interrupt the ring sequence.
 - Small rings contain increasingly valuable money bags.
 - Backward-jump secrets and the no-miss reward are represented.
-- A backwards hoop jump can replace the next ring with an extra-life doll.
+- Three backward jumps in the opening summon the moving extra-Charlie doll;
+  the life is awarded only when the rider catches it.
 - A backwards fire-pot jump can reveal the stage's hidden coin.
-- Collecting all bags and the hidden coin without a miss triggers the goal
-  bird and bonus-coin shower.
+- Collecting every available bag without a miss triggers the goal bird and
+  bonus-coin shower.
 - Scrolling, meter markers, bonus countdown, and goal arrival follow the
   arcade event's cadence.
+- The fixed marquee and score panel retain their multicolor bulbs and reserve
+  Charlie icons during play and the tally screen.
+- Goal arrival stops the stage music, animates the cheering crowd, alternates
+  GREAT/FAROUT signs, and then runs the bird, coin-shower, and bonus sounds in
+  the recorded order.
 
 ## Event 2 — Tightrope monkeys
 

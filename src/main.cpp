@@ -7,7 +7,9 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <iomanip>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -162,6 +164,10 @@ struct Game {
   bool perfectClear = false;
   bool hiddenCoinTriggered = false;
   bool timeScoreApplied = false;
+  int openingBackwardJumps = 0;
+  bool extraCharlieActive = false;
+  bool extraCharlieCollected = false;
+  float extraCharlieWorldX = 0.0F;
   std::uint32_t jumpAudioSerial = 0;
   std::uint32_t crashAudioSerial = 0;
   std::uint32_t randomState = 0x6d2b79f5U;
@@ -186,6 +192,7 @@ struct Assets {
   SDL_Texture* props = nullptr;
   SDL_Texture* propsFlare = nullptr;
   SDL_Texture* bird = nullptr;
+  SDL_Texture* charlieLife = nullptr;
 };
 
 struct AudioClip {
@@ -209,7 +216,10 @@ struct AudioEngine {
   AudioClip jump;
   AudioClip miss;
   AudioClip missTwo;
-  std::array<AudioVoice, 4> voices{};
+  AudioClip crowdCheer;
+  AudioClip birdCoinDrop;
+  AudioClip bonusCount;
+  std::array<AudioVoice, 7> voices{};
   bool available = false;
 };
 
@@ -314,16 +324,17 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.marquee = loadAsset(renderer, "stage1-marquee-v2.png");
   assets.ferrisWheel = loadAsset(renderer, "stage1-ferris-wheel.png");
   assets.ferrisGondola = loadAsset(renderer, "stage1-ferris-gondola.png");
-  assets.rider = loadAsset(renderer, "stage1-rider-sheet-v2.png");
+  assets.rider = loadAsset(renderer, "stage1-rider-sheet-v3.png");
   assets.hoop = loadAsset(renderer, "stage1-hoop.png");
   assets.hoopFlare = loadAsset(renderer, "stage1-hoop-flare.png");
   assets.props = loadAsset(renderer, "stage1-props.png");
   assets.propsFlare = loadAsset(renderer, "stage1-props-flare.png");
   assets.bird = loadAsset(renderer, "stage1-bird-sheet.png");
+  assets.charlieLife = loadAsset(renderer, "stage1-charlie-life.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.rider || !assets.hoop ||
       !assets.hoopFlare || !assets.props || !assets.propsFlare ||
-      !assets.bird) {
+      !assets.bird || !assets.charlieLife) {
     std::cerr << "Some HD assets could not be loaded; vector fallbacks remain "
                  "available. SDL_image: "
               << IMG_GetError() << '\n';
@@ -342,6 +353,7 @@ void destroyAssets(Assets& assets) {
   if (assets.props) SDL_DestroyTexture(assets.props);
   if (assets.propsFlare) SDL_DestroyTexture(assets.propsFlare);
   if (assets.bird) SDL_DestroyTexture(assets.bird);
+  if (assets.charlieLife) SDL_DestroyTexture(assets.charlieLife);
   assets = {};
 }
 
@@ -395,7 +407,10 @@ bool loadAudio(AudioEngine& audio) {
       loadAudioAsset("event1-stage.wav", audio.stageMusic) &&
       loadAudioAsset("jump.wav", audio.jump) &&
       loadAudioAsset("miss.wav", audio.miss) &&
-      loadAudioAsset("miss-2.wav", audio.missTwo);
+      loadAudioAsset("miss-2.wav", audio.missTwo) &&
+      loadAudioAsset("crowd-cheer.wav", audio.crowdCheer) &&
+      loadAudioAsset("bird-coin-drop.wav", audio.birdCoinDrop) &&
+      loadAudioAsset("bonus-count.wav", audio.bonusCount);
   if (!loaded) {
     std::cerr << "One or more audio assets could not be loaded: "
               << SDL_GetError() << '\n';
@@ -409,7 +424,10 @@ bool loadAudio(AudioEngine& audio) {
            clip.spec.channels == reference.channels;
   };
   if (!matchesReference(audio.jump) || !matchesReference(audio.miss) ||
-      !matchesReference(audio.missTwo)) {
+      !matchesReference(audio.missTwo) ||
+      !matchesReference(audio.crowdCheer) ||
+      !matchesReference(audio.birdCoinDrop) ||
+      !matchesReference(audio.bonusCount)) {
     std::cerr << "Audio assets do not share one PCM format.\n";
     return false;
   }
@@ -464,6 +482,20 @@ void playMissSounds(AudioEngine& audio) {
                 static_cast<int>(SDL_MIX_MAXVOLUME * 0.90F), false);
 }
 
+void playCrowdCheer(AudioEngine& audio) {
+  setAudioVoice(audio, 4, audio.crowdCheer,
+                static_cast<int>(SDL_MIX_MAXVOLUME * 0.86F), false);
+}
+
+void playBirdCoinDrop(AudioEngine& audio) {
+  setAudioVoice(audio, 5, audio.birdCoinDrop, SDL_MIX_MAXVOLUME, false);
+}
+
+void playBonusCount(AudioEngine& audio) {
+  setAudioVoice(audio, 6, audio.bonusCount,
+                static_cast<int>(SDL_MIX_MAXVOLUME * 0.92F), false);
+}
+
 void destroyAudio(AudioEngine& audio) {
   if (audio.device != 0) {
     SDL_PauseAudioDevice(audio.device, 1);
@@ -473,6 +505,9 @@ void destroyAudio(AudioEngine& audio) {
   if (audio.jump.data) SDL_FreeWAV(audio.jump.data);
   if (audio.miss.data) SDL_FreeWAV(audio.miss.data);
   if (audio.missTwo.data) SDL_FreeWAV(audio.missTwo.data);
+  if (audio.crowdCheer.data) SDL_FreeWAV(audio.crowdCheer.data);
+  if (audio.birdCoinDrop.data) SDL_FreeWAV(audio.birdCoinDrop.data);
+  if (audio.bonusCount.data) SDL_FreeWAV(audio.bonusCount.data);
   audio = {};
 }
 
@@ -637,6 +672,10 @@ void resetCourse(Game& game) {
   game.perfectClear = false;
   game.hiddenCoinTriggered = false;
   game.timeScoreApplied = false;
+  game.openingBackwardJumps = 0;
+  game.extraCharlieActive = false;
+  game.extraCharlieCollected = false;
+  game.extraCharlieWorldX = 0.0F;
 
   // Event 1 is laid out in the same difficulty progression visible in the
   // recorded 60M-to-GOAL run: two introductory rings, alternating floor fire
@@ -887,7 +926,32 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     }
   }
 
+  if (game.extraCharlieActive) {
+    game.extraCharlieWorldX -= ringTravel;
+    if (std::abs(game.extraCharlieWorldX - game.player.position.x) < 42.0F) {
+      game.extraCharlieActive = false;
+      game.extraCharlieCollected = true;
+      ++game.lives;
+      game.score += 1000;
+    } else if (game.extraCharlieWorldX < game.player.position.x - 95.0F) {
+      game.extraCharlieActive = false;
+    }
+  }
+
   if (jumpPressed && game.player.grounded) {
+    // In the recorded Event 1 opening, three reverse jumps summon a Charlie
+    // doll on the overhead rail. The player earns the extra life only by
+    // intercepting that moving doll, not at the instant of the third jump.
+    const bool openingReverseJump =
+        moveLeft && game.player.position.x < 240.0F &&
+        !game.extraCharlieActive && !game.extraCharlieCollected;
+    if (openingReverseJump) {
+      ++game.openingBackwardJumps;
+      if (game.openingBackwardJumps >= 3) {
+        game.extraCharlieActive = true;
+        game.extraCharlieWorldX = game.player.position.x + 430.0F;
+      }
+    }
     game.player.grounded = false;
     game.player.jumpFrame = 0;
     game.player.verticalVelocity = 0.0F;
@@ -1360,23 +1424,46 @@ void drawBonusRingForegrounds(SDL_Renderer* renderer, const Game& game,
 
 void drawFloorPlaque(SDL_Renderer* renderer, float screenX,
                      std::string_view label, bool start) {
-  const float width = start ? 74.0F : 58.0F;
+  const float width = start ? 82.0F : 62.0F;
   const float left = screenX - width * 0.5F;
-  const float top = kGroundY - 31.0F;
+  const float top = kGroundY - (start ? 43.0F : 36.0F);
   const SDL_Color edge =
-      start ? color(255, 196, 48) : color(72, 218, 255);
+      start ? color(255, 199, 48) : color(75, 219, 255);
   const SDL_Color face =
-      start ? color(145, 25, 34) : color(22, 70, 145);
+      start ? color(139, 26, 35) : color(15, 62, 126);
 
-  fillRect(renderer, left + 4.0F, top + 8.0F, width, 23.0F,
-           color(34, 17, 13, 145));
-  fillRect(renderer, left, top, width, 25.0F, edge);
-  fillRect(renderer, left + 3.0F, top + 3.0F, width - 6.0F, 19.0F, face);
-  fillRect(renderer, left + 6.0F, top + 5.0F, width - 12.0F, 2.0F,
-           start ? color(255, 232, 127) : color(135, 238, 255));
-  fillRect(renderer, left + 8.0F, top + 25.0F, 4.0F, 6.0F, edge);
-  fillRect(renderer, left + width - 12.0F, top + 25.0F, 4.0F, 6.0F, edge);
-  drawText(renderer, label, screenX, top + 7.0F, start ? 1.05F : 1.15F,
+  // Painted enamel marker with dimensional brass/chrome trim, legs and
+  // rivets. It remains readable at 480x640 without looking like a flat label.
+  fillRect(renderer, left + 5.0F, top + 7.0F, width, 29.0F,
+           color(26, 13, 11, 150));
+  fillRect(renderer, left, top, width, 29.0F, color(44, 38, 43));
+  fillRect(renderer, left + 2.0F, top + 2.0F, width - 4.0F, 25.0F, edge);
+  fillRect(renderer, left + 5.0F, top + 5.0F, width - 10.0F, 19.0F, face);
+  fillRect(renderer, left + 7.0F, top + 7.0F, width - 14.0F, 2.0F,
+           start ? color(255, 242, 157) : color(164, 244, 255));
+  filledCircle(renderer, left + 8.0F, top + 14.5F, 2.0F,
+               color(245, 235, 188));
+  filledCircle(renderer, left + width - 8.0F, top + 14.5F, 2.0F,
+               color(245, 235, 188));
+  for (int post = 0; post < 2; ++post) {
+    const float postX = left + (post == 0 ? 12.0F : width - 16.0F);
+    fillRect(renderer, postX, top + 29.0F, 5.0F, start ? 14.0F : 8.0F,
+             color(95, 83, 75));
+    fillRect(renderer, postX + 1.0F, top + 29.0F, 2.0F,
+             start ? 14.0F : 8.0F, color(230, 200, 120));
+  }
+  if (start) {
+    line(renderer, left + 8.0F, top, left + 8.0F, top - 15.0F,
+         color(232, 210, 154));
+    const std::array<SDL_Vertex, 3> flag{{
+        {{left + 9.0F, top - 15.0F}, color(239, 49, 45), {0, 0}},
+        {{left + 31.0F, top - 10.0F}, color(255, 199, 48), {0, 0}},
+        {{left + 9.0F, top - 5.0F}, color(239, 49, 45), {0, 0}},
+    }};
+    SDL_RenderGeometry(renderer, nullptr, flag.data(),
+                       static_cast<int>(flag.size()), nullptr, 0);
+  }
+  drawText(renderer, label, screenX, top + 8.0F, start ? 1.15F : 1.2F,
            color(255, 244, 190), true);
 }
 
@@ -1416,6 +1503,44 @@ void drawCourseMarkers(SDL_Renderer* renderer, const Game& game,
            color(255, 244, 124), true);
 }
 
+void drawExtraCharlie(SDL_Renderer* renderer, const Game& game,
+                      float cameraX, double timeSeconds,
+                      SDL_Texture* charlieTexture) {
+  if (!game.extraCharlieActive) return;
+  const float x = game.extraCharlieWorldX - cameraX;
+  if (x < -60.0F || x > kWorldWidth + 60.0F) return;
+
+  const float sway = std::sin(static_cast<float>(timeSeconds) * 5.0F) * 3.0F;
+  const float headY = 394.0F + sway;
+  line(renderer, x, kTrackY + 4.0F, x, headY - 19.0F,
+       color(220, 224, 230));
+  if (charlieTexture) {
+    const SDL_FRect destination{x - 30.0F, headY - 25.0F, 60.0F, 60.0F};
+    SDL_RenderCopyF(renderer, charlieTexture, nullptr, &destination);
+    return;
+  }
+  filledCircle(renderer, x, headY, 14.0F, color(250, 218, 186));
+  filledCircle(renderer, x + 12.0F, headY + 1.0F, 4.5F,
+               color(224, 44, 47));
+  filledCircle(renderer, x - 5.0F, headY + 2.0F, 3.0F,
+               color(55, 126, 213));
+  fillRect(renderer, x - 12.0F, headY + 14.0F, 24.0F, 31.0F,
+           color(190, 31, 43));
+  line(renderer, x - 8.0F, headY + 42.0F, x - 14.0F, headY + 61.0F,
+       color(45, 106, 202));
+  line(renderer, x + 8.0F, headY + 42.0F, x + 14.0F, headY + 61.0F,
+       color(45, 106, 202));
+  const std::array<SDL_Vertex, 3> cap{{
+      {{x - 13.0F, headY - 10.0F}, color(43, 99, 190), {0, 0}},
+      {{x - 3.0F, headY - 34.0F}, color(72, 142, 224), {0, 0}},
+      {{x + 11.0F, headY - 11.0F}, color(43, 99, 190), {0, 0}},
+  }};
+  SDL_RenderGeometry(renderer, nullptr, cap.data(),
+                     static_cast<int>(cap.size()), nullptr, 0);
+  filledCircle(renderer, x - 4.0F, headY - 35.0F, 4.0F,
+               color(248, 204, 45));
+}
+
 void drawCoin(SDL_Renderer* renderer, float x, float y, float squash = 1.0F) {
   const float width = 9.0F * std::max(0.25F, squash);
   ellipse(renderer, x, y, width, 9.0F, color(255, 255, 123), 3);
@@ -1429,9 +1554,33 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
       ((game.goalFrame / 12) & 1) == 0 ? color(255, 93, 36)
                                        : color(87, 219, 255);
   if (game.goalFrame > 30) {
-    drawText(renderer, "GREAT", 96.0F, 184.0F, 2.1F, cheerColor, true);
-    drawText(renderer, "FAROUT", 383.0F, 202.0F, 2.0F,
-             color(255, 130, 42), true);
+    const float bounce =
+        ((game.goalFrame / 8) & 1) == 0 ? 0.0F : -5.0F;
+    for (int spectator = 0; spectator < 18; ++spectator) {
+      const float x = 10.0F + spectator * 27.0F;
+      const float wave =
+          std::sin(static_cast<float>(game.goalFrame + spectator * 5) *
+                   0.18F);
+      const float y = 387.0F + wave * 7.0F;
+      line(renderer, x, y + 13.0F, x - 5.0F, y - 4.0F, cheerColor);
+      line(renderer, x, y + 13.0F, x + 5.0F, y - 7.0F,
+           color(255, 213, 70));
+      filledCircle(renderer, x, y + 4.0F, 3.0F,
+                   color(246, 184, 130));
+    }
+    const auto outlinedCheer = [&](std::string_view text, float x, float y,
+                                   SDL_Color value) {
+      for (const auto& offset : std::array<Vec2, 4>{
+               Vec2{-2.0F, 0.0F}, Vec2{2.0F, 0.0F},
+               Vec2{0.0F, -2.0F}, Vec2{0.0F, 2.0F}}) {
+        drawText(renderer, text, x + offset.x, y + offset.y, 2.0F,
+                 color(45, 10, 24), true);
+      }
+      drawText(renderer, text, x, y, 2.0F, value, true);
+    };
+    outlinedCheer("GREAT", 96.0F, 326.0F + bounce, cheerColor);
+    outlinedCheer("FAROUT", 383.0F, 346.0F - bounce,
+                  color(255, 130, 42));
   }
   if (!game.perfectClear) return;
 
@@ -1638,9 +1787,39 @@ void drawBurningRider(SDL_Renderer* renderer, float screenX, float groundY,
   SDL_SetTextureAlphaMod(propsTexture, 255);
 }
 
-void drawHud(SDL_Renderer* renderer, const Game& game) {
+void drawCharlieLifeIcon(SDL_Renderer* renderer, SDL_Texture* charlieTexture,
+                         float x, float y) {
+  if (charlieTexture) {
+    const SDL_FRect destination{x - 13.0F, y - 3.0F, 27.0F, 27.0F};
+    SDL_RenderCopyF(renderer, charlieTexture, nullptr, &destination);
+    return;
+  }
+  filledCircle(renderer, x, y + 7.0F, 6.0F, color(249, 218, 187));
+  filledCircle(renderer, x + 5.0F, y + 8.0F, 2.2F, color(225, 45, 48));
+  fillRect(renderer, x - 5.0F, y + 13.0F, 10.0F, 9.0F,
+           color(202, 37, 46));
+}
+
+void drawHudBulbs(SDL_Renderer* renderer) {
+  const std::array<SDL_Color, 5> bulbs{
+      color(255, 55, 41), color(255, 225, 45), color(45, 211, 80),
+      color(57, 106, 255), color(244, 85, 206)};
+  for (int index = 0; index < 60; ++index) {
+    const float x = static_cast<float>(index * 8 + 2);
+    const SDL_Color glow = bulbs[static_cast<size_t>(index % bulbs.size())];
+    filledCircle(renderer, x, kHudTop + 2.0F, 2.4F, color(20, 20, 25));
+    filledCircle(renderer, x, kHudTop + 2.0F, 1.6F, glow);
+    filledCircle(renderer, x, kHudTop + kHudHeight - 3.0F, 2.4F,
+                 color(20, 20, 25));
+    filledCircle(renderer, x, kHudTop + kHudHeight - 3.0F, 1.6F, glow);
+  }
+}
+
+void drawHud(SDL_Renderer* renderer, const Game& game,
+             SDL_Texture* charlieTexture) {
   fillRect(renderer, 0.0F, kHudTop, kWorldWidth, kHudHeight,
            color(0, 0, 0, 248));
+  drawHudBulbs(renderer);
 
   drawText(renderer, "1UP", 12.0F, kHudTop + 8.0F, 1.25F,
            color(255, 230, 34));
@@ -1653,8 +1832,11 @@ void drawHud(SDL_Renderer* renderer, const Game& game) {
            kWorldWidth * 0.5F, kHudTop + 28.0F, 1.65F,
            color(51, 213, 57), true);
 
-  drawText(renderer, "LIVES " + std::to_string(game.lives), 388.0F,
-           kHudTop + 8.0F, 1.2F, color(255, 255, 255));
+  const int waitingCharlies = std::clamp(game.lives - 1, 0, 5);
+  for (int life = 0; life < waitingCharlies; ++life) {
+    drawCharlieLifeIcon(renderer, charlieTexture, 386.0F + life * 22.0F,
+                        kHudTop + 4.0F);
+  }
   drawText(renderer, "CREDIT 00", 379.0F, kHudTop + 29.0F, 1.15F,
            color(70, 202, 255));
 
@@ -1668,31 +1850,31 @@ void drawHud(SDL_Renderer* renderer, const Game& game) {
   drawText(renderer, "EVENT 1", 399.0F, kHudTop + 59.0F, 1.15F,
            color(255, 227, 119));
 
-  const std::array<SDL_Color, 4> bulbs{
-      color(255, 57, 41), color(255, 224, 42), color(47, 207, 75),
-      color(60, 98, 255)};
-  for (int index = 0; index < 60; ++index) {
-    fillRect(renderer, static_cast<float>(index * 8), kHudTop + 84.0F,
-             4.0F, 4.0F,
-             bulbs[static_cast<size_t>(index % bulbs.size())]);
-  }
 }
 
 void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
-                     bool complete) {
+                     bool complete, const Assets& assets,
+                     double timeSeconds) {
   fillRect(renderer, 0.0F, 0.0F, kWorldWidth, kWorldHeight,
            color(0, 0, 0));
-  drawText(renderer, "1UP", 18.0F, 12.0F, 1.25F, color(255, 230, 34));
-  drawText(renderer, std::to_string(game.score), 18.0F, 32.0F, 1.7F,
-           color(255, 255, 255));
-  drawText(renderer, "HIGH SCORE", kWorldWidth * 0.5F, 12.0F, 1.25F,
-           color(245, 70, 37), true);
-  drawText(renderer, std::to_string(std::max(19830, game.score)),
-           kWorldWidth * 0.5F, 32.0F, 1.7F, color(51, 213, 57), true);
-  drawText(renderer, "FINE!!", kWorldWidth * 0.5F, 92.0F, 4.2F,
+  if (assets.marquee) {
+    const SDL_FRect marqueeDestination{
+        0.0F, 0.0F, static_cast<float>(kWorldWidth), kMarqueeHeight};
+    SDL_RenderCopyF(renderer, assets.marquee, nullptr, &marqueeDestination);
+  }
+  drawFerrisWheel(renderer, assets.ferrisWheel, assets.ferrisGondola,
+                  timeSeconds);
+  drawHud(renderer, game, assets.charlieLife);
+  drawText(renderer, "FINE!!", kWorldWidth * 0.5F, 218.0F, 3.5F,
            color(81, 222, 255), true);
-  drawText(renderer, "YOUR BONUS IS " + std::to_string(game.bonus),
-           kWorldWidth * 0.5F, 150.0F, 1.8F, color(255, 255, 255), true);
+  const int displayedBonus = complete
+      ? game.bonus
+      : std::min(game.bonus, std::max(0, game.tallyFrame) * 50);
+  std::ostringstream bonusText;
+  bonusText << "YOUR BONUS IS " << std::setw(4) << std::setfill('0')
+            << displayedBonus;
+  drawText(renderer, bonusText.str(),
+           kWorldWidth * 0.5F, 260.0F, 1.7F, color(255, 255, 255), true);
 
   constexpr std::array<std::string_view, 10> ranges{
       "6000-4500", "4499-4000", "3999-3500", "3499-3000",
@@ -1702,29 +1884,31 @@ void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
   constexpr std::array<int, 10> awards{
       10000, 5000, 4000, 3000, 2000, 1000, 800, 600, 400, 200,
   };
-  for (size_t index = 0; index < ranges.size(); ++index) {
-    const float y = 205.0F + static_cast<float>(index) * 29.0F;
+  const bool showAwardTable =
+      complete || displayedBonus >= game.bonus || game.timeScoreApplied;
+  for (size_t index = 0; showAwardTable && index < ranges.size(); ++index) {
+    const float y = 306.0F + static_cast<float>(index) * 23.0F;
     const int tierAward = awards[index];
     const bool selected =
         timeBonusFor(game.bonus) == tierAward;
     const SDL_Color value =
         selected ? color(255, 224, 58) : color(255, 255, 255);
-    drawText(renderer, ranges[index], 84.0F, y, 1.35F, value);
-    drawText(renderer, std::to_string(tierAward), 385.0F, y, 1.35F, value,
+    drawText(renderer, ranges[index], 84.0F, y, 1.2F, value);
+    drawText(renderer, std::to_string(tierAward), 385.0F, y, 1.2F, value,
              true);
   }
 
   if (complete) {
-    drawText(renderer, "EVENT 1 COMPLETE", kWorldWidth * 0.5F, 527.0F,
+    drawText(renderer, "EVENT 1 COMPLETE", kWorldWidth * 0.5F, 552.0F,
              2.0F, color(92, 235, 139), true);
-    drawText(renderer, "PRESS ENTER", kWorldWidth * 0.5F, 568.0F,
+    drawText(renderer, "PRESS ENTER", kWorldWidth * 0.5F, 588.0F,
              1.8F, color(255, 255, 255), true);
   } else {
     const std::string status =
         game.timeScoreApplied
             ? "TIME BONUS " + std::to_string(game.clearBonus)
             : "CHECKING TIME";
-    drawText(renderer, status, kWorldWidth * 0.5F, 550.0F, 1.6F,
+    drawText(renderer, status, kWorldWidth * 0.5F, 560.0F, 1.6F,
              color(92, 235, 139), true);
   }
 }
@@ -1755,7 +1939,8 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
                  double timeSeconds, double interpolation) {
   const bool lowDetail = surface.height <= 320;
   if (game.scene == Scene::Tally || game.scene == Scene::Complete) {
-    drawTallyScreen(renderer, game, game.scene == Scene::Complete);
+    drawTallyScreen(renderer, game, game.scene == Scene::Complete, assets,
+                    timeSeconds);
     if (game.debug) drawDebug(renderer, game, surface);
     return;
   }
@@ -1775,6 +1960,7 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
     drawHoop(renderer, hoop, camera, lowDetail, hoopFrame);
   }
   drawStageProps(renderer, game, camera, propsFrame);
+  drawExtraCharlie(renderer, game, camera, timeSeconds, assets.charlieLife);
 
   if (game.scene != Scene::Title) {
     const float playerWorldX =
@@ -1807,7 +1993,7 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
       drawGoalPresentation(renderer, game, assets.bird);
     }
   }
-  drawHud(renderer, game);
+  drawHud(renderer, game, assets.charlieLife);
 
   if (game.scene == Scene::Title) {
     fillRect(renderer, 33.0F, 210.0F, 414.0F, 270.0F,
@@ -2003,6 +2189,8 @@ int main(int argc, char** argv) {
   bool stageMusicPlaying = false;
   std::uint32_t observedJumpAudioSerial = game.jumpAudioSerial;
   std::uint32_t observedCrashAudioSerial = game.crashAudioSerial;
+  Scene observedScene = game.scene;
+  int observedGoalFrame = game.goalFrame;
   double accumulator = 0.0;
   const Uint64 frequency = SDL_GetPerformanceFrequency();
   Uint64 previousCounter = SDL_GetPerformanceCounter();
@@ -2110,9 +2298,7 @@ int main(int argc, char** argv) {
       accumulator -= kFixedDt;
     }
 
-    const bool shouldPlayStageMusic =
-        game.scene != Scene::Title && game.scene != Scene::Crashed &&
-        game.scene != Scene::Complete;
+    const bool shouldPlayStageMusic = game.scene == Scene::Playing;
     if (shouldPlayStageMusic != stageMusicPlaying) {
       if (shouldPlayStageMusic) {
         playStageMusic(audio);
@@ -2129,6 +2315,18 @@ int main(int argc, char** argv) {
       playMissSounds(audio);
       observedCrashAudioSerial = game.crashAudioSerial;
     }
+    if (game.scene != observedScene) {
+      if (game.scene == Scene::Goal) playCrowdCheer(audio);
+      if (game.scene == Scene::Tally) playBonusCount(audio);
+      observedScene = game.scene;
+    }
+    const int showerStart =
+        kGoalArrivalFrames + kBirdArrivalFrames + kBagOpenFrames;
+    if (game.scene == Scene::Goal && game.perfectClear &&
+        observedGoalFrame < showerStart && game.goalFrame >= showerStart) {
+      playBirdCoinDrop(audio);
+    }
+    observedGoalFrame = game.goalFrame;
 
     const double timeSeconds =
         static_cast<double>(currentCounter - startCounter) /

@@ -93,10 +93,15 @@ are not hidden in this file.
 The local build uses these standardized 48 kHz mono files:
 
 - `event1-stage.wav`: track 03, looped during Event 1, stopped immediately on
-  a miss, and restarted from the beginning when Charlie respawns
+  a miss or goal arrival, and restarted from the beginning when Charlie
+  respawns
 - `jump.wav`: track 08, restarted on every valid jump
 - `miss.wav` and `miss-2.wav`: tracks 07 and 09, started together on every
   fire collision
+- `crowd-cheer.wav`: played once when Charlie and the lion reach the goal
+- `bird-coin-drop.wav`: played with the perfect-clear coin shower
+- `bonus-count.wav`: played while the remaining time is counted on the bonus
+  screen
 
 The game remains playable in silent fallback mode if a local audio asset is
 missing. These user-supplied files stay ignored so the repository cannot
