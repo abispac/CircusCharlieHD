@@ -152,10 +152,17 @@ triggered in isolation, logged, recorded, trimmed, and matched to the action
 that invokes it. This produces authentic private reference clips without
 mistakenly treating arbitrary ROM byte ranges as PCM audio.
 
-`tools/capture_sound_ids.lua` automates that command sweep. Its first verified
-probe triggers decimal command `41` (`0x29`), matching the owner's labeled
-coin reference. Captured WAV output and command logs remain private and are
-written outside the repository.
+`tools/capture_sound_ids.lua` automates that command sweep. The clean isolated
+sweep confirms hexadecimal command `0x41` (decimal `65`) as the coin-insert
+sound. It must not be reused for money bags, hidden bonus coins, or the extra
+Charlie. Captured WAV output and command logs remain private and are written
+outside the repository.
+
+Auditioning the isolated command catalog confirms `0x49` (decimal `73`) as
+the shared money-bag and extra-Charlie reward effect. The native game keeps
+those as independent event channels even though they currently use the same
+verified arcade command, preventing later sound assignments from affecting
+unrelated rewards.
 
 ## Recovered Event 1 rider labels
 

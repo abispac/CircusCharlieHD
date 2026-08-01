@@ -1,5 +1,6 @@
 build/
 cfg/
+snap/
 .DS_Store
 *.user
 *.suo

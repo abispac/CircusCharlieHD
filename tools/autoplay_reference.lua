@@ -14,6 +14,19 @@ local snapshot_last = tonumber(os.getenv("CIRCUS_SNAPSHOT_LAST") or tostring(max
 local snapshot_every = tonumber(os.getenv("CIRCUS_SNAPSHOT_EVERY") or "120")
 local output_prefix = "/tmp/" .. romset .. "-" .. mode
 local trace = assert(io.open(output_prefix .. "-trace.csv", "w"))
+local sound_trace = assert(io.open(output_prefix .. "-sound.csv", "w"))
+sound_trace:write("frame,pc,sound_id_hex,sound_id_decimal\n")
+
+-- Preserve every real game-to-audio-CPU command. This maps each effect back
+-- to its gameplay frame and avoids assigning sounds by ear alone.
+local sound_tap = program:install_write_tap(
+  0x0800, 0x0800, "circusc_sound_commands",
+  function(_, data, _)
+    sound_trace:write(string.format("%d,%04x,0x%02x,%d\n",
+      frame, maincpu.state["PC"].value, data, data))
+    sound_trace:flush()
+    return data
+  end)
 
 local coin = system:field(0x01)
 local start = system:field(0x08)
@@ -154,6 +167,9 @@ local function finish()
   set_button(jump, false)
   trace:flush()
   trace:close()
+  sound_trace:flush()
+  sound_trace:close()
+  sound_tap:remove()
   print(string.format(
     "Autoplay capture complete: mode=%s frames=%d trace=%s-trace.csv",
     mode, frame, output_prefix))

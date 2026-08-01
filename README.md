@@ -102,10 +102,26 @@ The local build uses these standardized 48 kHz mono files:
 - `bird-coin-drop.wav`: played with the perfect-clear coin shower
 - `bonus-count.wav`: played while the remaining time is counted on the bonus
   screen
+- `extra-charlie.wav`, `prize-bag.wav`, and `hidden-coin.wav`: optional,
+  separate reward effects. They remain silent when absent so the known
+  credit-insert sound is never substituted for a gameplay reward.
 
 The game remains playable in silent fallback mode if a local audio asset is
 missing. These user-supplied files stay ignored so the repository cannot
 accidentally redistribute them.
+
+## Private ROM sound catalog
+
+`tools/capture_sound_ids.lua` asks MAME's original emulated sound board to
+render every command in isolation. `tools/split_sound_sweep.py` creates one
+labeled WAV per command, and `tools/build_sound_catalog.py` creates a local
+browser page containing only the audible commands. The private recordings
+remain outside the repository.
+
+`tools/trace_sound_commands.lua` is the second method: start MAME with the
+script, play the specific original-game action, then quit MAME. Its CSV maps
+the action to the exact hexadecimal sound command, avoiding guesses based on
+similar effects.
 
 ## Capture a deterministic preview
 

@@ -171,7 +171,9 @@ struct Game {
   float extraCharlieWorldX = 0.0F;
   std::uint32_t jumpAudioSerial = 0;
   std::uint32_t crashAudioSerial = 0;
-  std::uint32_t coinAudioSerial = 0;
+  std::uint32_t extraCharlieAudioSerial = 0;
+  std::uint32_t prizeBagAudioSerial = 0;
+  std::uint32_t hiddenCoinAudioSerial = 0;
   std::uint32_t randomState = 0x6d2b79f5U;
   bool debug = false;
 };
@@ -223,8 +225,10 @@ struct AudioEngine {
   AudioClip crowdCheer;
   AudioClip birdCoinDrop;
   AudioClip bonusCount;
-  AudioClip coin;
-  std::array<AudioVoice, 8> voices{};
+  AudioClip extraCharlie;
+  AudioClip prizeBag;
+  AudioClip hiddenCoin;
+  std::array<AudioVoice, 10> voices{};
   bool available = false;
 };
 
@@ -422,8 +426,7 @@ bool loadAudio(AudioEngine& audio) {
       loadAudioAsset("miss-2.wav", audio.missTwo) &&
       loadAudioAsset("crowd-cheer.wav", audio.crowdCheer) &&
       loadAudioAsset("bird-coin-drop.wav", audio.birdCoinDrop) &&
-      loadAudioAsset("bonus-count.wav", audio.bonusCount) &&
-      loadAudioAsset("coin.wav", audio.coin);
+      loadAudioAsset("bonus-count.wav", audio.bonusCount);
   if (!loaded) {
     std::cerr << "One or more audio assets could not be loaded: "
               << SDL_GetError() << '\n';
@@ -436,12 +439,21 @@ bool loadAudio(AudioEngine& audio) {
            clip.spec.format == reference.format &&
            clip.spec.channels == reference.channels;
   };
+  // These effects intentionally remain optional until their exact arcade
+  // command IDs have been verified. In particular, 0x41 is the credit-insert
+  // sound and must not be used as a generic reward sound.
+  loadAudioAsset("extra-charlie.wav", audio.extraCharlie);
+  loadAudioAsset("prize-bag.wav", audio.prizeBag);
+  loadAudioAsset("hidden-coin.wav", audio.hiddenCoin);
+
   if (!matchesReference(audio.jump) || !matchesReference(audio.miss) ||
       !matchesReference(audio.missTwo) ||
       !matchesReference(audio.crowdCheer) ||
       !matchesReference(audio.birdCoinDrop) ||
       !matchesReference(audio.bonusCount) ||
-      !matchesReference(audio.coin)) {
+      (audio.extraCharlie.data && !matchesReference(audio.extraCharlie)) ||
+      (audio.prizeBag.data && !matchesReference(audio.prizeBag)) ||
+      (audio.hiddenCoin.data && !matchesReference(audio.hiddenCoin))) {
     std::cerr << "Audio assets do not share one PCM format.\n";
     return false;
   }
@@ -510,8 +522,16 @@ void playBonusCount(AudioEngine& audio) {
                 static_cast<int>(SDL_MIX_MAXVOLUME * 0.92F), false);
 }
 
-void playCoinSound(AudioEngine& audio) {
-  setAudioVoice(audio, 7, audio.coin, SDL_MIX_MAXVOLUME, false);
+void playExtraCharlieSound(AudioEngine& audio) {
+  setAudioVoice(audio, 7, audio.extraCharlie, SDL_MIX_MAXVOLUME, false);
+}
+
+void playPrizeBagSound(AudioEngine& audio) {
+  setAudioVoice(audio, 8, audio.prizeBag, SDL_MIX_MAXVOLUME, false);
+}
+
+void playHiddenCoinSound(AudioEngine& audio) {
+  setAudioVoice(audio, 9, audio.hiddenCoin, SDL_MIX_MAXVOLUME, false);
 }
 
 void destroyAudio(AudioEngine& audio) {
@@ -526,7 +546,9 @@ void destroyAudio(AudioEngine& audio) {
   if (audio.crowdCheer.data) SDL_FreeWAV(audio.crowdCheer.data);
   if (audio.birdCoinDrop.data) SDL_FreeWAV(audio.birdCoinDrop.data);
   if (audio.bonusCount.data) SDL_FreeWAV(audio.bonusCount.data);
-  if (audio.coin.data) SDL_FreeWAV(audio.coin.data);
+  if (audio.extraCharlie.data) SDL_FreeWAV(audio.extraCharlie.data);
+  if (audio.prizeBag.data) SDL_FreeWAV(audio.prizeBag.data);
+  if (audio.hiddenCoin.data) SDL_FreeWAV(audio.hiddenCoin.data);
   audio = {};
 }
 
@@ -835,6 +857,23 @@ float firePotCoinY(const FirePot& firePot) {
   return kGroundY - 30.0F - std::sin(progress * kPi) * 112.0F;
 }
 
+void finishStage(Game& game) {
+  game.player.position = {kCourseLength, kGoalLandingY};
+  game.player.previous = game.player.position;
+  game.player.runSpeed = 0.0F;
+  game.player.verticalVelocity = 0.0F;
+  game.player.jumpFrame = -1;
+  game.player.grounded = true;
+  game.cameraX = kCourseLength - kGoalScreenX;
+  game.previousCameraX = game.cameraX;
+  game.perfectClear =
+      !game.deathOccurred && game.prizeBagsAvailable > 0 &&
+      game.prizeBagsCollected == game.prizeBagsAvailable;
+  game.score += 500;
+  game.goalFrame = 0;
+  game.scene = Scene::Goal;
+}
+
 void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
                 float controllerAxis) {
   if (game.scene == Scene::Crashed) {
@@ -851,7 +890,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     game.player.previous = game.player.position;
     game.previousCameraX = game.cameraX;
     game.player.runSpeed = 0.0F;
-    game.player.position.y = kGroundY - 18.0F;
+    game.player.position.y = kGoalLandingY;
     game.player.previous.y = game.player.position.y;
     game.player.grounded = true;
     game.player.jumpFrame = -1;
@@ -965,7 +1004,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
       if (game.openingBackwardJumps >= 3) {
         game.extraCharlieActive = true;
         game.extraCharlieWorldX = game.player.position.x + 430.0F;
-        ++game.coinAudioSerial;
+        ++game.extraCharlieAudioSerial;
       }
     }
     game.player.grounded = false;
@@ -1027,7 +1066,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         firePot.coinActive = true;
         firePot.coinFrame = 0;
         game.hiddenCoinTriggered = true;
-        ++game.coinAudioSerial;
+        ++game.hiddenCoinAudioSerial;
       }
     }
 
@@ -1044,7 +1083,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         firePot.coinCollected = true;
         firePot.coinActive = false;
         game.score += 500;
-        ++game.coinAudioSerial;
+        ++game.hiddenCoinAudioSerial;
       } else if (firePot.coinFrame >= kCoinFlightFrames) {
         firePot.coinActive = false;
       }
@@ -1096,7 +1135,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
       game.score += ring.containsPrize ? 500 : 200;
       if (ring.containsPrize) {
         ++game.prizeBagsCollected;
-        ++game.coinAudioSerial;
+        ++game.prizeBagAudioSerial;
       }
     }
   }
@@ -1104,23 +1143,31 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   if (game.bonus > 0) --game.bonus;
   game.score =
       std::max(game.score, static_cast<int>(game.player.position.x / 10.0F));
-  if (game.player.position.x >= kCourseLength) {
-    game.player.position.x = kCourseLength;
-    game.player.previous = game.player.position;
-    game.player.position.y = kGroundY - 18.0F;
-    game.player.previous.y = game.player.position.y;
-    game.player.runSpeed = 0.0F;
-    game.player.verticalVelocity = 0.0F;
-    game.player.jumpFrame = -1;
-    game.player.grounded = true;
-    game.cameraX = kCourseLength - kGoalScreenX;
+
+  constexpr float kGoalPlatformHalfWidth = 72.0F;
+  const float goalLeft = kCourseLength - kGoalPlatformHalfWidth;
+  const float goalRight = kCourseLength + kGoalPlatformHalfWidth;
+  const float groundedStopX = goalLeft - kLionCollisionRight;
+  const bool horizontallyOverPlatform =
+      game.player.position.x + kLionCollisionRight >= goalLeft &&
+      game.player.position.x - kLionCollisionLeft <= goalRight;
+  const bool descendingOntoPlatform =
+      !game.player.grounded && game.player.verticalVelocity >= 0.0F &&
+      game.player.position.y >= kGoalLandingY &&
+      horizontallyOverPlatform;
+
+  if (descendingOntoPlatform) {
+    finishStage(game);
+  } else if (game.player.grounded &&
+             game.player.position.x > groundedStopX) {
+    // A grounded lion meets the padded side of the platform instead of
+    // walking through it. The player must jump; the descending jump then
+    // lands on the green top and starts the goal presentation.
+    game.player.position.x = groundedStopX;
+    game.player.previous.x = groundedStopX;
+    game.player.runSpeed = std::min(0.0F, game.player.runSpeed);
+    game.cameraX = std::max(0.0F, game.player.position.x - 78.0F);
     game.previousCameraX = game.cameraX;
-    game.perfectClear =
-        !game.deathOccurred && game.prizeBagsAvailable > 0 &&
-        game.prizeBagsCollected == game.prizeBagsAvailable;
-    game.score += 500;
-    game.goalFrame = 0;
-    game.scene = Scene::Goal;
   }
 }
 
@@ -2223,7 +2270,7 @@ int main(int argc, char** argv) {
       game.crashFrame = 34;
     } else if (options.captureScene == "goal") {
       game.scene = Scene::Goal;
-      game.player.position = {kCourseLength, kGroundY - 18.0F};
+      game.player.position = {kCourseLength, kGoalLandingY};
       game.player.previous = game.player.position;
       game.player.grounded = true;
       game.player.runSpeed = 0.0F;
@@ -2275,7 +2322,10 @@ int main(int argc, char** argv) {
   bool stageMusicPlaying = false;
   std::uint32_t observedJumpAudioSerial = game.jumpAudioSerial;
   std::uint32_t observedCrashAudioSerial = game.crashAudioSerial;
-  std::uint32_t observedCoinAudioSerial = game.coinAudioSerial;
+  std::uint32_t observedExtraCharlieAudioSerial =
+      game.extraCharlieAudioSerial;
+  std::uint32_t observedPrizeBagAudioSerial = game.prizeBagAudioSerial;
+  std::uint32_t observedHiddenCoinAudioSerial = game.hiddenCoinAudioSerial;
   Scene observedScene = game.scene;
   int observedGoalFrame = game.goalFrame;
   double accumulator = 0.0;
@@ -2402,9 +2452,18 @@ int main(int argc, char** argv) {
       playMissSounds(audio);
       observedCrashAudioSerial = game.crashAudioSerial;
     }
-    if (observedCoinAudioSerial != game.coinAudioSerial) {
-      playCoinSound(audio);
-      observedCoinAudioSerial = game.coinAudioSerial;
+    if (observedExtraCharlieAudioSerial !=
+        game.extraCharlieAudioSerial) {
+      playExtraCharlieSound(audio);
+      observedExtraCharlieAudioSerial = game.extraCharlieAudioSerial;
+    }
+    if (observedPrizeBagAudioSerial != game.prizeBagAudioSerial) {
+      playPrizeBagSound(audio);
+      observedPrizeBagAudioSerial = game.prizeBagAudioSerial;
+    }
+    if (observedHiddenCoinAudioSerial != game.hiddenCoinAudioSerial) {
+      playHiddenCoinSound(audio);
+      observedHiddenCoinAudioSerial = game.hiddenCoinAudioSerial;
     }
     if (game.scene != observedScene) {
       if (game.scene == Scene::Goal) playCrowdCheer(audio);
