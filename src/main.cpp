@@ -29,6 +29,8 @@ constexpr float kRingRailSpeed = 65.0F;
 constexpr float kRingActivationLead = 900.0F;
 constexpr float kCourseLength = 6000.0F;
 constexpr float kGoalScreenX = 150.0F;
+constexpr float kGoalPlatformTop = kGroundY - 25.0F;
+constexpr float kGoalLandingY = kGoalPlatformTop + 5.0F;
 constexpr float kPi = 3.14159265358979323846F;
 constexpr float kMarqueeHeight = 105.0F;
 constexpr float kHudTop = kMarqueeHeight;
@@ -193,6 +195,8 @@ struct Assets {
   SDL_Texture* propsFlare = nullptr;
   SDL_Texture* bird = nullptr;
   SDL_Texture* charlieLife = nullptr;
+  SDL_Texture* goalPlatform = nullptr;
+  SDL_Texture* finishRider = nullptr;
 };
 
 struct AudioClip {
@@ -332,10 +336,14 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.propsFlare = loadAsset(renderer, "stage1-props-flare.png");
   assets.bird = loadAsset(renderer, "stage1-bird-sheet.png");
   assets.charlieLife = loadAsset(renderer, "stage1-charlie-life-v2.png");
+  assets.goalPlatform = loadAsset(renderer, "stage1-goal-platform-v3.png");
+  assets.finishRider =
+      loadAsset(renderer, "stage1-finish-rider-sheet.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.rider || !assets.hoop ||
       !assets.hoopFlare || !assets.props || !assets.propsFlare ||
-      !assets.bird || !assets.charlieLife) {
+      !assets.bird || !assets.charlieLife || !assets.goalPlatform ||
+      !assets.finishRider) {
     std::cerr << "Some HD assets could not be loaded; vector fallbacks remain "
                  "available. SDL_image: "
               << IMG_GetError() << '\n';
@@ -1460,7 +1468,7 @@ void drawFloorPlaque(SDL_Renderer* renderer, float screenX,
 }
 
 void drawCourseMarkers(SDL_Renderer* renderer, const Game& game,
-                       float cameraX) {
+                       float cameraX, SDL_Texture* goalPlatform) {
   const float startX = 78.0F - cameraX;
   if (startX > -80.0F && startX < kWorldWidth + 80.0F) {
     drawFloorPlaque(renderer, startX, "START", true);
@@ -1475,7 +1483,14 @@ void drawCourseMarkers(SDL_Renderer* renderer, const Game& game,
 
   const float goalX = kCourseLength - cameraX;
   if (goalX < -100.0F || goalX > kWorldWidth + 100.0F) return;
-  const float platformY = kGroundY - 18.0F;
+  const float platformY = kGoalPlatformTop;
+  if (goalPlatform) {
+    const SDL_FRect destination{goalX - 72.0F, platformY, 144.0F, 58.0F};
+    SDL_RenderCopyF(renderer, goalPlatform, nullptr, &destination);
+    drawText(renderer, "GOAL", goalX, platformY + 42.0F, 1.35F,
+             color(255, 248, 130), true);
+    return;
+  }
   fillRect(renderer, goalX - 62.0F, platformY - 4.0F, 124.0F, 10.0F,
            color(120, 242, 89));
   fillRect(renderer, goalX - 58.0F, platformY + 4.0F, 116.0F, 25.0F,
@@ -1493,6 +1508,26 @@ void drawCourseMarkers(SDL_Renderer* renderer, const Game& game,
            color(234, 68, 35));
   drawText(renderer, "GOAL", goalX, platformY + 36.0F, 1.75F,
            color(255, 244, 124), true);
+}
+
+void drawFinishRider(SDL_Renderer* renderer, SDL_Texture* finishTexture,
+                     float screenX, int goalFrame) {
+  if (!finishTexture) return;
+  int textureWidth = 0;
+  int textureHeight = 0;
+  SDL_QueryTexture(finishTexture, nullptr, nullptr, &textureWidth,
+                   &textureHeight);
+  const int cellWidth = textureWidth / 4;
+  // The arcade finish animation changes on a slower celebratory cadence than
+  // the run cycle. It is a distinct bowed-lion/upright-Charlie composite.
+  const int frame = (goalFrame / 10) % 4;
+  const SDL_Rect source{frame * cellWidth, 0, cellWidth, textureHeight};
+  constexpr float kFinishWidth = 116.0F;
+  constexpr float kFinishHeight = 122.0F;
+  const SDL_FRect destination{screenX - kFinishWidth * 0.5F,
+                              kGoalLandingY - 103.0F, kFinishWidth,
+                              kFinishHeight};
+  SDL_RenderCopyF(renderer, finishTexture, &source, &destination);
 }
 
 void drawExtraCharlie(SDL_Renderer* renderer, const Game& game,
@@ -1842,7 +1877,7 @@ void drawHud(SDL_Renderer* renderer, const Game& game,
 
   const int waitingCharlies = std::clamp(game.lives - 1, 0, 5);
   for (int life = 0; life < waitingCharlies; ++life) {
-    drawCharlieLifeIcon(renderer, charlieTexture, 38.0F + life * 76.0F,
+    drawCharlieLifeIcon(renderer, charlieTexture, 32.0F + life * 52.0F,
                         kHudTop + 20.0F);
   }
   drawText(renderer, "CREDIT 00", 312.0F, kHudTop + 46.0F, 2.9F,
@@ -1953,7 +1988,7 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
   SDL_Texture* propsFrame =
       flareFrame && assets.propsFlare ? assets.propsFlare : assets.props;
   drawBackdrop(renderer, camera, lowDetail, assets, game, timeSeconds);
-  drawCourseMarkers(renderer, game, camera);
+  drawCourseMarkers(renderer, game, camera, assets.goalPlatform);
 
   for (const auto& hoop : game.hoops) {
     drawHoop(renderer, hoop, camera, lowDetail, hoopFrame);
@@ -1970,10 +2005,15 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
         game.player.previous.y +
         (game.player.position.y - game.player.previous.y) *
             static_cast<float>(interpolation);
-    drawLionAndRider(renderer, playerWorldX - camera, playerY, timeSeconds,
-                     game.player.alive, lowDetail, assets.rider,
-                     game.player.runSpeed, game.player.grounded,
-                     game.player.facingRight);
+    if (game.scene == Scene::Goal && assets.finishRider) {
+      drawFinishRider(renderer, assets.finishRider, playerWorldX - camera,
+                      game.goalFrame);
+    } else {
+      drawLionAndRider(renderer, playerWorldX - camera, playerY, timeSeconds,
+                       game.player.alive, lowDetail, assets.rider,
+                       game.player.runSpeed, game.player.grounded,
+                       game.player.facingRight);
+    }
     for (const auto& hoop : game.hoops) {
       drawHoopForeground(renderer, hoop, camera, hoopFrame);
     }
