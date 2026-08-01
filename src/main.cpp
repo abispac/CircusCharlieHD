@@ -325,7 +325,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.marquee = loadAsset(renderer, "stage1-marquee-v2.png");
   assets.ferrisWheel = loadAsset(renderer, "stage1-ferris-wheel.png");
   assets.ferrisGondola = loadAsset(renderer, "stage1-ferris-gondola.png");
-  assets.rider = loadAsset(renderer, "stage1-rider-sheet-v5.png");
+  assets.rider = loadAsset(renderer, "stage1-rider-sheet-v6.png");
   assets.hoop = loadAsset(renderer, "stage1-hoop.png");
   assets.hoopFlare = loadAsset(renderer, "stage1-hoop-flare.png");
   assets.props = loadAsset(renderer, "stage1-props.png");
@@ -1626,8 +1626,7 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
 
 void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
                       double timeSeconds, bool alive, bool lowDetail,
-                      SDL_Texture* riderTexture, float runSpeed,
-                      float verticalVelocity, bool grounded,
+                      SDL_Texture* riderTexture, float runSpeed, bool grounded,
                       bool facingRight) {
   if (riderTexture) {
     int textureWidth = 0;
@@ -1639,9 +1638,10 @@ void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
 
     int frame = 0;
     if (!grounded) {
-      frame = verticalVelocity < -90.0F
-                  ? 3
-                  : (verticalVelocity < 95.0F ? 4 : 5);
+      // The original Event 1 rider keeps one stable composite throughout the
+      // fixed jump. Vertical movement comes only from the measured jump table;
+      // swapping generated poses here introduced the visible shake.
+      frame = 4;
     } else if (std::abs(runSpeed) > 5.0F) {
       // The original composite advances one pose every 7–8 board frames.
       // Cycling all three grounded poses preserves that cadence while making
@@ -1786,7 +1786,7 @@ void drawBurningRider(SDL_Renderer* renderer, float screenX, float groundY,
 void drawCharlieLifeIcon(SDL_Renderer* renderer, SDL_Texture* charlieTexture,
                          float x, float y) {
   if (charlieTexture) {
-    const SDL_FRect destination{x - 19.0F, y - 5.0F, 38.0F, 38.0F};
+    const SDL_FRect destination{x - 38.0F, y - 5.0F, 76.0F, 76.0F};
     SDL_RenderCopyF(renderer, charlieTexture, nullptr, &destination);
     return;
   }
@@ -1831,7 +1831,7 @@ void drawHud(SDL_Renderer* renderer, const Game& game,
 
   drawText(renderer, "1UP", 12.0F, kHudTop + 8.0F, 1.35F,
            color(255, 230, 34));
-  drawText(renderer, std::to_string(game.score), 100.0F, kHudTop + 27.0F,
+  drawText(renderer, std::to_string(game.score), 160.0F, kHudTop + 27.0F,
            1.65F, color(255, 255, 255));
 
   drawText(renderer, "HIGH SCORE", kWorldWidth * 0.5F, kHudTop + 8.0F,
@@ -1842,10 +1842,10 @@ void drawHud(SDL_Renderer* renderer, const Game& game,
 
   const int waitingCharlies = std::clamp(game.lives - 1, 0, 5);
   for (int life = 0; life < waitingCharlies; ++life) {
-    drawCharlieLifeIcon(renderer, charlieTexture, 21.0F + life * 39.0F,
-                        kHudTop + 47.0F);
+    drawCharlieLifeIcon(renderer, charlieTexture, 38.0F + life * 76.0F,
+                        kHudTop + 20.0F);
   }
-  drawText(renderer, "CREDIT 00", 365.0F, kHudTop + 46.0F, 1.45F,
+  drawText(renderer, "CREDIT 00", 312.0F, kHudTop + 46.0F, 2.9F,
            color(70, 202, 255));
 
 }
@@ -1972,8 +1972,8 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
             static_cast<float>(interpolation);
     drawLionAndRider(renderer, playerWorldX - camera, playerY, timeSeconds,
                      game.player.alive, lowDetail, assets.rider,
-                     game.player.runSpeed, game.player.verticalVelocity,
-                     game.player.grounded, game.player.facingRight);
+                     game.player.runSpeed, game.player.grounded,
+                     game.player.facingRight);
     for (const auto& hoop : game.hoops) {
       drawHoopForeground(renderer, hoop, camera, hoopFrame);
     }
@@ -1985,7 +1985,7 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
       // Redraw the heat-tinted rider over the fire bed so both Charlie and the
       // lion remain readable while the flames surround and cross their edges.
       drawLionAndRider(renderer, playerWorldX - camera, playerY, timeSeconds,
-                       false, lowDetail, assets.rider, 0.0F, 0.0F, true,
+                       false, lowDetail, assets.rider, 0.0F, true,
                        game.player.facingRight);
     }
     if (game.scene == Scene::Goal) {
