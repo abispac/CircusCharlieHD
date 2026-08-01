@@ -58,6 +58,15 @@ The decrypted disassembly currently confirms:
 
 ## Visual trace findings
 
+- MAME's board renderer draws background tile category `1`, then every sprite,
+  then foreground tile category `0`. The Event 1 fire rings use the foreground
+  tile pass rather than the ordinary sprite pass.
+- In frame-by-frame `circusc4` captures the large hoop is only about `16`
+  source pixels wide while the complete rider/lion composite is about `47`
+  pixels wide. The whole narrow hoop crosses in front of a thin slice of the
+  rider; its transparent center and rapid horizontal passage create the
+  through-the-ring illusion. Splitting the hoop into artificial near/far arcs
+  does not reproduce the arcade result.
 - Rider anchor: approximately source `x = 34` on a `224`-pixel-wide upright
   image.
 - The ceiling hoop uses a trolley/hanger immediately below the horizontal

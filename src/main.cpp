@@ -52,9 +52,10 @@ constexpr float kLionCollisionTop = 58.0F;
 constexpr float kLionCollisionBottom = 7.0F;
 constexpr float kFirePotCollisionHalfWidth = 32.0F;
 constexpr float kFirePotClearance = 42.0F;
+constexpr float kBigRingVisualHalfWidth = 24.0F;
 constexpr float kBonusRingCollisionHalfWidth = 6.0F;
 constexpr float kBonusRingOpeningHalfHeight = 72.0F;
-constexpr float kBonusRingVisualHalfWidth = 96.0F;
+constexpr float kBonusRingVisualHalfWidth = 30.0F;
 constexpr float kBonusRingVisualHalfHeight = 115.0F;
 constexpr int kCoinFlightFrames = 72;
 constexpr int kCrashBurnFrames = 72;
@@ -1242,19 +1243,11 @@ void drawHoop(SDL_Renderer* renderer, const Hoop& hoop, float cameraX,
                     &trolleyDestination);
 
     const float ringTop = hoop.openingTop - 25.0F;
-    const float ringBottom = hoop.openingBottom + 20.0F;
     fillRect(renderer, x - 2.0F, kTrackY + 10.0F, 4.0F,
              std::max(0.0F, ringTop - kTrackY - 6.0F),
              color(184, 151, 83));
-    const SDL_Rect ringSource{
-        0,
-        static_cast<int>(textureHeight * (500.0F / 1774.0F)),
-        textureWidth,
-        static_cast<int>(textureHeight * (1120.0F / 1774.0F)),
-    };
-    const SDL_FRect ringDestination{x - 50.0F, ringTop, 100.0F,
-                                   ringBottom - ringTop};
-    SDL_RenderCopyF(renderer, hoopTexture, &ringSource, &ringDestination);
+    // The animated ring itself is drawn in the foreground tile pass after the
+    // rider. This pass supplies only its rail hardware and hanger.
   } else {
     // Each ring travels with a hanger riding the ceiling track.
     fillRect(renderer, x - 5.0F, kTrackY + 4.0F, 10.0F,
@@ -1280,8 +1273,6 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
   const int cellWidth = textureWidth / 3;
   const SDL_Rect fireSource{0, 0, cellWidth, textureHeight};
   const SDL_Rect bagSource{cellWidth, 0, cellWidth, textureHeight};
-  const SDL_Rect bonusRingSource{cellWidth * 2, 0, cellWidth, textureHeight};
-
   for (const auto& firePot : game.firePots) {
     const float screenX = firePot.worldX - cameraX;
     if (screenX < -80.0F || screenX > kWorldWidth + 80.0F) continue;
@@ -1305,15 +1296,8 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
     const float ringCenterY = kGroundY - ring.height;
     line(renderer, screenX, kTrackY + 5.0F, screenX,
          ringCenterY - 55.0F, color(119, 101, 73));
-    // These are pass-through bonus rings, not vanishing pickups. Their larger
-    // opening reads clearly around the full lion-and-rider silhouette.
-    const SDL_FRect ringDestination{
-        screenX - kBonusRingVisualHalfWidth,
-        ringCenterY - kBonusRingVisualHalfHeight,
-        kBonusRingVisualHalfWidth * 2.0F,
-        kBonusRingVisualHalfHeight * 2.0F};
-    SDL_RenderCopyF(renderer, propsTexture, &bonusRingSource,
-                    &ringDestination);
+    // Like the original board's category-0 tiles, the animated flame rim is
+    // deferred to the foreground pass. The hanger and prize remain here.
     if (ring.containsPrize && !ring.collected) {
       const SDL_FRect bagDestination{screenX - 22.0F, ringCenterY - 44.0F,
                                      44.0F, 88.0F};
@@ -1340,20 +1324,13 @@ void drawHoopForeground(SDL_Renderer* renderer, const Hoop& hoop,
   };
   const float ringTop = hoop.openingTop - 25.0F;
   const float ringBottom = hoop.openingBottom + 20.0F;
-  const SDL_FRect ringDestination{x - 50.0F, ringTop, 100.0F,
-                                  ringBottom - ringTop};
-  SDL_Rect previousClip{};
-  const SDL_bool hadClip = SDL_RenderIsClipEnabled(renderer);
-  SDL_RenderGetClipRect(renderer, &previousClip);
-  const SDL_Rect nearArcClip{
-      static_cast<int>(std::floor(x - 54.0F)),
-      static_cast<int>(std::floor(hoop.openingBottom - 23.0F)),
-      108,
-      static_cast<int>(std::ceil(ringBottom - hoop.openingBottom + 27.0F)),
-  };
-  SDL_RenderSetClipRect(renderer, &nearArcClip);
+  const SDL_FRect ringDestination{
+      x - kBigRingVisualHalfWidth, ringTop,
+      kBigRingVisualHalfWidth * 2.0F, ringBottom - ringTop};
+  // MAME confirms the original board draws foreground-category tiles after
+  // all sprites. The hoop is therefore a complete, tall, narrow foreground
+  // element; its transparent center exposes the rider during the crossing.
   SDL_RenderCopyF(renderer, hoopTexture, &ringSource, &ringDestination);
-  SDL_RenderSetClipRect(renderer, hadClip ? &previousClip : nullptr);
 }
 
 void drawBonusRingForegrounds(SDL_Renderer* renderer, const Game& game,
@@ -1375,23 +1352,9 @@ void drawBonusRingForegrounds(SDL_Renderer* renderer, const Game& game,
         ringCenterY - kBonusRingVisualHalfHeight,
         kBonusRingVisualHalfWidth * 2.0F,
         kBonusRingVisualHalfHeight * 2.0F};
-    SDL_Rect previousClip{};
-    const SDL_bool hadClip = SDL_RenderIsClipEnabled(renderer);
-    SDL_RenderGetClipRect(renderer, &previousClip);
-    const SDL_Rect nearArcClip{
-        static_cast<int>(std::floor(screenX - kBonusRingVisualHalfWidth - 4.0F)),
-        static_cast<int>(
-            std::floor(ringCenterY + kBonusRingVisualHalfHeight * 0.50F)),
-        static_cast<int>(std::ceil(kBonusRingVisualHalfWidth * 2.0F + 8.0F)),
-        static_cast<int>(
-            std::ceil(kBonusRingVisualHalfHeight * 0.50F + 4.0F)),
-    };
-    SDL_RenderSetClipRect(renderer, &nearArcClip);
-    // Only the lower near arc crosses in front of the rider. The upper and
-    // side flames remain behind, creating a readable through-the-hoop depth
-    // cue rather than placing the complete ring over the characters.
+    // The narrow full-height foreground rim crosses only a thin slice of the
+    // much wider lion/rider composite, reproducing the arcade depth illusion.
     SDL_RenderCopyF(renderer, propsTexture, &ringSource, &destination);
-    SDL_RenderSetClipRect(renderer, hadClip ? &previousClip : nullptr);
   }
 }
 

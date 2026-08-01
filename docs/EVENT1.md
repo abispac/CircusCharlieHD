@@ -32,8 +32,9 @@ requirements supplied through hands-on play knowledge.
   burns the rider when the airborne lion is below or above the opening.
   Running beneath a small ring without jumping is safe. At the fixed jump apex
   the rider fits inside a forgiving `144`-logical-unit vertical opening. The
-  ring is centered on the complete airborne sprite, and only its lower near
-  arc receives a foreground render pass so the traversal is visually clear.
+  ring is centered on the complete airborne sprite. Its tall, narrow flame rim
+  is rendered in full after the rider, matching the original foreground-tile
+  priority and making the rider visibly cross through the transparent center.
 - Exactly one fire pot is selected as the hidden-coin pot for each run.
 - The hidden coin can trigger only when Charlie returns to that pot and jumps
   over it while moving backward. A normal forward jump never reveals it.
