@@ -72,7 +72,8 @@ cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
 
 ## Controls
 
-- `Enter` or `1`: start
+- `5` or `C`: insert one coin / add one credit
+- `1` or `Enter`: one-player start; consumes one credit
 - `Left` / `A`: move or backtrack left
 - `Right` / `D`: move right
 - Release horizontal input: stop
@@ -80,13 +81,33 @@ cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
 - `R`: restart event
 - `F1`: physics/debug overlay
 - `F11`: toggle fullscreen
-- `Escape`: return to title, then quit
+- `Escape`: return to the coin waiting screen, then quit
 
 SDL game controllers are detected automatically. D-pad/left stick controls
-direction and the south face button jumps.
+direction, the south face button jumps, the Back/View button inserts a coin,
+and the Start/Menu button consumes one credit to begin.
 
-The title screen and the opening gameplay overlay show these controls. They
-are not hidden in this file.
+The cabinet-standard keyboard mappings are `5` for coin and `1` for start, so
+a physical coin acceptor can use a normal arcade USB encoder configured like
+MAME. The temporary prototype title and repeated gameplay instruction overlay
+have been replaced by an arcade-style credit waiting screen.
+
+## Score memory and credits
+
+The high score is retained between launches in SDL's per-user application
+preferences directory as `high-score.txt`. Credits intentionally last only
+for the current power session, like a conventional arcade board. The first
+score-based extra life is awarded at 20,000 points and another is awarded
+every 70,000 points after that.
+
+## Planned boot and attract sequence
+
+The present coin waiting screen is the permanent end of the future attract
+flow. After all gameplay stages are complete, the recorded reference will be
+used to reproduce the board boot through the logo and animated stars, then a
+new HD montage featuring every completed stage will lead into this credit
+screen. That later montage is intentionally deferred until every stage has
+final art and animation available.
 
 ## Local Event 1 audio
 
@@ -106,6 +127,8 @@ The local build uses these standardized 48 kHz mono files:
 - `extra-charlie.wav`, `prize-bag.wav`, and `hidden-coin.wav`: optional,
   separate reward effects. They remain silent when absent so the known
   credit-insert sound is never substituted for a gameplay reward.
+- `coin.wav`: reserved for the physical/software coin switch and played only
+  when a credit is added
 
 The game remains playable in silent fallback mode if a local audio asset is
 missing. These user-supplied files stay ignored so the repository cannot

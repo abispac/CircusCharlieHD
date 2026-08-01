@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <iomanip>
 #include <optional>
@@ -75,6 +76,9 @@ constexpr int kBirdExitFrames = 18;
 constexpr int kCoinShowerFrames = 220;
 constexpr int kRewardCoinCount = 18;
 constexpr float kStrideAnimationSpeedScale = 0.85F;
+constexpr int kDefaultHighScore = 19830;
+constexpr int kFirstScoreLife = 20000;
+constexpr int kRecurringScoreLife = 70000;
 
 constexpr float railStartForIntercept(float playerWorldX) {
   // Rings begin travelling once they are kRingActivationLead units ahead of
@@ -159,9 +163,11 @@ struct Game {
   float cameraX = 0.0F;
   float previousCameraX = 0.0F;
   int score = 0;
+  int highScore = kDefaultHighScore;
+  int credits = 0;
   int lives = 3;
   int bonus = 6000;
-  int instructionFrames = 0;
+  int nextScoreLife = kFirstScoreLife;
   int goalFrame = 0;
   int tallyFrame = 0;
   int crashFrame = 0;
@@ -182,7 +188,9 @@ struct Game {
   std::uint32_t extraCharlieAudioSerial = 0;
   std::uint32_t prizeBagAudioSerial = 0;
   std::uint32_t hiddenCoinAudioSerial = 0;
+  std::uint32_t coinAudioSerial = 0;
   std::uint32_t randomState = 0x6d2b79f5U;
+  bool highScoreDirty = false;
   bool debug = false;
 };
 
@@ -238,9 +246,38 @@ struct AudioEngine {
   AudioClip extraCharlie;
   AudioClip prizeBag;
   AudioClip hiddenCoin;
-  std::array<AudioVoice, 10> voices{};
+  AudioClip creditInsert;
+  std::array<AudioVoice, 11> voices{};
   bool available = false;
 };
+
+std::string highScoreMemoryPath() {
+  char* preferencePath =
+      SDL_GetPrefPath("BigTopRun", "BigTopRunNative");
+  if (!preferencePath) return {};
+  const std::string path =
+      std::string(preferencePath) + "high-score.txt";
+  SDL_free(preferencePath);
+  return path;
+}
+
+int loadHighScore(const std::string& path) {
+  if (path.empty()) return kDefaultHighScore;
+  std::ifstream input(path);
+  int savedScore = 0;
+  if (!(input >> savedScore) || savedScore < 0 || savedScore > 99999999) {
+    return kDefaultHighScore;
+  }
+  return std::max(kDefaultHighScore, savedScore);
+}
+
+bool saveHighScore(const std::string& path, int highScore) {
+  if (path.empty()) return false;
+  std::ofstream output(path, std::ios::trunc);
+  if (!output) return false;
+  output << std::max(kDefaultHighScore, highScore) << '\n';
+  return output.good();
+}
 
 bool parseMode(std::string_view value, int& width, int& height) {
   const auto split = value.find('x');
@@ -485,12 +522,13 @@ bool loadAudio(AudioEngine& audio) {
            clip.spec.format == reference.format &&
            clip.spec.channels == reference.channels;
   };
-  // These effects intentionally remain optional until their exact arcade
-  // command IDs have been verified. In particular, 0x41 is the credit-insert
-  // sound and must not be used as a generic reward sound.
+  // Reward effects remain optional until their exact arcade command IDs have
+  // been verified. The known coin effect is reserved exclusively for an
+  // actual credit insertion and is never substituted for a gameplay reward.
   loadAudioAsset("extra-charlie.wav", audio.extraCharlie);
   loadAudioAsset("prize-bag.wav", audio.prizeBag);
   loadAudioAsset("hidden-coin.wav", audio.hiddenCoin);
+  loadAudioAsset("coin.wav", audio.creditInsert);
 
   if (!matchesReference(audio.jump) || !matchesReference(audio.miss) ||
       !matchesReference(audio.missTwo) ||
@@ -499,7 +537,8 @@ bool loadAudio(AudioEngine& audio) {
       !matchesReference(audio.bonusCount) ||
       (audio.extraCharlie.data && !matchesReference(audio.extraCharlie)) ||
       (audio.prizeBag.data && !matchesReference(audio.prizeBag)) ||
-      (audio.hiddenCoin.data && !matchesReference(audio.hiddenCoin))) {
+      (audio.hiddenCoin.data && !matchesReference(audio.hiddenCoin)) ||
+      (audio.creditInsert.data && !matchesReference(audio.creditInsert))) {
     std::cerr << "Audio assets do not share one PCM format.\n";
     return false;
   }
@@ -591,6 +630,10 @@ void playHiddenCoinSound(AudioEngine& audio) {
   setAudioVoice(audio, 9, audio.hiddenCoin, SDL_MIX_MAXVOLUME, false);
 }
 
+void playCreditInsertSound(AudioEngine& audio) {
+  setAudioVoice(audio, 10, audio.creditInsert, SDL_MIX_MAXVOLUME, false);
+}
+
 void destroyAudio(AudioEngine& audio) {
   if (audio.device != 0) {
     SDL_PauseAudioDevice(audio.device, 1);
@@ -606,6 +649,7 @@ void destroyAudio(AudioEngine& audio) {
   if (audio.extraCharlie.data) SDL_FreeWAV(audio.extraCharlie.data);
   if (audio.prizeBag.data) SDL_FreeWAV(audio.prizeBag.data);
   if (audio.hiddenCoin.data) SDL_FreeWAV(audio.hiddenCoin.data);
+  if (audio.creditInsert.data) SDL_FreeWAV(audio.creditInsert.data);
   audio = {};
 }
 
@@ -758,6 +802,7 @@ void resetCourse(Game& game) {
   game.previousCameraX = 0.0F;
   game.score = 0;
   game.bonus = 6000;
+  game.nextScoreLife = kFirstScoreLife;
   game.goalFrame = 0;
   game.tallyFrame = 0;
   game.crashFrame = 0;
@@ -849,7 +894,27 @@ void startGame(Game& game) {
   game.scene = Scene::Playing;
   game.lives = 3;
   resetCourse(game);
-  game.instructionFrames = 420;
+}
+
+void insertCoin(Game& game) {
+  if (game.credits >= 99) return;
+  ++game.credits;
+  ++game.coinAudioSerial;
+}
+
+bool startWithCredit(Game& game) {
+  if (game.credits <= 0) return false;
+  --game.credits;
+  startGame(game);
+  return true;
+}
+
+void awardScoreLives(Game& game) {
+  while (game.score >= game.nextScoreLife) {
+    ++game.lives;
+    game.nextScoreLife += kRecurringScoreLife;
+    ++game.extraCharlieAudioSerial;
+  }
 }
 
 void restartAfterCrash(Game& game) {
@@ -869,7 +934,6 @@ void restartAfterCrash(Game& game) {
   game.crashFrame = 0;
   game.cameraX = std::max(0.0F, game.player.position.x - 78.0F);
   game.previousCameraX = game.cameraX;
-  game.instructionFrames = 180;
 }
 
 int timeBonusFor(int bonus) {
@@ -1000,7 +1064,6 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   }
 
   if (game.scene != Scene::Playing) return;
-  if (game.instructionFrames > 0) --game.instructionFrames;
 
   game.player.previous = game.player.position;
   game.previousCameraX = game.cameraX;
@@ -2076,12 +2139,15 @@ void drawHud(SDL_Renderer* renderer, const Game& game,
 
   drawText(renderer, "1UP", 12.0F, kHudTop + 8.0F, 1.35F,
            color(255, 230, 34));
-  drawText(renderer, std::to_string(game.score), 68.0F, kHudTop + 8.0F,
+  const int displayedPlayerScore =
+      game.scene == Scene::Title ? game.highScore : game.score;
+  drawText(renderer, std::to_string(displayedPlayerScore), 68.0F,
+           kHudTop + 8.0F,
            1.45F, color(255, 255, 255));
 
   drawText(renderer, "HIGH SCORE", kWorldWidth * 0.5F, kHudTop + 8.0F,
            1.25F, color(245, 70, 37), true);
-  drawText(renderer, std::to_string(std::max(19830, game.score)),
+  drawText(renderer, std::to_string(game.highScore),
            kWorldWidth * 0.5F, kHudTop + 28.0F, 1.65F,
            color(51, 213, 57), true);
 
@@ -2090,9 +2156,46 @@ void drawHud(SDL_Renderer* renderer, const Game& game,
     drawCharlieLifeIcon(renderer, charlieTexture, 32.0F + life * 52.0F,
                         kHudTop + 20.0F);
   }
-  drawText(renderer, "CREDIT 00", 312.0F, kHudTop + 46.0F, 2.9F,
+  std::ostringstream creditText;
+  creditText << "CREDIT " << std::setw(2) << std::setfill('0')
+             << std::clamp(game.credits, 0, 99);
+  drawText(renderer, creditText.str(), 312.0F, kHudTop + 46.0F, 2.9F,
            color(70, 202, 255));
 
+}
+
+void drawCoinWaitingScreen(SDL_Renderer* renderer, const Game& game,
+                           const Assets& assets, double timeSeconds) {
+  fillRect(renderer, 0.0F, 0.0F, kWorldWidth, kWorldHeight,
+           color(0, 0, 0));
+  if (assets.marquee) {
+    const SDL_FRect marqueeDestination{
+        0.0F, 0.0F, static_cast<float>(kWorldWidth), kMarqueeHeight};
+    SDL_RenderCopyF(renderer, assets.marquee, nullptr, &marqueeDestination);
+  }
+  drawFerrisWheel(renderer, assets.ferrisWheel, assets.ferrisGondola,
+                  timeSeconds);
+  drawZeppelinBonus(renderer, 0);
+  drawHud(renderer, game, assets.charlieLife);
+
+  const bool promptVisible =
+      (static_cast<int>(timeSeconds * 2.0) & 1) == 0;
+  if (promptVisible) {
+    const std::string_view prompt =
+        game.credits > 0 ? "PRESS START BUTTON" : "INSERT COIN";
+    const SDL_Color promptColor =
+        game.credits > 0 ? color(238, 203, 255) : color(255, 224, 63);
+    drawText(renderer, prompt, kWorldWidth * 0.5F, 246.0F,
+             game.credits > 0 ? 2.25F : 2.8F, promptColor, true);
+  }
+  drawText(renderer, "ONE PLAYER ONLY", kWorldWidth * 0.5F, 315.0F,
+           2.25F, color(42, 216, 69), true);
+  drawText(renderer, "1ST BONUS AFTER 20000 PTS", kWorldWidth * 0.5F,
+           433.0F, 1.55F, color(67, 201, 255), true);
+  drawText(renderer, "AND BONUS EVERY 70000 PTS", kWorldWidth * 0.5F,
+           486.0F, 1.55F, color(67, 201, 255), true);
+  drawText(renderer, "BIG TOP RUN HD TRIBUTE", kWorldWidth * 0.5F,
+           596.0F, 1.25F, color(245, 245, 245), true);
 }
 
 void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
@@ -2145,8 +2248,10 @@ void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
   if (complete) {
     drawText(renderer, "EVENT 1 COMPLETE", kWorldWidth * 0.5F, 552.0F,
              2.0F, color(92, 235, 139), true);
-    drawText(renderer, "PRESS ENTER", kWorldWidth * 0.5F, 588.0F,
-             1.8F, color(255, 255, 255), true);
+    drawText(renderer,
+             game.credits > 0 ? "PRESS START BUTTON" : "INSERT COIN",
+             kWorldWidth * 0.5F, 588.0F, 1.8F,
+             color(255, 255, 255), true);
   } else {
     const std::string status =
         game.timeScoreApplied
@@ -2182,6 +2287,11 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
                  const RenderSurface& surface, const Assets& assets,
                  double timeSeconds, double interpolation) {
   const bool lowDetail = surface.height <= 320;
+  if (game.scene == Scene::Title) {
+    drawCoinWaitingScreen(renderer, game, assets, timeSeconds);
+    if (game.debug) drawDebug(renderer, game, surface);
+    return;
+  }
   if (game.scene == Scene::Tally || game.scene == Scene::Complete) {
     drawTallyScreen(renderer, game, game.scene == Scene::Complete, assets,
                     timeSeconds);
@@ -2248,39 +2358,13 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
   }
   drawHud(renderer, game, assets.charlieLife);
 
-  if (game.scene == Scene::Title) {
-    fillRect(renderer, 33.0F, 210.0F, 414.0F, 270.0F,
-             color(3, 9, 29, 225));
-    drawText(renderer, "BIG TOP", kWorldWidth * 0.5F, 246.0F, 6.0F,
-             color(255, 202, 56), true);
-    drawText(renderer, "RUN", kWorldWidth * 0.5F, 305.0F, 8.0F,
-             color(225, 52, 54), true);
-    drawText(renderer, "NATIVE ARCADE PROTOTYPE", kWorldWidth * 0.5F,
-             371.0F, 1.6F, color(160, 211, 255), true);
-    drawText(renderer, "LEFT RIGHT MOVE LION", kWorldWidth * 0.5F, 399.0F,
-             1.5F, color(255, 255, 255), true);
-    drawText(renderer, "SPACE OR Z JUMP", kWorldWidth * 0.5F, 422.0F,
-             1.5F, color(255, 255, 255), true);
-    drawText(renderer, "PRESS ENTER OR 1", kWorldWidth * 0.5F, 449.0F,
-             2.0F, color(255, 255, 255), true);
-  } else if (game.scene == Scene::Crashed &&
+  if (game.scene == Scene::Crashed &&
              game.crashFrame >= kCrashBurnFrames) {
     fillRect(renderer, 55.0F, 220.0F, 370.0F, 134.0F, color(33, 5, 8, 232));
     drawText(renderer, "MISSED THE HOOP", kWorldWidth * 0.5F, 246.0F, 2.4F,
              color(255, 96, 64), true);
     drawText(renderer, "SPACE OR Z TO RETRY", kWorldWidth * 0.5F, 300.0F,
              1.8F, color(255, 255, 255), true);
-  }
-
-  if (game.scene == Scene::Playing && game.instructionFrames > 0) {
-    fillRect(renderer, 61.0F, kArenaTop + 12.0F, 358.0F, 66.0F,
-             color(2, 8, 23, 218));
-    drawText(renderer, "LEFT RIGHT MOVE LION", kWorldWidth * 0.5F,
-             kArenaTop + 25.0F,
-             1.6F, color(255, 227, 119), true);
-    drawText(renderer, "SPACE OR Z JUMP", kWorldWidth * 0.5F,
-             kArenaTop + 51.0F,
-             1.7F, color(255, 255, 255), true);
   }
 
   if (game.debug) drawDebug(renderer, game, surface);
@@ -2366,13 +2450,19 @@ int main(int argc, char** argv) {
   }
 
   Game game;
+  const std::string highScorePath = highScoreMemoryPath();
+  game.highScore = loadHighScore(highScorePath);
   game.randomState ^=
       static_cast<std::uint32_t>(SDL_GetPerformanceCounter());
   game.debug = options.debug;
   resetCourse(game);
   if (!options.capturePath.empty()) {
-    startGame(game);
-    game.instructionFrames = 0;
+    if (options.captureScene == "start") {
+      game.credits = 1;
+      game.scene = Scene::Title;
+    } else {
+      startGame(game);
+    }
     if (options.captureScene == "ring") {
       game.player.position = {800.0F, kGroundY - 137.0F};
       game.player.previous = game.player.position;
@@ -2416,14 +2506,7 @@ int main(int argc, char** argv) {
       game.clearBonus = timeBonusFor(game.bonus);
       game.score += game.clearBonus;
       game.tallyFrame = 190;
-    } else if (options.captureScene == "start") {
-      game.player.position = {78.0F, kGroundY};
-      game.player.previous = game.player.position;
-      game.player.grounded = true;
-      game.player.runSpeed = 0.0F;
-      game.cameraX = 0.0F;
-      game.previousCameraX = 0.0F;
-    } else {
+    } else if (options.captureScene != "start") {
       game.player.position.x = 800.0F;
       game.player.previous = game.player.position;
       game.cameraX = game.player.position.x - 78.0F;
@@ -2455,6 +2538,7 @@ int main(int argc, char** argv) {
       game.extraCharlieAudioSerial;
   std::uint32_t observedPrizeBagAudioSerial = game.prizeBagAudioSerial;
   std::uint32_t observedHiddenCoinAudioSerial = game.hiddenCoinAudioSerial;
+  std::uint32_t observedCoinAudioSerial = game.coinAudioSerial;
   Scene observedScene = game.scene;
   int observedGoalFrame = game.goalFrame;
   double accumulator = 0.0;
@@ -2481,9 +2565,16 @@ int main(int argc, char** argv) {
                          SDL_GameControllerGetJoystick(controller))) {
         SDL_GameControllerClose(controller);
         controller = nullptr;
-      } else if (event.type == SDL_CONTROLLERBUTTONDOWN &&
-                 event.cbutton.button == SDL_CONTROLLER_BUTTON_A) {
-        jumpQueued = true;
+      } else if (event.type == SDL_CONTROLLERBUTTONDOWN) {
+        if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
+          insertCoin(game);
+        } else if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START) {
+          if (game.scene == Scene::Title || game.scene == Scene::Complete) {
+            startWithCredit(game);
+          }
+        } else if (event.cbutton.button == SDL_CONTROLLER_BUTTON_A) {
+          jumpQueued = true;
+        }
       } else if (event.type == SDL_KEYDOWN && !event.key.repeat) {
         switch (event.key.keysym.sym) {
           case SDLK_ESCAPE:
@@ -2496,20 +2587,25 @@ int main(int argc, char** argv) {
             break;
           case SDLK_RETURN:
           case SDLK_1:
-            if (game.scene == Scene::Title) {
-              startGame(game);
-            } else if (game.scene == Scene::Complete) {
-              startGame(game);
+            if (game.scene == Scene::Title ||
+                game.scene == Scene::Complete) {
+              startWithCredit(game);
             }
+            break;
+          case SDLK_5:
+          case SDLK_c:
+            insertCoin(game);
             break;
           case SDLK_SPACE:
           case SDLK_z:
             jumpQueued = true;
             break;
           case SDLK_r:
-            resetCourse(game);
-            game.scene = Scene::Playing;
-            game.instructionFrames = 180;
+            if (game.scene != Scene::Title &&
+                game.scene != Scene::Complete) {
+              resetCourse(game);
+              game.scene = Scene::Playing;
+            }
             break;
           case SDLK_F1:
             game.debug = !game.debug;
@@ -2559,6 +2655,11 @@ int main(int argc, char** argv) {
     bool jumpForStep = jumpQueued;
     while (accumulator >= kFixedDt) {
       updateGame(game, keyboard, jumpForStep, controllerAxis);
+      awardScoreLives(game);
+      if (game.score > game.highScore) {
+        game.highScore = game.score;
+        game.highScoreDirty = true;
+      }
       jumpForStep = false;
       jumpQueued = false;
       accumulator -= kFixedDt;
@@ -2602,7 +2703,18 @@ int main(int argc, char** argv) {
       playHiddenCoinSound(audio);
       observedHiddenCoinAudioSerial = game.hiddenCoinAudioSerial;
     }
+    if (observedCoinAudioSerial != game.coinAudioSerial) {
+      playCreditInsertSound(audio);
+      observedCoinAudioSerial = game.coinAudioSerial;
+    }
     if (game.scene != observedScene) {
+      if (game.highScoreDirty &&
+          (game.scene == Scene::Crashed || game.scene == Scene::Goal ||
+           game.scene == Scene::Complete || game.scene == Scene::Title)) {
+        if (saveHighScore(highScorePath, game.highScore)) {
+          game.highScoreDirty = false;
+        }
+      }
       if (game.scene == Scene::Goal) playCrowdCheer(audio);
       if (game.scene == Scene::Tally) playBonusCount(audio);
       observedScene = game.scene;
@@ -2650,6 +2762,9 @@ int main(int argc, char** argv) {
             .c_str());
   }
 
+  if (!saveHighScore(highScorePath, game.highScore)) {
+    std::cerr << "High score could not be saved.\n";
+  }
   if (surface.texture) SDL_DestroyTexture(surface.texture);
   if (controller) SDL_GameControllerClose(controller);
   destroyAudio(audio);
