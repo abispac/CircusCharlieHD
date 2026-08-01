@@ -246,7 +246,7 @@ void printUsage() {
       << "  --fullscreen\n"
       << "  --debug\n"
       << "  --capture FILE.png\n"
-      << "  --capture-scene gameplay|ring|crash|goal|tally\n";
+      << "  --capture-scene start|gameplay|ring|crash|goal|tally\n";
 }
 
 std::optional<Options> parseOptions(int argc, char** argv) {
@@ -261,13 +261,14 @@ std::optional<Options> parseOptions(int argc, char** argv) {
       options.capturePath = argv[++index];
     } else if (argument == "--capture-scene" && index + 1 < argc) {
       options.captureScene = argv[++index];
-      if (options.captureScene != "gameplay" &&
+      if (options.captureScene != "start" &&
+          options.captureScene != "gameplay" &&
           options.captureScene != "ring" &&
           options.captureScene != "crash" &&
           options.captureScene != "goal" &&
           options.captureScene != "tally") {
         std::cerr
-            << "Capture scene must be gameplay, ring, crash, goal, or tally.\n";
+            << "Capture scene must be start, gameplay, ring, crash, goal, or tally.\n";
         return std::nullopt;
       }
     } else if (argument == "--mode" && index + 1 < argc) {
@@ -324,13 +325,13 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.marquee = loadAsset(renderer, "stage1-marquee-v2.png");
   assets.ferrisWheel = loadAsset(renderer, "stage1-ferris-wheel.png");
   assets.ferrisGondola = loadAsset(renderer, "stage1-ferris-gondola.png");
-  assets.rider = loadAsset(renderer, "stage1-rider-sheet-v3.png");
+  assets.rider = loadAsset(renderer, "stage1-rider-sheet-v4.png");
   assets.hoop = loadAsset(renderer, "stage1-hoop.png");
   assets.hoopFlare = loadAsset(renderer, "stage1-hoop-flare.png");
   assets.props = loadAsset(renderer, "stage1-props.png");
   assets.propsFlare = loadAsset(renderer, "stage1-props-flare.png");
   assets.bird = loadAsset(renderer, "stage1-bird-sheet.png");
-  assets.charlieLife = loadAsset(renderer, "stage1-charlie-life.png");
+  assets.charlieLife = loadAsset(renderer, "stage1-charlie-life-v2.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.rider || !assets.hoop ||
       !assets.hoopFlare || !assets.props || !assets.propsFlare ||
@@ -724,8 +725,8 @@ void resetCourse(Game& game) {
       {railStartForIntercept(5250.0F), 152.0F, false, false},
   };
   game.meterMarkers = {
-      {260.0F, 60}, {1180.0F, 50}, {2100.0F, 40},
-      {3040.0F, 30}, {3980.0F, 20}, {4920.0F, 10},
+      {620.0F, 60},  {1480.0F, 50}, {2340.0F, 40},
+      {3200.0F, 30}, {4060.0F, 20}, {4920.0F, 10},
   };
   game.hiddenCoinPotIndex =
       static_cast<int>(nextRandom(game) % game.firePots.size());
@@ -1195,8 +1196,18 @@ void drawFerrisWheel(SDL_Renderer* renderer, SDL_Texture* wheelTexture,
   }
 }
 
+void drawZeppelinBonus(SDL_Renderer* renderer, int bonus) {
+  drawText(renderer, "BONUS", 76.0F, 34.0F, 1.0F,
+           color(74, 111, 229), true);
+  std::ostringstream value;
+  value << std::setw(4) << std::setfill('0') << bonus;
+  drawText(renderer, value.str(), 76.0F, 50.0F, 1.45F,
+           color(255, 255, 255), true);
+}
+
 void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
-                  const Assets& assets, double timeSeconds) {
+                  const Assets& assets, const Game& game,
+                  double timeSeconds) {
   fillRect(renderer, 0.0F, 0.0F, kWorldWidth, kWorldHeight,
            color(5, 18, 51));
 
@@ -1223,6 +1234,7 @@ void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
   }
   drawFerrisWheel(renderer, assets.ferrisWheel, assets.ferrisGondola,
                   timeSeconds);
+  drawZeppelinBonus(renderer, game.bonus);
 
   if (assets.arena) {
     int textureWidth = 0;
@@ -1424,52 +1436,32 @@ void drawBonusRingForegrounds(SDL_Renderer* renderer, const Game& game,
 
 void drawFloorPlaque(SDL_Renderer* renderer, float screenX,
                      std::string_view label, bool start) {
-  const float width = start ? 82.0F : 62.0F;
+  const float width = start ? 56.0F : 48.0F;
   const float left = screenX - width * 0.5F;
-  const float top = kGroundY - (start ? 43.0F : 36.0F);
-  const SDL_Color edge =
-      start ? color(255, 199, 48) : color(75, 219, 255);
-  const SDL_Color face =
-      start ? color(139, 26, 35) : color(15, 62, 126);
-
-  // Painted enamel marker with dimensional brass/chrome trim, legs and
-  // rivets. It remains readable at 480x640 without looking like a flat label.
-  fillRect(renderer, left + 5.0F, top + 7.0F, width, 29.0F,
-           color(26, 13, 11, 150));
-  fillRect(renderer, left, top, width, 29.0F, color(44, 38, 43));
-  fillRect(renderer, left + 2.0F, top + 2.0F, width - 4.0F, 25.0F, edge);
-  fillRect(renderer, left + 5.0F, top + 5.0F, width - 10.0F, 19.0F, face);
-  fillRect(renderer, left + 7.0F, top + 7.0F, width - 14.0F, 2.0F,
-           start ? color(255, 242, 157) : color(164, 244, 255));
-  filledCircle(renderer, left + 8.0F, top + 14.5F, 2.0F,
-               color(245, 235, 188));
-  filledCircle(renderer, left + width - 8.0F, top + 14.5F, 2.0F,
-               color(245, 235, 188));
-  for (int post = 0; post < 2; ++post) {
-    const float postX = left + (post == 0 ? 12.0F : width - 16.0F);
-    fillRect(renderer, postX, top + 29.0F, 5.0F, start ? 14.0F : 8.0F,
-             color(95, 83, 75));
-    fillRect(renderer, postX + 1.0F, top + 29.0F, 2.0F,
-             start ? 14.0F : 8.0F, color(230, 200, 120));
-  }
-  if (start) {
-    line(renderer, left + 8.0F, top, left + 8.0F, top - 15.0F,
-         color(232, 210, 154));
-    const std::array<SDL_Vertex, 3> flag{{
-        {{left + 9.0F, top - 15.0F}, color(239, 49, 45), {0, 0}},
-        {{left + 31.0F, top - 10.0F}, color(255, 199, 48), {0, 0}},
-        {{left + 9.0F, top - 5.0F}, color(239, 49, 45), {0, 0}},
-    }};
-    SDL_RenderGeometry(renderer, nullptr, flag.data(),
-                       static_cast<int>(flag.size()), nullptr, 0);
-  }
-  drawText(renderer, label, screenX, top + 8.0F, start ? 1.15F : 1.2F,
-           color(255, 244, 190), true);
+  const float top = kGroundY - 8.0F;
+  // Faithful to the cabinet: this is a painted floor decal, not a signpost.
+  // The slight perspective shadow and inner highlight keep it crisp in HD.
+  const std::array<SDL_Vertex, 4> shadow{{
+      {{left + 4.0F, top + 4.0F}, color(19, 13, 12, 130), {0, 0}},
+      {{left + width + 4.0F, top + 4.0F}, color(19, 13, 12, 130), {0, 0}},
+      {{left + width - 1.0F, top + 21.0F}, color(19, 13, 12, 130), {0, 0}},
+      {{left + 9.0F, top + 21.0F}, color(19, 13, 12, 130), {0, 0}},
+  }};
+  const int indices[]{0, 1, 2, 0, 2, 3};
+  SDL_RenderGeometry(renderer, nullptr, shadow.data(),
+                     static_cast<int>(shadow.size()), indices, 6);
+  fillRect(renderer, left, top, width, 18.0F, color(46, 224, 247));
+  fillRect(renderer, left + 2.0F, top + 2.0F, width - 4.0F, 14.0F,
+           color(246, 72, 43));
+  fillRect(renderer, left + 5.0F, top + 4.0F, width - 10.0F, 10.0F,
+           color(255, 226, 74));
+  drawText(renderer, label, screenX, top + 5.0F, start ? 1.0F : 1.05F,
+           color(18, 97, 183), true);
 }
 
 void drawCourseMarkers(SDL_Renderer* renderer, const Game& game,
                        float cameraX) {
-  const float startX = 132.0F - cameraX;
+  const float startX = 78.0F - cameraX;
   if (startX > -80.0F && startX < kWorldWidth + 80.0F) {
     drawFloorPlaque(renderer, startX, "START", true);
   }
@@ -1813,6 +1805,18 @@ void drawHudBulbs(SDL_Renderer* renderer) {
                  color(20, 20, 25));
     filledCircle(renderer, x, kHudTop + kHudHeight - 3.0F, 1.6F, glow);
   }
+  for (int index = 1; index < 11; ++index) {
+    const float y = kHudTop + static_cast<float>(index * 8);
+    const SDL_Color leftGlow =
+        bulbs[static_cast<size_t>((index + 1) % bulbs.size())];
+    const SDL_Color rightGlow =
+        bulbs[static_cast<size_t>((index + 3) % bulbs.size())];
+    filledCircle(renderer, 2.0F, y, 2.4F, color(20, 20, 25));
+    filledCircle(renderer, 2.0F, y, 1.6F, leftGlow);
+    filledCircle(renderer, kWorldWidth - 3.0F, y, 2.4F,
+                 color(20, 20, 25));
+    filledCircle(renderer, kWorldWidth - 3.0F, y, 1.6F, rightGlow);
+  }
 }
 
 void drawHud(SDL_Renderer* renderer, const Game& game,
@@ -1823,7 +1827,7 @@ void drawHud(SDL_Renderer* renderer, const Game& game,
 
   drawText(renderer, "1UP", 12.0F, kHudTop + 8.0F, 1.25F,
            color(255, 230, 34));
-  drawText(renderer, std::to_string(game.score), 12.0F, kHudTop + 28.0F,
+  drawText(renderer, std::to_string(game.score), 58.0F, kHudTop + 27.0F,
            1.65F, color(255, 255, 255));
 
   drawText(renderer, "HIGH SCORE", kWorldWidth * 0.5F, kHudTop + 8.0F,
@@ -1834,21 +1838,11 @@ void drawHud(SDL_Renderer* renderer, const Game& game,
 
   const int waitingCharlies = std::clamp(game.lives - 1, 0, 5);
   for (int life = 0; life < waitingCharlies; ++life) {
-    drawCharlieLifeIcon(renderer, charlieTexture, 386.0F + life * 22.0F,
-                        kHudTop + 4.0F);
+    drawCharlieLifeIcon(renderer, charlieTexture, 18.0F + life * 27.0F,
+                        kHudTop + 48.0F);
   }
-  drawText(renderer, "CREDIT 00", 379.0F, kHudTop + 29.0F, 1.15F,
+  drawText(renderer, "CREDIT 00", 379.0F, kHudTop + 48.0F, 1.15F,
            color(70, 202, 255));
-
-  const int secondsRemaining = static_cast<int>(
-      std::ceil(static_cast<double>(game.bonus) / kBoardRefresh));
-  drawText(renderer, "TIME " + std::to_string(secondsRemaining), 12.0F,
-           kHudTop + 59.0F, 1.2F, color(95, 221, 255));
-  drawText(renderer, "BONUS " + std::to_string(game.bonus),
-           kWorldWidth * 0.5F, kHudTop + 59.0F, 1.2F,
-           color(255, 255, 255), true);
-  drawText(renderer, "EVENT 1", 399.0F, kHudTop + 59.0F, 1.15F,
-           color(255, 227, 119));
 
 }
 
@@ -1864,6 +1858,7 @@ void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
   }
   drawFerrisWheel(renderer, assets.ferrisWheel, assets.ferrisGondola,
                   timeSeconds);
+  drawZeppelinBonus(renderer, game.bonus);
   drawHud(renderer, game, assets.charlieLife);
   drawText(renderer, "FINE!!", kWorldWidth * 0.5F, 218.0F, 3.5F,
            color(81, 222, 255), true);
@@ -1906,7 +1901,7 @@ void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
   } else {
     const std::string status =
         game.timeScoreApplied
-            ? "TIME BONUS " + std::to_string(game.clearBonus)
+            ? "BONUS SCORE " + std::to_string(game.clearBonus)
             : "CHECKING TIME";
     drawText(renderer, status, kWorldWidth * 0.5F, 560.0F, 1.6F,
              color(92, 235, 139), true);
@@ -1953,7 +1948,7 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
       flareFrame && assets.hoopFlare ? assets.hoopFlare : assets.hoop;
   SDL_Texture* propsFrame =
       flareFrame && assets.propsFlare ? assets.propsFlare : assets.props;
-  drawBackdrop(renderer, camera, lowDetail, assets, timeSeconds);
+  drawBackdrop(renderer, camera, lowDetail, assets, game, timeSeconds);
   drawCourseMarkers(renderer, game, camera);
 
   for (const auto& hoop : game.hoops) {
@@ -2162,6 +2157,13 @@ int main(int argc, char** argv) {
       game.clearBonus = timeBonusFor(game.bonus);
       game.score += game.clearBonus;
       game.tallyFrame = 190;
+    } else if (options.captureScene == "start") {
+      game.player.position = {78.0F, kGroundY};
+      game.player.previous = game.player.position;
+      game.player.grounded = true;
+      game.player.runSpeed = 0.0F;
+      game.cameraX = 0.0F;
+      game.previousCameraX = 0.0F;
     } else {
       game.player.position.x = 800.0F;
       game.player.previous = game.player.position;

@@ -114,7 +114,8 @@ cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
 ./build/big_top_run --mode 480x640 --capture /tmp/big-top-preview.png
 ```
 
-Pass `--capture-scene ring` or `--capture-scene crash` to inspect those
+Pass `--capture-scene start`, `--capture-scene ring`, or
+`--capture-scene crash` to inspect those
 animation states; `goal` and `tally` are also available.
 
 ## Reference analysis

@@ -141,6 +141,16 @@ production audio.
 
 - Sprite slots `0x25f0–0x2640` form Charlie and the lion as a six-tile,
   `48 × 32` source-pixel composite.
+- MAME's official driver identifies the graphics as packed-MSB four-bit
+  `16 × 16` sprites. The six private sprite ROMs therefore contain 384
+  individually addressable sprite cells.
+- A grounded rider composite uses two columns by three rows before cabinet
+  rotation. Confirmed animation groups include `57–5c`, `5d–62`, and the
+  non-contiguous `63/64/b5/b6/cc/cd` group. These labels and silhouettes are
+  used only as temporary clean-room proportion guides.
+- `tools/decode_reference_sprites.py` can reconstruct temporary private
+  blueprint sheets under `/tmp`; it never copies ROM pixels into production
+  assets or the repository.
 - Their vertical source coordinate produces a symmetric 64-sample jump table.
   The peak displacement is `55` source pixels and the complete takeoff to
   landing interval is `63` board frames.
