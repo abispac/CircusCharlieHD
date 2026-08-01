@@ -325,7 +325,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.marquee = loadAsset(renderer, "stage1-marquee-v2.png");
   assets.ferrisWheel = loadAsset(renderer, "stage1-ferris-wheel.png");
   assets.ferrisGondola = loadAsset(renderer, "stage1-ferris-gondola.png");
-  assets.rider = loadAsset(renderer, "stage1-rider-sheet-v4.png");
+  assets.rider = loadAsset(renderer, "stage1-rider-sheet-v5.png");
   assets.hoop = loadAsset(renderer, "stage1-hoop.png");
   assets.hoopFlare = loadAsset(renderer, "stage1-hoop-flare.png");
   assets.props = loadAsset(renderer, "stage1-props.png");
@@ -1643,7 +1643,11 @@ void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
                   ? 3
                   : (verticalVelocity < 95.0F ? 4 : 5);
     } else if (std::abs(runSpeed) > 5.0F) {
-      frame = 1 + (static_cast<int>(timeSeconds * 8.0) & 1);
+      // The original composite advances one pose every 7–8 board frames.
+      // Cycling all three grounded poses preserves that cadence while making
+      // a complete stride slower and more readable than the old two-frame
+      // toggle.
+      frame = static_cast<int>(timeSeconds * (kBoardRefresh / 7.5)) % 3;
     }
 
     const SDL_Rect source{(frame % 3) * cellWidth, (frame / 3) * cellHeight,
@@ -1654,7 +1658,7 @@ void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
     constexpr float kSpriteWidth = 116.0F;
     constexpr float kSpriteHeight = 96.0F;
     constexpr std::array<float, 6> kAnchorCorrection{
-        12.0F, 13.0F, 14.0F, 20.0F, 35.0F, 18.0F};
+        12.0F, 12.0F, 12.0F, 12.0F, 12.0F, 12.0F};
     const SDL_FRect destination{
         screenX - 38.0F,
         groundY - kSpriteHeight +
@@ -1782,7 +1786,7 @@ void drawBurningRider(SDL_Renderer* renderer, float screenX, float groundY,
 void drawCharlieLifeIcon(SDL_Renderer* renderer, SDL_Texture* charlieTexture,
                          float x, float y) {
   if (charlieTexture) {
-    const SDL_FRect destination{x - 13.0F, y - 3.0F, 27.0F, 27.0F};
+    const SDL_FRect destination{x - 19.0F, y - 5.0F, 38.0F, 38.0F};
     SDL_RenderCopyF(renderer, charlieTexture, nullptr, &destination);
     return;
   }
@@ -1825,9 +1829,9 @@ void drawHud(SDL_Renderer* renderer, const Game& game,
            color(0, 0, 0, 248));
   drawHudBulbs(renderer);
 
-  drawText(renderer, "1UP", 12.0F, kHudTop + 8.0F, 1.25F,
+  drawText(renderer, "1UP", 12.0F, kHudTop + 8.0F, 1.35F,
            color(255, 230, 34));
-  drawText(renderer, std::to_string(game.score), 58.0F, kHudTop + 27.0F,
+  drawText(renderer, std::to_string(game.score), 100.0F, kHudTop + 27.0F,
            1.65F, color(255, 255, 255));
 
   drawText(renderer, "HIGH SCORE", kWorldWidth * 0.5F, kHudTop + 8.0F,
@@ -1838,10 +1842,10 @@ void drawHud(SDL_Renderer* renderer, const Game& game,
 
   const int waitingCharlies = std::clamp(game.lives - 1, 0, 5);
   for (int life = 0; life < waitingCharlies; ++life) {
-    drawCharlieLifeIcon(renderer, charlieTexture, 18.0F + life * 27.0F,
-                        kHudTop + 48.0F);
+    drawCharlieLifeIcon(renderer, charlieTexture, 21.0F + life * 39.0F,
+                        kHudTop + 47.0F);
   }
-  drawText(renderer, "CREDIT 00", 379.0F, kHudTop + 48.0F, 1.15F,
+  drawText(renderer, "CREDIT 00", 365.0F, kHudTop + 46.0F, 1.45F,
            color(70, 202, 255));
 
 }
