@@ -30,7 +30,7 @@ constexpr float kRingActivationLead = 900.0F;
 constexpr float kCourseLength = 6000.0F;
 constexpr float kGoalScreenX = 150.0F;
 constexpr float kGoalPlatformTop = kGroundY - 25.0F;
-constexpr float kGoalLandingY = kGoalPlatformTop + 5.0F;
+constexpr float kGoalLandingY = kGoalPlatformTop + 12.0F;
 constexpr float kPi = 3.14159265358979323846F;
 constexpr float kMarqueeHeight = 105.0F;
 constexpr float kHudTop = kMarqueeHeight;
@@ -161,7 +161,6 @@ struct Game {
   int rewardCoinsAwarded = 0;
   int prizeBagsAvailable = 0;
   int prizeBagsCollected = 0;
-  int hiddenCoinPotIndex = -1;
   bool deathOccurred = false;
   bool perfectClear = false;
   bool hiddenCoinTriggered = false;
@@ -172,6 +171,7 @@ struct Game {
   float extraCharlieWorldX = 0.0F;
   std::uint32_t jumpAudioSerial = 0;
   std::uint32_t crashAudioSerial = 0;
+  std::uint32_t coinAudioSerial = 0;
   std::uint32_t randomState = 0x6d2b79f5U;
   bool debug = false;
 };
@@ -223,7 +223,8 @@ struct AudioEngine {
   AudioClip crowdCheer;
   AudioClip birdCoinDrop;
   AudioClip bonusCount;
-  std::array<AudioVoice, 7> voices{};
+  AudioClip coin;
+  std::array<AudioVoice, 8> voices{};
   bool available = false;
 };
 
@@ -336,7 +337,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.propsFlare = loadAsset(renderer, "stage1-props-flare.png");
   assets.bird = loadAsset(renderer, "stage1-bird-sheet.png");
   assets.charlieLife = loadAsset(renderer, "stage1-charlie-life-v2.png");
-  assets.goalPlatform = loadAsset(renderer, "stage1-goal-platform-v3.png");
+  assets.goalPlatform = loadAsset(renderer, "stage1-goal-platform-v4.png");
   assets.finishRider =
       loadAsset(renderer, "stage1-finish-rider-sheet.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
@@ -363,6 +364,8 @@ void destroyAssets(Assets& assets) {
   if (assets.propsFlare) SDL_DestroyTexture(assets.propsFlare);
   if (assets.bird) SDL_DestroyTexture(assets.bird);
   if (assets.charlieLife) SDL_DestroyTexture(assets.charlieLife);
+  if (assets.goalPlatform) SDL_DestroyTexture(assets.goalPlatform);
+  if (assets.finishRider) SDL_DestroyTexture(assets.finishRider);
   assets = {};
 }
 
@@ -419,7 +422,8 @@ bool loadAudio(AudioEngine& audio) {
       loadAudioAsset("miss-2.wav", audio.missTwo) &&
       loadAudioAsset("crowd-cheer.wav", audio.crowdCheer) &&
       loadAudioAsset("bird-coin-drop.wav", audio.birdCoinDrop) &&
-      loadAudioAsset("bonus-count.wav", audio.bonusCount);
+      loadAudioAsset("bonus-count.wav", audio.bonusCount) &&
+      loadAudioAsset("coin.wav", audio.coin);
   if (!loaded) {
     std::cerr << "One or more audio assets could not be loaded: "
               << SDL_GetError() << '\n';
@@ -436,7 +440,8 @@ bool loadAudio(AudioEngine& audio) {
       !matchesReference(audio.missTwo) ||
       !matchesReference(audio.crowdCheer) ||
       !matchesReference(audio.birdCoinDrop) ||
-      !matchesReference(audio.bonusCount)) {
+      !matchesReference(audio.bonusCount) ||
+      !matchesReference(audio.coin)) {
     std::cerr << "Audio assets do not share one PCM format.\n";
     return false;
   }
@@ -505,6 +510,10 @@ void playBonusCount(AudioEngine& audio) {
                 static_cast<int>(SDL_MIX_MAXVOLUME * 0.92F), false);
 }
 
+void playCoinSound(AudioEngine& audio) {
+  setAudioVoice(audio, 7, audio.coin, SDL_MIX_MAXVOLUME, false);
+}
+
 void destroyAudio(AudioEngine& audio) {
   if (audio.device != 0) {
     SDL_PauseAudioDevice(audio.device, 1);
@@ -517,6 +526,7 @@ void destroyAudio(AudioEngine& audio) {
   if (audio.crowdCheer.data) SDL_FreeWAV(audio.crowdCheer.data);
   if (audio.birdCoinDrop.data) SDL_FreeWAV(audio.birdCoinDrop.data);
   if (audio.bonusCount.data) SDL_FreeWAV(audio.bonusCount.data);
+  if (audio.coin.data) SDL_FreeWAV(audio.coin.data);
   audio = {};
 }
 
@@ -676,7 +686,6 @@ void resetCourse(Game& game) {
   game.rewardCoinsAwarded = 0;
   game.prizeBagsAvailable = 0;
   game.prizeBagsCollected = 0;
-  game.hiddenCoinPotIndex = -1;
   game.deathOccurred = false;
   game.perfectClear = false;
   game.hiddenCoinTriggered = false;
@@ -736,9 +745,6 @@ void resetCourse(Game& game) {
       {620.0F, 60},  {1480.0F, 50}, {2340.0F, 40},
       {3200.0F, 30}, {4060.0F, 20}, {4920.0F, 10},
   };
-  game.hiddenCoinPotIndex =
-      static_cast<int>(nextRandom(game) % game.firePots.size());
-
   int prizeCount = 0;
   for (auto& ring : game.bonusRings) {
     ring.containsPrize = nextRandom(game) % 5U < 3U;
@@ -959,6 +965,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
       if (game.openingBackwardJumps >= 3) {
         game.extraCharlieActive = true;
         game.extraCharlieWorldX = game.player.position.x + 430.0F;
+        ++game.coinAudioSerial;
       }
     }
     game.player.grounded = false;
@@ -1010,27 +1017,34 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         game.player.position.x - firePot.worldX;
     const bool backwardJump =
         !game.player.grounded && game.player.runSpeed < -20.0F;
-    const bool isHiddenCoinPot =
-        static_cast<int>(firePotIndex) == game.hiddenCoinPotIndex;
-    if (isHiddenCoinPot && !game.hiddenCoinTriggered &&
-        !firePot.coinChanceResolved && backwardJump &&
+    if (!game.hiddenCoinTriggered && !firePot.coinChanceResolved &&
+        backwardJump &&
         potDistance > -20.0F && potDistance < 62.0F) {
       firePot.coinChanceResolved = true;
-      firePot.coinActive = true;
-      firePot.coinFrame = 0;
-      game.hiddenCoinTriggered = true;
+      const bool finalPot = firePotIndex + 1 == game.firePots.size();
+      const bool revealCoin = nextRandom(game) % 3U == 0U || finalPot;
+      if (revealCoin) {
+        firePot.coinActive = true;
+        firePot.coinFrame = 0;
+        game.hiddenCoinTriggered = true;
+        ++game.coinAudioSerial;
+      }
     }
 
     if (firePot.coinActive) {
       ++firePot.coinFrame;
       const float coinY = firePotCoinY(firePot);
       const float riderCenterY = game.player.position.y - 40.0F;
-      if (!firePot.coinCollected &&
+      // Do not collect on the same update that reveals the coin. The old
+      // overlap test could create and remove it invisibly before one frame was
+      // rendered; the arcade coin must complete part of its flip first.
+      if (!firePot.coinCollected && firePot.coinFrame > 12 &&
           std::abs(game.player.position.x - firePot.worldX) < 44.0F &&
           std::abs(riderCenterY - coinY) < 44.0F) {
         firePot.coinCollected = true;
         firePot.coinActive = false;
         game.score += 500;
+        ++game.coinAudioSerial;
       } else if (firePot.coinFrame >= kCoinFlightFrames) {
         firePot.coinActive = false;
       }
@@ -1080,7 +1094,10 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     if (!ring.collected) {
       ring.collected = true;
       game.score += ring.containsPrize ? 500 : 200;
-      if (ring.containsPrize) ++game.prizeBagsCollected;
+      if (ring.containsPrize) {
+        ++game.prizeBagsCollected;
+        ++game.coinAudioSerial;
+      }
     }
   }
 
@@ -1205,11 +1222,12 @@ void drawFerrisWheel(SDL_Renderer* renderer, SDL_Texture* wheelTexture,
 }
 
 void drawZeppelinBonus(SDL_Renderer* renderer, int bonus) {
-  drawText(renderer, "BONUS", 76.0F, 34.0F, 1.0F,
+  constexpr float kZeppelinPanelCenterX = 92.0F;
+  drawText(renderer, "BONUS", kZeppelinPanelCenterX, 34.0F, 1.0F,
            color(74, 111, 229), true);
   std::ostringstream value;
   value << std::setw(4) << std::setfill('0') << bonus;
-  drawText(renderer, value.str(), 76.0F, 50.0F, 1.45F,
+  drawText(renderer, value.str(), kZeppelinPanelCenterX, 50.0F, 1.45F,
            color(255, 255, 255), true);
 }
 
@@ -1365,12 +1383,17 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
     SDL_RenderCopyF(renderer, propsTexture, &fireSource, &destination);
     if (firePot.coinActive && !firePot.coinCollected) {
       const float coinY = firePotCoinY(firePot);
-      filledCircle(renderer, screenX, coinY, 9.0F, color(255, 201, 46));
-      filledCircle(renderer, screenX, coinY, 5.5F, color(255, 237, 122));
-      line(renderer, screenX - 3.0F, coinY - 5.0F, screenX - 3.0F,
-           coinY + 5.0F, color(172, 104, 18));
-      line(renderer, screenX + 3.0F, coinY - 5.0F, screenX + 3.0F,
-           coinY + 5.0F, color(172, 104, 18));
+      const float flip = std::max(
+          0.16F, std::abs(std::cos(static_cast<float>(firePot.coinFrame) *
+                                  0.34F)));
+      const float coinWidth = 9.0F * flip;
+      ellipse(renderer, screenX, coinY, coinWidth, 9.0F,
+              color(255, 246, 115), 3);
+      ellipse(renderer, screenX, coinY, std::max(1.0F, coinWidth - 2.5F),
+              6.0F, color(226, 146, 20), 2);
+      fillRect(renderer, screenX - coinWidth * 0.35F, coinY - 5.0F,
+               std::max(1.0F, coinWidth * 0.20F), 3.0F,
+               color(255, 255, 221));
     }
   }
 
@@ -1524,10 +1547,23 @@ void drawFinishRider(SDL_Renderer* renderer, SDL_Texture* finishTexture,
   const SDL_Rect source{frame * cellWidth, 0, cellWidth, textureHeight};
   constexpr float kFinishWidth = 116.0F;
   constexpr float kFinishHeight = 122.0F;
-  const SDL_FRect destination{screenX - kFinishWidth * 0.5F,
-                              kGoalLandingY - 103.0F, kFinishWidth,
-                              kFinishHeight};
+  const float landingProgress = std::clamp(
+      static_cast<float>(goalFrame) / 18.0F, 0.0F, 1.0F);
+  const float arrivalX = (1.0F - landingProgress) * -26.0F;
+  const float arrivalY = (1.0F - landingProgress) * -19.0F;
+  const SDL_FRect destination{
+      screenX - kFinishWidth * 0.5F + arrivalX,
+      kGoalLandingY - 103.0F + arrivalY, kFinishWidth, kFinishHeight};
   SDL_RenderCopyF(renderer, finishTexture, &source, &destination);
+}
+
+void drawGoalPlatformFrontRim(SDL_Renderer* renderer, float screenX) {
+  // This narrow foreground edge gives the landing depth: paws remain on the
+  // green top while the padded front lip passes in front of their lowest row.
+  fillRect(renderer, screenX - 67.0F, kGoalPlatformTop + 17.0F, 134.0F,
+           2.5F, color(46, 126, 13, 225));
+  fillRect(renderer, screenX - 65.0F, kGoalPlatformTop + 16.0F, 130.0F,
+           1.0F, color(220, 255, 91, 235));
 }
 
 void drawExtraCharlie(SDL_Renderer* renderer, const Game& game,
@@ -1641,7 +1677,8 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
       cell = 3;
     }
     const SDL_Rect source{cell * cellWidth, 0, cellWidth, textureHeight};
-    const SDL_FRect destination{birdX - 45.0F, 110.0F, 90.0F, 120.0F};
+    // Keep the reward bird in the arena below the persistent LED/HUD panel.
+    const SDL_FRect destination{birdX - 45.0F, 205.0F, 90.0F, 120.0F};
     SDL_RenderCopyF(renderer, birdTexture, &source, &destination);
   }
 
@@ -1652,7 +1689,7 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
       const float lane =
           static_cast<float>((index * 37) % 91) - 45.0F;
       const float x = kGoalScreenX + lane * 0.55F;
-      const float y = 205.0F + static_cast<float>(localFrame) * 3.1F;
+      const float y = 300.0F + static_cast<float>(localFrame) * 2.15F;
       drawCoin(renderer, x, y,
                std::abs(std::sin(static_cast<float>(localFrame) * 0.24F)));
     }
@@ -2018,6 +2055,9 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
       drawHoopForeground(renderer, hoop, camera, hoopFrame);
     }
     drawBonusRingForegrounds(renderer, game, camera, propsFrame);
+    if (game.scene == Scene::Goal) {
+      drawGoalPlatformFrontRim(renderer, playerWorldX - camera);
+    }
     if (game.scene == Scene::Crashed &&
         game.crashFrame < kCrashBurnFrames) {
       drawBurningRider(renderer, playerWorldX - camera, playerY, propsFrame,
@@ -2235,6 +2275,7 @@ int main(int argc, char** argv) {
   bool stageMusicPlaying = false;
   std::uint32_t observedJumpAudioSerial = game.jumpAudioSerial;
   std::uint32_t observedCrashAudioSerial = game.crashAudioSerial;
+  std::uint32_t observedCoinAudioSerial = game.coinAudioSerial;
   Scene observedScene = game.scene;
   int observedGoalFrame = game.goalFrame;
   double accumulator = 0.0;
@@ -2360,6 +2401,10 @@ int main(int argc, char** argv) {
     if (observedCrashAudioSerial != game.crashAudioSerial) {
       playMissSounds(audio);
       observedCrashAudioSerial = game.crashAudioSerial;
+    }
+    if (observedCoinAudioSerial != game.coinAudioSerial) {
+      playCoinSound(audio);
+      observedCoinAudioSerial = game.coinAudioSerial;
     }
     if (game.scene != observedScene) {
       if (game.scene == Scene::Goal) playCrowdCheer(audio);

@@ -137,6 +137,21 @@ ROM-derived WAV files remain outside this repository as private references.
 Only timing, envelope, and pitch observations may guide newly synthesized
 production audio.
 
+## Why the effects cannot be copied out as individual WAV files
+
+The two audio ROMs are ordinary Z80 program/data ROMs; unlike the encrypted
+KONAMI-1 main program, they do not require opcode decryption. They do not hold
+a folder of finished recordings. The main CPU writes a sound command at
+`0x0800` and triggers the audio interrupt at `0x0c00`. The Z80 reads that
+command at `0x6000`, then generates the audible result by programming two
+SN76489A tone/noise chips, an 8-bit DAC, and the board's discrete filter/mixer.
+
+Consequently, the faithful recovery workflow is command enumeration plus
+MAME `-wavwrite` capture of the emulated final mono mixer. Each command must be
+triggered in isolation, logged, recorded, trimmed, and matched to the action
+that invokes it. This produces authentic private reference clips without
+mistakenly treating arbitrary ROM byte ranges as PCM audio.
+
 ## Recovered Event 1 rider labels
 
 - Sprite slots `0x25f0–0x2640` form Charlie and the lion as a six-tile,
