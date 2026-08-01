@@ -152,6 +152,11 @@ triggered in isolation, logged, recorded, trimmed, and matched to the action
 that invokes it. This produces authentic private reference clips without
 mistakenly treating arbitrary ROM byte ranges as PCM audio.
 
+`tools/capture_sound_ids.lua` automates that command sweep. Its first verified
+probe triggers decimal command `41` (`0x29`), matching the owner's labeled
+coin reference. Captured WAV output and command logs remain private and are
+written outside the repository.
+
 ## Recovered Event 1 rider labels
 
 - Sprite slots `0x25f0–0x2640` form Charlie and the lion as a six-tile,
