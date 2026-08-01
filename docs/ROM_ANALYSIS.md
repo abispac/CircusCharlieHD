@@ -164,6 +164,17 @@ those as independent event channels even though they currently use the same
 verified arcade command, preventing later sound assignments from affecting
 unrelated rewards.
 
+The deterministic `circusc4` attract trace also captures the complete hidden
+fire-pot coin interaction. A reverse jump begins at frame `2775`; command
+`0x50` launches the coin at frame `2838`, exactly 63 board frames later when
+Charlie has landed beyond the pot. A separate forward jump begins at frame
+`2886`, and a second `0x50` marks collection at frame `2904`. If it is not
+collected, the coin completes its arc back into the pot without a second
+sound. This timing is implemented as a pending launch after the reverse jump,
+not as an immediate mid-jump pickup. The captured coin is near its apex about
+50 frames after launch; the native 96-frame flight therefore reaches its peak
+at frame 48 and passes Charlie on its descending half at the measured catch.
+
 ## Recovered Event 1 rider labels
 
 - Sprite slots `0x25f0–0x2640` form Charlie and the lion as a six-tile,

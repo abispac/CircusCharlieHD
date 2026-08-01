@@ -61,7 +61,10 @@ constexpr float kBonusRingCollisionHalfWidth = 6.0F;
 constexpr float kBonusRingOpeningHalfHeight = 72.0F;
 constexpr float kBonusRingVisualHalfWidth = 30.0F;
 constexpr float kBonusRingVisualHalfHeight = 115.0F;
-constexpr int kCoinFlightFrames = 72;
+// The MAME sequence places the coin near its apex about 50 frames after the
+// launch and catches it on the descending half at frame 66. A 96-frame arc
+// matches both measurements and still returns visibly to the pot when missed.
+constexpr int kCoinFlightFrames = 96;
 constexpr int kCrashBurnFrames = 72;
 constexpr int kGoalArrivalFrames = 90;
 constexpr int kBirdArrivalFrames = 170;
@@ -104,6 +107,7 @@ struct Hoop {
 struct FirePot {
   float worldX = 0.0F;
   bool coinChanceResolved = false;
+  bool coinPending = false;
   bool coinActive = false;
   bool coinCollected = false;
   int coinFrame = 0;
@@ -839,6 +843,10 @@ bool overlapsHoop(const Player& player, const Hoop& hoop) {
 
 void crashPlayer(Game& game) {
   if (game.scene != Scene::Playing) return;
+  for (auto& firePot : game.firePots) {
+    firePot.coinPending = false;
+    firePot.coinActive = false;
+  }
   game.player.alive = false;
   game.player.runSpeed = 0.0F;
   game.player.verticalVelocity = 0.0F;
@@ -987,6 +995,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
       game.extraCharlieCollected = true;
       ++game.lives;
       game.score += 1000;
+      ++game.extraCharlieAudioSerial;
     } else if (game.extraCharlieWorldX < game.player.position.x - 95.0F) {
       game.extraCharlieActive = false;
     }
@@ -1004,7 +1013,6 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
       if (game.openingBackwardJumps >= 3) {
         game.extraCharlieActive = true;
         game.extraCharlieWorldX = game.player.position.x + 430.0F;
-        ++game.extraCharlieAudioSerial;
       }
     }
     game.player.grounded = false;
@@ -1057,27 +1065,39 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     const bool backwardJump =
         !game.player.grounded && game.player.runSpeed < -20.0F;
     if (!game.hiddenCoinTriggered && !firePot.coinChanceResolved &&
-        backwardJump &&
-        potDistance > -20.0F && potDistance < 62.0F) {
+        backwardJump && potDistance > -20.0F && potDistance < 62.0F) {
       firePot.coinChanceResolved = true;
-      const bool finalPot = firePotIndex + 1 == game.firePots.size();
-      const bool revealCoin = nextRandom(game) % 3U == 0U || finalPot;
+      const bool revealCoin = nextRandom(game) % 3U == 0U;
       if (revealCoin) {
-        firePot.coinActive = true;
-        firePot.coinFrame = 0;
+        // MAME's Event 1 trace issues the reverse-jump command at frame 2775
+        // and the coin command at frame 2838: exactly one complete 63-frame
+        // jump later. Arm the reward while crossing, but do not launch it
+        // until Charlie has landed on the far side of the pot.
+        firePot.coinPending = true;
         game.hiddenCoinTriggered = true;
-        ++game.hiddenCoinAudioSerial;
       }
+    }
+
+    if (firePot.coinPending && game.player.grounded &&
+        game.player.position.x <
+            firePot.worldX - kFirePotCollisionHalfWidth) {
+      firePot.coinPending = false;
+      firePot.coinActive = true;
+      firePot.coinFrame = 0;
+      ++game.hiddenCoinAudioSerial;
     }
 
     if (firePot.coinActive) {
       ++firePot.coinFrame;
       const float coinY = firePotCoinY(firePot);
       const float riderCenterY = game.player.position.y - 40.0F;
-      // Do not collect on the same update that reveals the coin. The old
-      // overlap test could create and remove it invisibly before one frame was
-      // rendered; the arcade coin must complete part of its flip first.
-      if (!firePot.coinCollected && firePot.coinFrame > 12 &&
+      // The launch happens after the reverse jump has finished. Collection
+      // therefore requires a distinct forward jump, just as the MAME demo
+      // does at frames 2886–2904. Running underneath or waiting lets the coin
+      // finish its arc and fall silently back into the pot.
+      const bool forwardCatchAttempt =
+          !game.player.grounded && game.player.runSpeed > 20.0F;
+      if (!firePot.coinCollected && forwardCatchAttempt &&
           std::abs(game.player.position.x - firePot.worldX) < 44.0F &&
           std::abs(riderCenterY - coinY) < 44.0F) {
         firePot.coinCollected = true;

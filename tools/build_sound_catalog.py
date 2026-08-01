@@ -23,6 +23,7 @@ KNOWN_LABELS = {
     0x47: "Jump",
     0x49: "Money bag / extra Charlie",
     0x4F: "Miss effect component",
+    0x50: "Fire-pot coin launch / collection",
 }
 
 
