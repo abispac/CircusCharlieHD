@@ -71,7 +71,7 @@ constexpr int kCrashBurnFrames = 72;
 constexpr int kGoalArrivalFrames = 90;
 constexpr int kBirdArrivalFrames = 170;
 constexpr int kBagDropFrames = 45;
-constexpr int kBirdExitFrames = 36;
+constexpr int kBirdExitFrames = 18;
 constexpr int kCoinShowerFrames = 220;
 constexpr int kRewardCoinCount = 18;
 constexpr float kStrideAnimationSpeedScale = 0.85F;
@@ -1805,7 +1805,7 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
           static_cast<float>(game.goalFrame - bagDropStart) /
               static_cast<float>(kBirdExitFrames),
           0.0F, 1.0F);
-      birdX = kGoalScreenX - exitProgress * 220.0F;
+      birdX = kGoalScreenX - exitProgress * 260.0F;
       cell = 3;
     }
     const SDL_Rect source{cell * cellWidth, 0, cellWidth, textureHeight};
@@ -2076,8 +2076,8 @@ void drawHud(SDL_Renderer* renderer, const Game& game,
 
   drawText(renderer, "1UP", 12.0F, kHudTop + 8.0F, 1.35F,
            color(255, 230, 34));
-  drawText(renderer, std::to_string(game.score), 160.0F, kHudTop + 27.0F,
-           1.65F, color(255, 255, 255));
+  drawText(renderer, std::to_string(game.score), 68.0F, kHudTop + 8.0F,
+           1.45F, color(255, 255, 255));
 
   drawText(renderer, "HIGH SCORE", kWorldWidth * 0.5F, kHudTop + 8.0F,
            1.25F, color(245, 70, 37), true);
