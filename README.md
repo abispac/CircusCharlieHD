@@ -8,7 +8,7 @@ folder and are not stored in this repository.
 
 The current milestone is a playable Stage 1 prototype with original
 hand-painted HD rider, green Stage 1 arena, marquee, Ferris-wheel, and
-fire-hoop assets.
+fire-hoop assets, plus a faithful six-event HD selection screen.
 The friendly blond Charlie rider uses a six-pose sheet while retaining the
 original HD lion artwork. Vector rendering remains only as a fallback if an
 asset cannot be loaded.
@@ -74,7 +74,7 @@ cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
 ## Controls
 
 - `5` or `C`: insert one coin / add one credit
-- `1` or `Enter`: one-player start; consumes one credit
+- `1` or `Enter`: open the event-selection screen when a credit is available
 - `Left` / `A`: move or backtrack left
 - `Right` / `D`: move right
 - Release horizontal input: stop
@@ -86,7 +86,18 @@ cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
 
 SDL game controllers are detected automatically. D-pad/left stick controls
 direction, the south face button jumps, the Back/View button inserts a coin,
-and the Start/Menu button consumes one credit to begin.
+and the Start/Menu button begins or confirms event selection.
+
+## Event selection
+
+The six-event screen follows the recorded arcade layout and starts with
+Charlie on Event 1. Arrow keys, `WASD`, or the controller D-pad move Charlie
+one cell at a time; `Space`, `Z`, `1`, `Enter`, controller A, or controller
+Start confirms the current cell. Track 02 plays once and automatically
+confirms the cell where Charlie is standing when it ends. Confirmation
+consumes the credit. Until later events are implemented, every cell
+deliberately launches the finished Event 1 course while preserving the chosen
+event in game state.
 
 The cabinet-standard keyboard mappings are `5` for coin and `1` for start, so
 a physical coin acceptor can use a normal arcade USB encoder configured like
@@ -110,10 +121,14 @@ new HD montage featuring every completed stage will lead into this credit
 screen. That later montage is intentionally deferred until every stage has
 final art and animation available.
 
-## Local Event 1 audio
+## Local audio
 
 The local build uses these standardized 48 kHz mono files:
 
+- `event-select.wav`: track 02, played once during the six-event screen; its
+  exact WAV duration controls automatic confirmation
+- `event-select-move.wav`: isolated command `0x52` (catalog RMS 927),
+  restarted on every valid move between event cells
 - `event1-stage.wav`: track 03, looped during Event 1, stopped immediately on
   a miss or goal arrival, and restarted from the beginning when Charlie
   respawns. Its playback switches to the arcade-style double-speed warning
@@ -157,8 +172,8 @@ cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
 ./build/big_top_run --mode 480x640 --capture /tmp/big-top-preview.png
 ```
 
-Pass `--capture-scene start`, `--capture-scene ring`, or
-`--capture-scene crash` to inspect those
+Pass `--capture-scene start`, `--capture-scene select`,
+`--capture-scene ring`, or `--capture-scene crash` to inspect those
 animation states; `goal` and `tally` are also available.
 
 ## Reference analysis
