@@ -210,6 +210,29 @@ double hoops or ordinary fire-pot jumps.
   approximately source `y = 152–216`. These relative coordinates drive the
   HD rail and ring placement.
 
+## Recovered Event 2 animation labels
+
+- A fresh `circusc` attract trace covers the complete tightrope sequence at
+  object slots `$2400-$257f` while preserving the original `60.606 Hz` board
+  cadence.
+- Charlie's Event 2 jump is a separate fixed arc, not the Event 1 lion arc.
+  It lasts 57 movement updates after takeoff, peaks at `52` upright source
+  pixels, and returns to the rope on the 58th sampled pose.
+- A standard monkey is a four-cell `32 x 32` composite. Its three ROM key
+  poses are staged as `ce/cf/d0/fe`, `d1/d2/d3/fe`, and
+  `ce/d5/d6/fe`. Their repeated hold pattern is approximately `7/5/7` board
+  frames.
+- The purple leap adds three distinct composites:
+  `d7/d8/d9/fe`, `da/db/dc/fe`, and `ce/de/df/fe`.
+- Production HD animation keeps those silhouettes and hold timing as the
+  motion anchors, but adds one newly authored in-between pose between each
+  ROM key pose. Standard walking, purple walking, and purple leaping therefore
+  each render as smooth six-frame families without changing game speed or
+  collision timing.
+- The goal sequence stops Charlie on the raised green/red perch, awards the
+  visible `5000`, and runs the FAROUT/GREAT crowd response before the shared
+  bonus tally.
+
 ## Next labels to recover
 
 - Camera threshold and backtracking limit
