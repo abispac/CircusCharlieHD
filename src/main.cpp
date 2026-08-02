@@ -2285,7 +2285,9 @@ void drawCoinWaitingScreen(SDL_Renderer* renderer, const Game& game,
 }
 
 void drawEventSelectBulbs(SDL_Renderer* renderer, float x, float y,
-                          float width, float height, int phase) {
+                          float width, float height, int phase,
+                          bool drawTop, bool drawBottom, bool drawLeft,
+                          bool drawRight) {
   const std::array<SDL_Color, 5> bulbs{
       color(250, 46, 48), color(255, 226, 41), color(40, 216, 72),
       color(54, 133, 255), color(217, 73, 244),
@@ -2299,8 +2301,10 @@ void drawEventSelectBulbs(SDL_Renderer* renderer, float x, float y,
         bulbs[static_cast<size_t>((index + phase) % bulbs.size())];
     const SDL_Color bottom =
         bulbs[static_cast<size_t>((index + phase + 2) % bulbs.size())];
-    filledCircle(renderer, bulbX, y, 1.75F, top);
-    filledCircle(renderer, bulbX, y + height, 1.75F, bottom);
+    if (drawTop) filledCircle(renderer, bulbX, y, 1.75F, top);
+    if (drawBottom) {
+      filledCircle(renderer, bulbX, y + height, 1.75F, bottom);
+    }
   }
   for (int index = 1; index < verticalCount; ++index) {
     const float bulbY = y + index * spacing;
@@ -2308,8 +2312,10 @@ void drawEventSelectBulbs(SDL_Renderer* renderer, float x, float y,
         bulbs[static_cast<size_t>((index + phase + 1) % bulbs.size())];
     const SDL_Color right =
         bulbs[static_cast<size_t>((index + phase + 3) % bulbs.size())];
-    filledCircle(renderer, x, bulbY, 1.75F, left);
-    filledCircle(renderer, x + width, bulbY, 1.75F, right);
+    if (drawLeft) filledCircle(renderer, x, bulbY, 1.75F, left);
+    if (drawRight) {
+      filledCircle(renderer, x + width, bulbY, 1.75F, right);
+    }
   }
 }
 
@@ -2355,10 +2361,10 @@ void drawEventSelectionScreen(SDL_Renderer* renderer, const Game& game,
   };
   constexpr float panelWidth = 152.0F;
   constexpr float panelHeight = 188.0F;
-  constexpr float firstX = 5.0F;
+  constexpr float firstX = 12.0F;
   constexpr float firstY = 244.0F;
-  constexpr float columnStep = 159.0F;
-  constexpr float rowStep = 191.0F;
+  constexpr float columnStep = panelWidth;
+  constexpr float rowStep = panelHeight;
 
   for (int eventIndex = 0; eventIndex < kEventCount; ++eventIndex) {
     const int column = eventIndex % kEventColumns;
@@ -2370,8 +2376,9 @@ void drawEventSelectionScreen(SDL_Renderer* renderer, const Game& game,
         eventIndex == game.selectedEvent ? assets.eventSelectChosen
                                          : assets.eventSelectProps;
     drawEventSelectCell(renderer, panelTexture, eventIndex, panel);
-    drawEventSelectBulbs(renderer, x, y, panelWidth, panelHeight,
-                         eventIndex);
+    drawEventSelectBulbs(renderer, x, y, panelWidth, panelHeight, eventIndex,
+                         true, row == 1, true,
+                         column == kEventColumns - 1);
     drawText(renderer, std::to_string(eventIndex + 1), x + 6.0F,
              y + 7.0F, 1.0F, color(62, 204, 255));
     drawText(renderer, difficulty[static_cast<size_t>(eventIndex)],
