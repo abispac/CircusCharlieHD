@@ -75,7 +75,9 @@ constexpr int kBagDropFrames = 45;
 constexpr int kBirdExitFrames = 18;
 constexpr int kCoinShowerFrames = 220;
 constexpr int kRewardCoinCount = 18;
-constexpr float kStrideAnimationSpeedScale = 0.85F;
+// Preserve the measured arcade cadence. This was briefly reduced to 0.85,
+// which made the lion's full stride cycle 15% slower than normal.
+constexpr float kStrideAnimationSpeedScale = 1.00F;
 constexpr int kDefaultHighScore = 19830;
 constexpr int kFirstScoreLife = 20000;
 constexpr int kRecurringScoreLife = 70000;
@@ -377,7 +379,7 @@ SDL_Texture* loadAsset(SDL_Renderer* renderer, const char* filename) {
 
 Assets loadAssets(SDL_Renderer* renderer) {
   Assets assets;
-  assets.arena = loadAsset(renderer, "stage1-arena.png");
+  assets.arena = loadAsset(renderer, "stage1-arena-green.png");
   assets.marquee = loadAsset(renderer, "stage1-marquee-v2.png");
   assets.ferrisWheel = loadAsset(renderer, "stage1-ferris-wheel.png");
   assets.ferrisGondola = loadAsset(renderer, "stage1-ferris-gondola.png");
@@ -523,7 +525,8 @@ bool loadAudio(AudioEngine& audio) {
            clip.spec.channels == reference.channels;
   };
   // Reward effects remain optional until their exact arcade command IDs have
-  // been verified. The known coin effect is reserved exclusively for an
+  // been verified. RMS 1007 from isolated command 0x42 is the confirmed
+  // extra-Charlie pickup effect. The credit sound remains reserved for an
   // actual credit insertion and is never substituted for a gameplay reward.
   loadAudioAsset("extra-charlie.wav", audio.extraCharlie);
   loadAudioAsset("prize-bag.wav", audio.prizeBag);
@@ -1494,12 +1497,12 @@ void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
     fillRect(renderer, 0.0F, 462.0F, kWorldWidth, 12.0F,
              color(112, 23, 37));
     fillRect(renderer, 0.0F, 474.0F, kWorldWidth, 68.0F,
-             color(190, 126, 52));
+             color(38, 142, 46));
     for (int stripe = 0; stripe < kWorldWidth / 28 + 2; ++stripe) {
       const float x = static_cast<float>(stripe * 28) -
                       std::fmod(cameraX, 28.0F);
       line(renderer, x, 478.0F, x - 22.0F, 537.0F,
-           color(211, 151, 72));
+           color(68, 171, 59));
     }
     fillRect(renderer, 0.0F, kGroundY, kWorldWidth, 108.0F,
              color(89, 35, 30));
@@ -1950,9 +1953,8 @@ void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
       frame = 4;
     } else if (std::abs(runSpeed) > 5.0F) {
       // The original composite advances one pose every 7–8 board frames.
-      // Cycling all three grounded poses preserves that cadence while making
-      // a complete stride slower and more readable than the old two-frame
-      // toggle.
+      // Cycling all three grounded poses preserves that measured cadence and
+      // avoids the choppy old two-frame toggle.
       frame = static_cast<int>(timeSeconds * (kBoardRefresh / 7.5) *
                                kStrideAnimationSpeedScale) %
               3;

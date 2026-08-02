@@ -7,7 +7,8 @@ soundtrack and effects are loaded only from the ignored local `assets/audio`
 folder and are not stored in this repository.
 
 The current milestone is a playable Stage 1 prototype with original
-hand-painted HD rider, arena, marquee, Ferris-wheel, and fire-hoop assets.
+hand-painted HD rider, green Stage 1 arena, marquee, Ferris-wheel, and
+fire-hoop assets.
 The friendly blond Charlie rider uses a six-pose sheet while retaining the
 original HD lion artwork. Vector rendering remains only as a fallback if an
 asset cannot be loaded.
@@ -124,9 +125,11 @@ The local build uses these standardized 48 kHz mono files:
 - `bird-coin-drop.wav`: played with the perfect-clear coin shower
 - `bonus-count.wav`: played while the remaining time is counted on the bonus
   screen
-- `extra-charlie.wav`, `prize-bag.wav`, and `hidden-coin.wav`: optional,
-  separate reward effects. They remain silent when absent so the known
-  credit-insert sound is never substituted for a gameplay reward.
+- `extra-charlie.wav`: isolated command `0x42` (catalog RMS 1007), played only
+  when the extra Charlie is actually collected
+- `prize-bag.wav` and `hidden-coin.wav`: optional, separate reward effects.
+  They remain silent when absent so the known credit-insert sound is never
+  substituted for a gameplay reward.
 - `coin.wav`: reserved for the physical/software coin switch and played only
   when a credit is added
 
