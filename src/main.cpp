@@ -410,7 +410,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.eventSelectProps =
       loadAsset(renderer, "event-select-props-v1.png");
   assets.eventSelectChosen =
-      loadAsset(renderer, "event-select-selected-v1.png");
+      loadAsset(renderer, "event-select-selected-v4.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.rider || !assets.hoop ||
       !assets.hoopFlare || !assets.props || !assets.propsFlare ||
@@ -964,17 +964,13 @@ void confirmEventSelection(Game& game) {
   startGame(game);
 }
 
-void moveEventSelection(Game& game, int columnDelta, int rowDelta) {
-  if (game.scene != Scene::EventSelect) return;
+void moveEventSelection(Game& game, int direction) {
+  if (game.scene != Scene::EventSelect || direction == 0) return;
   const int oldEvent = game.selectedEvent;
-  int column = oldEvent % kEventColumns;
-  int row = oldEvent / kEventColumns;
-  column = std::clamp(column + columnDelta, 0, kEventColumns - 1);
-  row = std::clamp(row + rowDelta, 0, 1);
-  game.selectedEvent = row * kEventColumns + column;
-  if (game.selectedEvent != oldEvent) {
-    ++game.eventSelectMoveAudioSerial;
-  }
+  const int step = direction < 0 ? -1 : 1;
+  game.selectedEvent =
+      (oldEvent + step + kEventCount) % kEventCount;
+  ++game.eventSelectMoveAudioSerial;
 }
 
 void insertCoin(Game& game) {
@@ -2777,16 +2773,10 @@ int main(int argc, char** argv) {
           }
         } else if (game.scene == Scene::EventSelect &&
                    event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_LEFT) {
-          moveEventSelection(game, -1, 0);
+          moveEventSelection(game, -1);
         } else if (game.scene == Scene::EventSelect &&
                    event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT) {
-          moveEventSelection(game, 1, 0);
-        } else if (game.scene == Scene::EventSelect &&
-                   event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP) {
-          moveEventSelection(game, 0, -1);
-        } else if (game.scene == Scene::EventSelect &&
-                   event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) {
-          moveEventSelection(game, 0, 1);
+          moveEventSelection(game, 1);
         } else if (event.cbutton.button == SDL_CONTROLLER_BUTTON_A) {
           if (game.scene == Scene::EventSelect) {
             confirmEventSelection(game);
@@ -2817,19 +2807,11 @@ int main(int argc, char** argv) {
             break;
           case SDLK_LEFT:
           case SDLK_a:
-            moveEventSelection(game, -1, 0);
+            moveEventSelection(game, -1);
             break;
           case SDLK_RIGHT:
           case SDLK_d:
-            moveEventSelection(game, 1, 0);
-            break;
-          case SDLK_UP:
-          case SDLK_w:
-            moveEventSelection(game, 0, -1);
-            break;
-          case SDLK_DOWN:
-          case SDLK_s:
-            moveEventSelection(game, 0, 1);
+            moveEventSelection(game, 1);
             break;
           case SDLK_5:
           case SDLK_c:

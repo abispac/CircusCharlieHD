@@ -91,13 +91,14 @@ and the Start/Menu button begins or confirms event selection.
 ## Event selection
 
 The six-event screen follows the recorded arcade layout and starts with
-Charlie on Event 1. Arrow keys, `WASD`, or the controller D-pad move Charlie
-one cell at a time; `Space`, `Z`, `1`, `Enter`, controller A, or controller
-Start confirms the current cell. Track 02 plays once and automatically
-confirms the cell where Charlie is standing when it ends. Confirmation
-consumes the credit. Until later events are implemented, every cell
-deliberately launches the finished Event 1 course while preserving the chosen
-event in game state.
+Charlie on Event 1. Only `Left`/`Right`, `A`/`D`, or the controller D-pad's
+left/right directions move Charlie. The selection cycles through Events 1–6
+in order and wraps at both ends; up/down input does nothing. `Space`, `Z`,
+`1`, `Enter`, controller A, or controller Start confirms the current cell.
+Track 02 plays once and automatically confirms the cell where Charlie is
+standing when it ends. Confirmation consumes the credit. Until later events
+are implemented, every cell deliberately launches the finished Event 1
+course while preserving the chosen event in game state.
 
 The cabinet-standard keyboard mappings are `5` for coin and `1` for start, so
 a physical coin acceptor can use a normal arcade USB encoder configured like
