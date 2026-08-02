@@ -410,7 +410,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.eventSelectProps =
       loadAsset(renderer, "event-select-props-v1.png");
   assets.eventSelectChosen =
-      loadAsset(renderer, "event-select-selected-v4.png");
+      loadAsset(renderer, "event-select-selected-v5.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.rider || !assets.hoop ||
       !assets.hoopFlare || !assets.props || !assets.propsFlare ||
