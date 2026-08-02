@@ -408,9 +408,9 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.finishRider =
       loadAsset(renderer, "stage1-finish-rider-sheet.png");
   assets.eventSelectProps =
-      loadAsset(renderer, "event-select-props-v1.png");
+      loadAsset(renderer, "event-select-props-v2.png");
   assets.eventSelectChosen =
-      loadAsset(renderer, "event-select-selected-v5.png");
+      loadAsset(renderer, "event-select-selected-v6.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.rider || !assets.hoop ||
       !assets.hoopFlare || !assets.props || !assets.propsFlare ||
