@@ -85,7 +85,9 @@ constexpr float kLionCollisionBottom = 7.0F;
 constexpr float kFirePotCollisionHalfWidth = 32.0F;
 constexpr float kFirePotClearance = 42.0F;
 constexpr float kHoopPotSafetyDistance = 76.0F;
-constexpr float kBigRingVisualHalfWidth = 27.0F;
+// The HD hoop source has about 50% transparent horizontal padding. A
+// 108-unit destination produces the measured 46-unit visible MAME width.
+constexpr float kBigRingVisualHalfWidth = 54.0F;
 // Both ring types use the arcade board's narrow foreground collision plane.
 // Testing the full visible width makes reverse crossings fail before the
 // rider has actually reached the flame edge.
@@ -255,6 +257,10 @@ struct Game {
   int stage2ScorePopup = 0;
   int stage2ScorePopupFrame = 0;
   float stage2ScorePopupWorldX = 0.0F;
+  int stage1ScorePopup = 0;
+  int stage1ScorePopupFrame = 0;
+  float stage1ScorePopupWorldX = 0.0F;
+  float stage1ScorePopupY = 0.0F;
   std::uint32_t jumpAudioSerial = 0;
   std::uint32_t crashAudioSerial = 0;
   std::uint32_t extraCharlieAudioSerial = 0;
@@ -390,7 +396,7 @@ void printUsage() {
       << "  --debug\n"
       << "  --lion-test\n"
       << "  --capture FILE.png\n"
-      << "  --capture-scene start|select|layout|prize|gameplay|stage2|stage2-goal|ring|extra|crash|goal|tally\n";
+      << "  --capture-scene start|select|layout|large|prize|gameplay|stage2|stage2-goal|ring|extra|crash|goal|tally\n";
 }
 
 std::optional<Options> parseOptions(int argc, char** argv) {
@@ -410,6 +416,7 @@ std::optional<Options> parseOptions(int argc, char** argv) {
       if (options.captureScene != "start" &&
           options.captureScene != "select" &&
           options.captureScene != "layout" &&
+          options.captureScene != "large" &&
           options.captureScene != "prize" &&
           options.captureScene != "gameplay" &&
           options.captureScene != "stage2" &&
@@ -420,7 +427,7 @@ std::optional<Options> parseOptions(int argc, char** argv) {
           options.captureScene != "goal" &&
           options.captureScene != "tally") {
         std::cerr
-            << "Capture scene must be start, select, layout, prize, gameplay, stage2, stage2-goal, ring, extra, crash, goal, or tally.\n";
+            << "Capture scene must be start, select, layout, large, prize, gameplay, stage2, stage2-goal, ring, extra, crash, goal, or tally.\n";
         return std::nullopt;
       }
     } else if (argument == "--mode" && index + 1 < argc) {
@@ -934,7 +941,13 @@ void drawText(SDL_Renderer* renderer, std::string_view text, float x, float y,
               float scale, SDL_Color value, bool centered = false) {
   const float glyphAdvance = 6.0F * scale;
   if (centered) {
-    x -= static_cast<float>(text.size()) * glyphAdvance * 0.5F;
+    const float inkWidth = text.empty()
+                               ? 0.0F
+                               : (static_cast<float>(text.size() - 1U) *
+                                      6.0F +
+                                  5.0F) *
+                                     scale;
+    x -= inkWidth * 0.5F;
   }
   for (const char character : text) {
     const auto& bitmap = glyph(character);
@@ -989,6 +1002,10 @@ void resetCourse(Game& game) {
   game.stage2ScorePopup = 0;
   game.stage2ScorePopupFrame = 0;
   game.stage2ScorePopupWorldX = 0.0F;
+  game.stage1ScorePopup = 0;
+  game.stage1ScorePopupFrame = 0;
+  game.stage1ScorePopupWorldX = 0.0F;
+  game.stage1ScorePopupY = 0.0F;
 
   if (game.selectedEvent == 1) {
     game.player.position = {78.0F, kStage2RopeY};
@@ -1233,6 +1250,13 @@ float firePotCoinY(const FirePot& firePot) {
           static_cast<float>(kCoinFlightFrames),
       0.0F, 1.0F);
   return kGroundY - 30.0F - std::sin(progress * kPi) * kCoinArcHeight;
+}
+
+void showStage1Score(Game& game, int points, float worldX, float y) {
+  game.stage1ScorePopup = points;
+  game.stage1ScorePopupFrame = 52;
+  game.stage1ScorePopupWorldX = worldX;
+  game.stage1ScorePopupY = y;
 }
 
 void finishStage(Game& game) {
@@ -1488,6 +1512,8 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     return;
   }
 
+  if (game.stage1ScorePopupFrame > 0) --game.stage1ScorePopupFrame;
+
   game.player.previous = game.player.position;
   game.previousCameraX = game.cameraX;
 
@@ -1620,6 +1646,8 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     const bool previouslyCleared = hoop.cleared;
     hoop.cleared = true;
     game.score += 100;
+    showStage1Score(game, 100, hoop.worldX,
+                    (hoop.openingTop + hoop.openingBottom) * 0.5F - 5.0F);
 
     // The verified circusc4 recording shows the secret Charlie hanging inside
     // the next approaching hoop after a successful backward crossing. It can
@@ -1706,6 +1734,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         firePot.coinCollected = true;
         firePot.coinActive = false;
         game.score += 5000;
+        showStage1Score(game, 5000, firePot.worldX, coinY - 18.0F);
         ++game.hiddenCoinAudioSerial;
       } else if (firePot.coinFrame >= kCoinFlightFrames) {
         firePot.coinActive = false;
@@ -1724,6 +1753,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
             firePot.worldX + kFirePotCollisionHalfWidth) {
       firePot.scored = true;
       game.score += 200;
+      showStage1Score(game, 200, firePot.worldX, kGroundY - 118.0F);
     }
   }
 
@@ -1762,10 +1792,12 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
 
     if (!ring.collected) {
       ring.collected = true;
-      game.score += ring.containsPrize
-                        ? ((nextRandom(game) & 1U) == 0U ? 500 : 1000)
-                        : 0;
+      const int points = ring.containsPrize
+                             ? ((nextRandom(game) & 1U) == 0U ? 500 : 1000)
+                             : 0;
+      game.score += points;
       if (ring.containsPrize) {
+        showStage1Score(game, points, ring.worldX, ringCenterY - 5.0F);
         ++game.prizeBagsCollected;
         ++game.prizeBagAudioSerial;
       }
@@ -1989,6 +2021,24 @@ void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
       SDL_RenderCopyF(renderer, assets.arena, &grassSource,
                       &grassDestination);
     }
+    const bool brightCheer =
+        game.scene == Scene::Goal && game.goalFrame > 30 &&
+        ((game.goalFrame / 8) & 1) != 0;
+    if (brightCheer) {
+      // The arcade flashes the same audience between its normal and brighter
+      // palette during the finish cheer. Do not add invented spectator art.
+      SDL_SetTextureBlendMode(assets.arena, SDL_BLENDMODE_ADD);
+      SDL_SetTextureAlphaMod(assets.arena, 76);
+      for (int tile = -1; tile <= 1; ++tile) {
+        const float tileX = static_cast<float>(tile) * tileWidth - scroll;
+        const SDL_FRect crowdDestination{
+            tileX, kCrowdTop, tileWidth, kGrassTop - kCrowdTop};
+        SDL_RenderCopyF(renderer, assets.arena, &crowdSource,
+                        &crowdDestination);
+      }
+      SDL_SetTextureAlphaMod(assets.arena, 255);
+      SDL_SetTextureBlendMode(assets.arena, SDL_BLENDMODE_BLEND);
+    }
   } else {
     fillRect(renderer, 0.0F, kArenaTop, kWorldWidth,
              kWorldHeight - kArenaTop, color(24, 25, 45));
@@ -1998,8 +2048,12 @@ void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
         const float x = static_cast<float>(column * 23) - crowdScroll +
                         static_cast<float>((row % 2) * 9);
         const float y = kCrowdTop + 18.0F + static_cast<float>(row * 21);
+        const bool brightCheer =
+            game.scene == Scene::Goal && game.goalFrame > 30 &&
+            ((game.goalFrame / 8) & 1) != 0;
         filledCircle(renderer, x, y, 5.0F,
-                     color(45 + row * 8, 50, 72));
+                     brightCheer ? color(110 + row * 8, 102, 118)
+                                 : color(45 + row * 8, 50, 72));
       }
     }
     fillRect(renderer, 0.0F, kGrassTop - 12.0F, kWorldWidth, 12.0F,
@@ -2255,15 +2309,19 @@ void drawFinishRider(SDL_Renderer* renderer, SDL_Texture* finishTexture,
   // the run cycle. It is a distinct bowed-lion/upright-Charlie composite.
   const int frame = (goalFrame / 10) % 4;
   const SDL_Rect source{frame * cellWidth, 0, cellWidth, textureHeight};
-  constexpr float kFinishWidth = 116.0F;
-  constexpr float kFinishHeight = 122.0F;
+  // The finish composite is larger than the running pose in MAME. Frame
+  // 003329 measures about 16% larger than the old render while the regular
+  // runner already matches, so only this non-gameplay presentation is scaled.
+  constexpr float kFinishWidth = 134.0F;
+  constexpr float kFinishHeight = 141.0F;
   const float landingProgress = std::clamp(
       static_cast<float>(goalFrame) / 18.0F, 0.0F, 1.0F);
   const float arrivalX = (1.0F - landingProgress) * -26.0F;
   const float arrivalY = (1.0F - landingProgress) * -19.0F;
   const SDL_FRect destination{
       screenX - kFinishWidth * 0.5F + arrivalX,
-      kGoalLandingY - 103.0F + arrivalY, kFinishWidth, kFinishHeight};
+      kGoalPlatformTop - kFinishHeight + 3.0F + arrivalY,
+      kFinishWidth, kFinishHeight};
   SDL_RenderCopyF(renderer, finishTexture, &source, &destination);
 }
 
@@ -2346,30 +2404,18 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
   if (game.goalFrame > 30) {
     const float bounce =
         ((game.goalFrame / 8) & 1) == 0 ? 0.0F : -5.0F;
-    for (int spectator = 0; spectator < 18; ++spectator) {
-      const float x = 10.0F + spectator * 27.0F;
-      const float wave =
-          std::sin(static_cast<float>(game.goalFrame + spectator * 5) *
-                   0.18F);
-      const float y = 387.0F + wave * 7.0F;
-      line(renderer, x, y + 13.0F, x - 5.0F, y - 4.0F, cheerColor);
-      line(renderer, x, y + 13.0F, x + 5.0F, y - 7.0F,
-           color(255, 213, 70));
-      filledCircle(renderer, x, y + 4.0F, 3.0F,
-                   color(246, 184, 130));
-    }
     const auto outlinedCheer = [&](std::string_view text, float x, float y,
                                    SDL_Color value) {
       for (const auto& offset : std::array<Vec2, 4>{
                Vec2{-2.0F, 0.0F}, Vec2{2.0F, 0.0F},
                Vec2{0.0F, -2.0F}, Vec2{0.0F, 2.0F}}) {
-        drawText(renderer, text, x + offset.x, y + offset.y, 2.0F,
+        drawText(renderer, text, x + offset.x, y + offset.y, 2.5F,
                  color(45, 10, 24), true);
       }
-      drawText(renderer, text, x, y, 2.0F, value, true);
+      drawText(renderer, text, x, y, 2.5F, value, true);
     };
-    outlinedCheer("GREAT", 96.0F, 326.0F + bounce, cheerColor);
-    outlinedCheer("FAROUT", 383.0F, 346.0F - bounce,
+    outlinedCheer("GREAT", 110.0F, 282.0F + bounce, cheerColor);
+    outlinedCheer("FAROUT", 370.0F, 282.0F - bounce,
                   color(255, 130, 42));
   }
   if (!game.perfectClear) return;
@@ -3074,6 +3120,17 @@ void drawStage2Monkeys(SDL_Renderer* renderer, const Game& game,
   }
 }
 
+void drawStage1ScorePopup(SDL_Renderer* renderer, const Game& game,
+                          float cameraX) {
+  if (game.stage1ScorePopupFrame <= 0 || game.stage1ScorePopup <= 0) return;
+  const float x = game.stage1ScorePopupWorldX - cameraX;
+  const float lift = static_cast<float>(52 - game.stage1ScorePopupFrame) *
+                     0.35F;
+  drawText(renderer, std::to_string(game.stage1ScorePopup), x,
+           game.stage1ScorePopupY - lift, 1.25F,
+           color(255, 245, 96), true);
+}
+
 void drawStage2Charlie(SDL_Renderer* renderer, const Game& game,
                        const Assets& assets, float screenX, float playerY,
                        double timeSeconds) {
@@ -3305,6 +3362,7 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
                            assets.props);
     }
   }
+  drawStage1ScorePopup(renderer, game, camera);
   drawHud(renderer, game, assets.charlieLife);
 
   if (game.scene == Scene::Crashed &&
@@ -3438,6 +3496,22 @@ int main(int argc, char** argv) {
       for (auto& ring : game.bonusRings) ring.worldX = -10000.0F;
       for (auto& firePot : game.firePots) firePot.retired = true;
       game.extraCharlieActive = false;
+    } else if (options.captureScene == "large") {
+      game.player.position = {800.0F, kGroundY};
+      game.player.previous = game.player.position;
+      game.player.runSpeed = 0.0F;
+      game.player.grounded = true;
+      game.cameraX = game.player.position.x - 78.0F;
+      game.previousCameraX = game.cameraX;
+      for (auto& hoop : game.hoops) {
+        hoop.worldX = -10000.0F;
+        hoop.previousWorldX = hoop.worldX;
+      }
+      game.hoops.front().worldX = game.player.position.x + 150.0F;
+      game.hoops.front().previousWorldX = game.hoops.front().worldX;
+      for (auto& ring : game.bonusRings) ring.worldX = -10000.0F;
+      for (auto& firePot : game.firePots) firePot.retired = true;
+      game.extraCharlieActive = false;
     } else if (options.captureScene == "prize") {
       game.player.position = {800.0F, kGroundY};
       game.player.previous = game.player.position;
@@ -3510,10 +3584,7 @@ int main(int argc, char** argv) {
                      (stage2Goal ? 340.0F : kGoalScreenX);
       game.previousCameraX = game.cameraX;
       game.perfectClear = !stage2Goal;
-      game.goalFrame = stage2Goal
-                           ? 100
-                           : kGoalArrivalFrames + kBirdArrivalFrames +
-                                 kBagDropFrames + 30;
+      game.goalFrame = stage2Goal ? 100 : 45;
       for (auto& hoop : game.hoops) {
         hoop.worldX = -10000.0F;
         hoop.previousWorldX = hoop.worldX;

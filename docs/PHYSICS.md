@@ -112,6 +112,12 @@ Current user-control model:
   opening while airborne burns both Charlie and the lion; running beneath the
   suspended ring is safe. A centered arcade jump passes and collects the
   randomized prize.
+- Stage 1 displays a short point popup at the object for every scored arcade
+  action: `100` for a hoop crossing, `200` for a firepot, `500` or `1000` for
+  a randomized moneybag, and `5000` for the hidden coin.
+- The finish pose is presentation-only and renders at `134 x 141`, matching
+  frame 003329 without changing the calibrated running sprite, collision body,
+  or jump physics. Its paws rest on the green platform top.
 - The single action button advances the measured, repeatable arcade jump
   table; holding the button does not alter height or duration.
 - Backtracking never turns Charlie or the lion around; they remain facing

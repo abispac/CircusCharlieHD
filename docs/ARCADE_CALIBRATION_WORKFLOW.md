@@ -43,3 +43,10 @@ cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
 ```
 
 The checked comparison is `docs/stage1-prize-calibration.png`.
+
+The same-size large-hoop and goal comparisons are stored as
+`docs/stage1-large-hoop-calibration.png` and
+`docs/stage1-goal-calibration.png`. The goal reference uses MAME frame 003329:
+the finish composite stands on the green platform surface, `GREAT` and
+`FAROUT` occupy the crowd band, and the crowd alternates between its normal
+and brighter palette instead of spawning separate spectator shapes.
