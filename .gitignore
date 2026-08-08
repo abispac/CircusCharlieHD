@@ -5,4 +5,6 @@ snap/
 *.user
 *.suo
 *.VC.db
+*.blend1
 assets/audio/*.wav
+blender-rig/stage1-build/

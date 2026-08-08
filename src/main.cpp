@@ -438,7 +438,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.marquee = loadAsset(renderer, "stage1-marquee-v2.png");
   assets.ferrisWheel = loadAsset(renderer, "stage1-ferris-wheel.png");
   assets.ferrisGondola = loadAsset(renderer, "stage1-ferris-gondola.png");
-  assets.rider = loadAsset(renderer, "stage1-rider-sheet-v7.png");
+  assets.rider = loadAsset(renderer, "stage1-rider-sheet-v8.png");
   assets.hoop = loadAsset(renderer, "stage1-hoop.png");
   assets.hoopFlare = loadAsset(renderer, "stage1-hoop-flare.png");
   assets.props = loadAsset(renderer, "stage1-props.png");
@@ -2333,12 +2333,12 @@ void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
     // The original six-tile composite is 48x32 source pixels and its visible
     // grounded pose is about 47x28. These non-square dimensions preserve that
     // measured silhouette on the 480x640 logical canvas.
-    constexpr float kSpriteWidth = 116.0F;
-    constexpr float kSpriteHeight = 96.0F;
+    constexpr float kSpriteWidth = 140.0F;
+    constexpr float kSpriteHeight = 132.0F;
     constexpr std::array<float, 6> kAnchorCorrection{
-        12.0F, 12.0F, 12.0F, 12.0F, 12.0F, 12.0F};
+        30.0F, 30.0F, 30.0F, 30.0F, 30.0F, 30.0F};
     const SDL_FRect destination{
-        screenX - 38.0F,
+        screenX - 46.0F,
         groundY - kSpriteHeight +
             kAnchorCorrection[static_cast<size_t>(frame)],
         kSpriteWidth,
