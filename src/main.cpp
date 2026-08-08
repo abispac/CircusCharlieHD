@@ -77,6 +77,7 @@ constexpr float kBonusRingCollisionHalfWidth = 6.0F;
 constexpr float kBonusRingOpeningHalfHeight = 72.0F;
 constexpr float kBonusRingVisualHalfWidth = 30.0F;
 constexpr float kBonusRingVisualHalfHeight = 115.0F;
+constexpr float kBonusRingCenterHeight = 164.0F;
 // The MAME sequence places the coin near its apex about 50 frames after the
 // launch and catches it on the descending half at frame 66. A 96-frame arc
 // matches both measurements and still returns visibly to the pot when missed.
@@ -1044,11 +1045,11 @@ void resetCourse(Game& game) {
       {5870.0F},
   };
   game.bonusRings = {
-      {railStartForIntercept(1360.0F), 152.0F, false, false},
-      {railStartForIntercept(3100.0F), 152.0F, false, false},
-      {railStartForIntercept(3500.0F), 152.0F, false, false},
-      {railStartForIntercept(4650.0F), 152.0F, false, false},
-      {railStartForIntercept(5250.0F), 152.0F, false, false},
+      {railStartForIntercept(1360.0F), kBonusRingCenterHeight, false, false},
+      {railStartForIntercept(3100.0F), kBonusRingCenterHeight, false, false},
+      {railStartForIntercept(3500.0F), kBonusRingCenterHeight, false, false},
+      {railStartForIntercept(4650.0F), kBonusRingCenterHeight, false, false},
+      {railStartForIntercept(5250.0F), kBonusRingCenterHeight, false, false},
   };
   game.meterMarkers = {
       {620.0F, 60},  {1480.0F, 50}, {2340.0F, 40},
