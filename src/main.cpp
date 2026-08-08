@@ -113,6 +113,7 @@ struct Options {
   int rotation = 0;
   bool fullscreen = false;
   bool debug = false;
+  bool lionTest = false;
   bool showHelp = false;
   std::string capturePath;
   std::string captureScene = "gameplay";
@@ -236,6 +237,7 @@ struct Game {
   std::uint32_t randomState = 0x6d2b79f5U;
   bool highScoreDirty = false;
   bool debug = false;
+  bool lionOnlyTest = false;
 };
 
 struct RenderSurface {
@@ -251,6 +253,7 @@ struct Assets {
   SDL_Texture* ferrisWheel = nullptr;
   SDL_Texture* ferrisGondola = nullptr;
   SDL_Texture* rider = nullptr;
+  SDL_Texture* lionWalkTest = nullptr;
   SDL_Texture* hoop = nullptr;
   SDL_Texture* hoopFlare = nullptr;
   SDL_Texture* props = nullptr;
@@ -355,6 +358,7 @@ void printUsage() {
       << "  --rotate 0|90|270\n"
       << "  --fullscreen\n"
       << "  --debug\n"
+      << "  --lion-test\n"
       << "  --capture FILE.png\n"
       << "  --capture-scene start|select|gameplay|stage2|stage2-goal|ring|crash|goal|tally\n";
 }
@@ -365,6 +369,8 @@ std::optional<Options> parseOptions(int argc, char** argv) {
     const std::string argument = argv[index];
     if (argument == "--fullscreen") {
       options.fullscreen = true;
+    } else if (argument == "--lion-test") {
+      options.lionTest = true;
     } else if (argument == "--debug") {
       options.debug = true;
     } else if (argument == "--capture" && index + 1 < argc) {
@@ -439,6 +445,8 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.ferrisWheel = loadAsset(renderer, "stage1-ferris-wheel.png");
   assets.ferrisGondola = loadAsset(renderer, "stage1-ferris-gondola.png");
   assets.rider = loadAsset(renderer, "stage1-rider-sheet-v8.png");
+  assets.lionWalkTest =
+      loadAsset(renderer, "stage1-lion-walk-12-v1.png");
   assets.hoop = loadAsset(renderer, "stage1-hoop.png");
   assets.hoopFlare = loadAsset(renderer, "stage1-hoop-flare.png");
   assets.props = loadAsset(renderer, "stage1-props.png");
@@ -485,6 +493,7 @@ void destroyAssets(Assets& assets) {
   if (assets.ferrisWheel) SDL_DestroyTexture(assets.ferrisWheel);
   if (assets.ferrisGondola) SDL_DestroyTexture(assets.ferrisGondola);
   if (assets.rider) SDL_DestroyTexture(assets.rider);
+  if (assets.lionWalkTest) SDL_DestroyTexture(assets.lionWalkTest);
   if (assets.hoop) SDL_DestroyTexture(assets.hoop);
   if (assets.hoopFlare) SDL_DestroyTexture(assets.hoopFlare);
   if (assets.props) SDL_DestroyTexture(assets.props);
@@ -2301,10 +2310,49 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
   }
 }
 
+void drawLionOnlyTest(SDL_Renderer* renderer, float screenX, float groundY,
+                      double timeSeconds, bool alive,
+                      SDL_Texture* lionTexture, float runSpeed, bool grounded,
+                      bool facingRight) {
+  int textureWidth = 0;
+  int textureHeight = 0;
+  SDL_QueryTexture(lionTexture, nullptr, nullptr, &textureWidth,
+                   &textureHeight);
+  const int cellWidth = textureWidth / 4;
+  const int cellHeight = textureHeight / 3;
+
+  int frame = 0;
+  if (!grounded) {
+    frame = 3;
+  } else if (std::abs(runSpeed) > 5.0F) {
+    constexpr double kLionTestFramesPerSecond = 16.0;
+    frame = static_cast<int>(timeSeconds * kLionTestFramesPerSecond) % 12;
+  }
+
+  const SDL_Rect source{(frame % 4) * cellWidth, (frame / 4) * cellHeight,
+                        cellWidth, cellHeight};
+  constexpr float kTestWidth = 190.0F;
+  constexpr float kTestHeight = 118.75F;
+  const SDL_FRect destination{screenX - 76.0F, groundY - 111.0F,
+                              kTestWidth, kTestHeight};
+  SDL_SetTextureColorMod(lionTexture, 255, alive ? 255 : 128,
+                         alive ? 255 : 58);
+  SDL_RenderCopyExF(renderer, lionTexture, &source, &destination, 0.0,
+                    nullptr,
+                    facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
+  SDL_SetTextureColorMod(lionTexture, 255, 255, 255);
+}
+
 void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
                       double timeSeconds, bool alive, bool lowDetail,
-                      SDL_Texture* riderTexture, float runSpeed, bool grounded,
+                      SDL_Texture* riderTexture, SDL_Texture* lionTestTexture,
+                      bool lionOnlyTest, float runSpeed, bool grounded,
                       bool facingRight) {
+  if (lionOnlyTest && lionTestTexture) {
+    drawLionOnlyTest(renderer, screenX, groundY, timeSeconds, alive,
+                     lionTestTexture, runSpeed, grounded, facingRight);
+    return;
+  }
   if (riderTexture) {
     int textureWidth = 0;
     int textureHeight = 0;
@@ -3053,6 +3101,7 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
     } else {
       drawLionAndRider(renderer, playerWorldX - camera, playerY, timeSeconds,
                        game.player.alive, lowDetail, assets.rider,
+                       assets.lionWalkTest, game.lionOnlyTest,
                        game.player.runSpeed, game.player.grounded,
                        game.player.facingRight);
     }
@@ -3070,7 +3119,8 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
       // Redraw the heat-tinted rider over the fire bed so both Charlie and the
       // lion remain readable while the flames surround and cross their edges.
       drawLionAndRider(renderer, playerWorldX - camera, playerY, timeSeconds,
-                       false, lowDetail, assets.rider, 0.0F, true,
+                       false, lowDetail, assets.rider, assets.lionWalkTest,
+                       game.lionOnlyTest, 0.0F, true,
                        game.player.facingRight);
     }
     if (game.scene == Scene::Goal) {
@@ -3179,6 +3229,7 @@ int main(int argc, char** argv) {
   game.randomState ^=
       static_cast<std::uint32_t>(SDL_GetPerformanceCounter());
   game.debug = options.debug;
+  game.lionOnlyTest = options.lionTest;
   resetCourse(game);
   if (!options.capturePath.empty()) {
     if (options.captureScene == "start") {
@@ -3381,6 +3432,9 @@ int main(int argc, char** argv) {
             break;
           case SDLK_F1:
             game.debug = !game.debug;
+            break;
+          case SDLK_F2:
+            game.lionOnlyTest = !game.lionOnlyTest;
             break;
           case SDLK_F11:
             fullscreen = !fullscreen;

@@ -114,7 +114,7 @@ def add_camera(corners, target):
     horizontal = max(point.x for point in projected) - min(point.x for point in projected)
     vertical = max(point.y for point in projected) - min(point.y for point in projected)
     aspect = 768 / 512
-    camera_data.ortho_scale = max(vertical * 1.22, horizontal / aspect * 1.22)
+    camera_data.ortho_scale = max(vertical * 2.65, horizontal / aspect * 2.65)
     bpy.context.scene.camera = camera
 
 
