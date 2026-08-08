@@ -43,8 +43,8 @@ constexpr float kHudTop = kMarqueeHeight;
 constexpr float kHudHeight = 90.0F;
 constexpr float kArenaTop = kHudTop + kHudHeight;
 constexpr float kCrowdTop = 310.0F;
-constexpr float kBigHoopOpeningTop = kGroundY - 211.0F;
-constexpr float kBigHoopOpeningBottom = kGroundY - 74.0F;
+constexpr float kBigHoopOpeningTop = kGroundY - 223.0F;
+constexpr float kBigHoopOpeningBottom = kGroundY - 86.0F;
 constexpr float kSourceToLogicalY =
     static_cast<float>(kWorldHeight) / 256.0F;
 // Clean-room measurement of the original Event 1 rider sprite's vertical
