@@ -2325,7 +2325,7 @@ void drawLionOnlyTest(SDL_Renderer* renderer, float screenX, float groundY,
   if (!grounded) {
     frame = 3;
   } else if (std::abs(runSpeed) > 5.0F) {
-    constexpr double kLionTestFramesPerSecond = 16.0;
+    constexpr double kLionTestFramesPerSecond = 14.0;
     frame = static_cast<int>(timeSeconds * kLionTestFramesPerSecond) % 12;
   }
 
@@ -2333,7 +2333,14 @@ void drawLionOnlyTest(SDL_Renderer* renderer, float screenX, float groundY,
                         cellWidth, cellHeight};
   constexpr float kTestWidth = 190.0F;
   constexpr float kTestHeight = 118.75F;
-  const SDL_FRect destination{screenX - 76.0F, groundY - 111.0F,
+  constexpr float kAtlasGroundLine = 215.0F;
+  constexpr float kJumpFrameBottom = 189.0F;
+  const float sourceGroundLine = grounded ? kAtlasGroundLine
+                                          : kJumpFrameBottom;
+  const float visualGroundOffset =
+      sourceGroundLine / static_cast<float>(cellHeight) * kTestHeight;
+  const SDL_FRect destination{screenX - 76.0F,
+                              groundY - visualGroundOffset,
                               kTestWidth, kTestHeight};
   SDL_SetTextureColorMod(lionTexture, 255, alive ? 255 : 128,
                          alive ? 255 : 58);
