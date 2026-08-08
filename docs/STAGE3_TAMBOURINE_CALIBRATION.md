@@ -21,10 +21,22 @@ landings advance a four-part chain:
 1. Low bounce.
 2. Medium bounce.
 3. High bounce; this is the first arc that can reach a money bag.
-4. Over-jump with the tuck/rotation sprite family, then the chain resets.
+4. A final front-facing vertical rebound that strikes the tent roof and costs
+   a life if Charlie has remained on the same tambourine.
 
-The drums are spaced one full normal forward-bounce apart. Missing the next
-drum is a crash; the grass is not a safe landing surface.
+Holding left or right during the opening beats commits Charlie to the adjacent
+tambourine. Every transfer uses the tucked rotation family and lands at the
+exact center of the selected drum; horizontal free drift does not exist. A
+successful transfer resets the stationary chain to its first, low bounce. The
+grass is never a landing surface, and performers are not platforms.
+
+Measured regular drum centers are approximately 84–88 pixels apart in the
+224-pixel ROM frame. The HD course uses a 180-unit center spacing on its
+480-unit logical canvas, with performers centered in the intended gaps.
+
+Every landing compresses the tambourine artwork before it recovers. Only a
+knife/flame collision, the fourth stationary roof impact, or an expired timer
+can kill Charlie. The final target is a separate double-width goal tambourine.
 
 ## Stage objects
 
@@ -40,11 +52,15 @@ drum is a crash; the grass is not a safe landing surface.
 
 ## HD sprite assets
 
-- `assets/stage3-charlie-bounce-12-v1.png`: 4x3 Charlie bounce/over-jump atlas.
+- `assets/stage3-charlie-vertical-front-12-v2.png`: 4x3 front-facing vertical
+  bounce atlas.
+- `assets/stage3-charlie-bounce-12-v1.png`: tucked center-to-center rotation
+  atlas.
 - `assets/stage3-tambourine-v1.png`: tall leather tambourine.
+- `assets/stage3-goal-tambourine-v1.png`: double-width final tambourine.
 - `assets/stage3-knife-thrower-8-v1.png`: 4x2 knife-thrower atlas.
-- `assets/stage3-fire-breather-8-v1.png`: 4x2 fire-thrower atlas selected by
-  the project owner.
+- `assets/stage3-fire-breather-vertical-8-v2.png`: 4x2 vertical fire-thrower
+  atlas selected by the project owner.
 - `assets/stage3-projectiles-8-v1.png`: four knife rotations and four fireball
   animation frames.
 

@@ -33,8 +33,12 @@ constexpr float kStage2GoalTopY = kStage2RopeY - 76.0F;
 constexpr float kStage2GoalX = 5700.0F;
 constexpr float kStage3GroundY = 592.0F;
 constexpr float kStage3TambourineTopY = 482.0F;
-constexpr float kStage3CourseLength = 5838.0F;
+constexpr float kStage3TambourineSpacing = 180.0F;
+constexpr float kStage3CourseLength = 4398.0F;
 constexpr int kStage3BounceFrames = 62;
+// With Charlie rendered at a 104-unit height and a 15-unit baseline offset,
+// this places the top of his head exactly against the arena fascia at y=350.
+constexpr float kStage3RoofImpactY = 439.0F;
 // The original board places the ring tube directly below the crowd fascia
 // (about source y=140), not at the top of the crowd.
 constexpr float kTrackY = 350.0F;
@@ -204,6 +208,7 @@ struct Stage2Monkey {
 struct Stage3Tambourine {
   float worldX = 0.0F;
   bool bagAvailable = false;
+  int compressionFrame = 0;
 };
 
 enum class Stage3PerformerKind {
@@ -299,6 +304,12 @@ struct Game {
   int stage3BounceFrame = 0;
   float stage3BounceBaseY = kStage3GroundY;
   bool stage3OnTambourine = false;
+  int stage3CurrentTambourine = 0;
+  int stage3TargetTambourine = 0;
+  bool stage3Traveling = false;
+  int stage3TravelStartFrame = 0;
+  float stage3TravelStartX = 78.0F;
+  bool stage3RoofCrash = false;
   std::uint32_t jumpAudioSerial = 0;
   std::uint32_t crashAudioSerial = 0;
   std::uint32_t extraCharlieAudioSerial = 0;
@@ -350,6 +361,7 @@ struct Assets {
   SDL_Texture* stage3Charlie = nullptr;
   SDL_Texture* stage3CharlieVertical = nullptr;
   SDL_Texture* stage3Tambourine = nullptr;
+  SDL_Texture* stage3GoalTambourine = nullptr;
   SDL_Texture* stage3KnifeThrower = nullptr;
   SDL_Texture* stage3FlameThrower = nullptr;
   SDL_Texture* stage3Projectiles = nullptr;
@@ -571,6 +583,8 @@ Assets loadAssets(SDL_Renderer* renderer) {
       loadAsset(renderer, "stage3-charlie-vertical-front-12-v2.png");
   assets.stage3Tambourine =
       loadAsset(renderer, "stage3-tambourine-v1.png");
+  assets.stage3GoalTambourine =
+      loadAsset(renderer, "stage3-goal-tambourine-v1.png");
   assets.stage3KnifeThrower =
       loadAsset(renderer, "stage3-knife-thrower-8-v1.png");
   assets.stage3FlameThrower =
@@ -589,7 +603,8 @@ Assets loadAssets(SDL_Renderer* renderer) {
       !assets.stage2PurpleWalk || !assets.stage2PurpleJump ||
       !assets.stage2GoalRig || !assets.stage3Charlie ||
       !assets.stage3CharlieVertical ||
-      !assets.stage3Tambourine || !assets.stage3KnifeThrower ||
+      !assets.stage3Tambourine || !assets.stage3GoalTambourine ||
+      !assets.stage3KnifeThrower ||
       !assets.stage3FlameThrower || !assets.stage3Projectiles) {
     std::cerr << "Some HD assets could not be loaded; vector fallbacks remain "
                  "available. SDL_image: "
@@ -627,6 +642,8 @@ void destroyAssets(Assets& assets) {
   if (assets.stage3CharlieVertical)
     SDL_DestroyTexture(assets.stage3CharlieVertical);
   if (assets.stage3Tambourine) SDL_DestroyTexture(assets.stage3Tambourine);
+  if (assets.stage3GoalTambourine)
+    SDL_DestroyTexture(assets.stage3GoalTambourine);
   if (assets.stage3KnifeThrower) SDL_DestroyTexture(assets.stage3KnifeThrower);
   if (assets.stage3FlameThrower) SDL_DestroyTexture(assets.stage3FlameThrower);
   if (assets.stage3Projectiles) SDL_DestroyTexture(assets.stage3Projectiles);
@@ -1110,6 +1127,12 @@ void resetCourse(Game& game) {
   game.stage3BounceFrame = 0;
   game.stage3BounceBaseY = kStage3GroundY;
   game.stage3OnTambourine = false;
+  game.stage3CurrentTambourine = 0;
+  game.stage3TargetTambourine = 0;
+  game.stage3Traveling = false;
+  game.stage3TravelStartFrame = 0;
+  game.stage3TravelStartX = 78.0F;
+  game.stage3RoofCrash = false;
   game.stage3Tambourines.clear();
   game.stage3Performers.clear();
   game.stage3Projectiles.clear();
@@ -1166,42 +1189,41 @@ void resetCourse(Game& game) {
     game.stage3BounceLevel = 1;
     game.stage3BounceBaseY = kStage3TambourineTopY;
     game.stage3OnTambourine = true;
+    game.stage3CurrentTambourine = 0;
+    game.stage3TargetTambourine = 0;
+    game.stage3Traveling = false;
+    game.stage3TravelStartFrame = 0;
+    game.stage3TravelStartX = game.player.position.x;
+    game.stage3RoofCrash = false;
     game.hoops.clear();
     game.firePots.clear();
     game.bonusRings.clear();
     game.stage2Monkeys.clear();
     game.meterMarkers = {
-        {720.0F, 50}, {1680.0F, 40}, {2640.0F, 30},
-        {3600.0F, 20}, {4560.0F, 10},
+        {618.0F, 50}, {1338.0F, 40}, {2058.0F, 30},
+        {2778.0F, 20}, {3498.0F, 10},
     };
     // Event 3's drums are tall leather cylinders, not flattened versions of
     // the Event 1 goal pad. Their measured spacing leaves a clear performer
     // lane between successive bounce targets.
-    game.stage3Tambourines = {
-        {78.0F, false},   {318.0F, false},  {558.0F, false},
-        {798.0F, true},   {1038.0F, false}, {1278.0F, false},
-        {1518.0F, false}, {1758.0F, true},  {1998.0F, false},
-        {2238.0F, false}, {2478.0F, false}, {2718.0F, true},
-        {2958.0F, false}, {3198.0F, false}, {3438.0F, false},
-        {3678.0F, true},  {3918.0F, false}, {4158.0F, false},
-        {4398.0F, false}, {4638.0F, true},  {4878.0F, false},
-        {5118.0F, false}, {5358.0F, false}, {5598.0F, true},
-        {5838.0F, false},
-    };
-    game.stage3Performers = {
-        {438.0F, Stage3PerformerKind::KnifeThrower},
-        {918.0F, Stage3PerformerKind::FlameThrower},
-        {1398.0F, Stage3PerformerKind::KnifeThrower},
-        {1878.0F, Stage3PerformerKind::FlameThrower},
-        {2358.0F, Stage3PerformerKind::KnifeThrower},
-        {2838.0F, Stage3PerformerKind::FlameThrower},
-        {3318.0F, Stage3PerformerKind::KnifeThrower},
-        {3798.0F, Stage3PerformerKind::FlameThrower},
-        {4278.0F, Stage3PerformerKind::KnifeThrower},
-        {4758.0F, Stage3PerformerKind::FlameThrower},
-        {5238.0F, Stage3PerformerKind::KnifeThrower},
-        {5718.0F, Stage3PerformerKind::FlameThrower},
-    };
+    game.stage3Tambourines.reserve(25);
+    for (int index = 0; index < 25; ++index) {
+      const bool bag = index > 0 && index < 24 && index % 4 == 3;
+      game.stage3Tambourines.push_back(
+          {78.0F + static_cast<float>(index) * kStage3TambourineSpacing,
+           bag});
+    }
+    // The ROM frames place each act exactly halfway between its surrounding
+    // drums. The opening gap remains clear; acts then alternate every other
+    // gap through the final approach.
+    game.stage3Performers.reserve(12);
+    for (int index = 0; index < 12; ++index) {
+      game.stage3Performers.push_back({
+          348.0F + static_cast<float>(index) *
+                       (kStage3TambourineSpacing * 2.0F),
+          (index & 1) == 0 ? Stage3PerformerKind::KnifeThrower
+                           : Stage3PerformerKind::FlameThrower});
+    }
     game.stage3Projectiles.resize(game.stage3Performers.size());
     return;
   }
@@ -1358,9 +1380,21 @@ void restartAfterCrash(Game& game) {
   game.previousCameraX = game.cameraX;
   if (game.selectedEvent == 2) {
     game.player.grounded = false;
+    game.stage3CurrentTambourine = std::clamp(
+        game.stage3CurrentTambourine, 0,
+        static_cast<int>(game.stage3Tambourines.size()) - 1);
+    game.stage3TargetTambourine = game.stage3CurrentTambourine;
+    game.player.position.x =
+        game.stage3Tambourines[static_cast<std::size_t>(
+            game.stage3CurrentTambourine)].worldX;
+    game.player.previous = game.player.position;
     game.stage3BounceLevel = 1;
     game.stage3BounceFrame = 0;
     game.stage3BounceBaseY = kStage3TambourineTopY;
+    game.stage3Traveling = false;
+    game.stage3TravelStartFrame = 0;
+    game.stage3TravelStartX = game.player.position.x;
+    game.stage3RoofCrash = false;
   }
 }
 
@@ -1415,6 +1449,22 @@ void crashPlayer(Game& game) {
   game.crashFrame = 0;
   game.deathOccurred = true;
   ++game.crashAudioSerial;
+  --game.lives;
+}
+
+void crashStage3Roof(Game& game) {
+  if (game.scene != Scene::Playing) return;
+  game.stage3RoofCrash = true;
+  game.stage3Traveling = false;
+  game.player.alive = false;
+  game.player.position.y = kStage3RoofImpactY;
+  game.player.previous = game.player.position;
+  game.player.runSpeed = 0.0F;
+  game.player.verticalVelocity = 0.0F;
+  game.scene = Scene::Crashed;
+  game.crashFrame = 0;
+  game.deathOccurred = true;
+  ++game.stage3OverjumpAudioSerial;
   --game.lives;
 }
 
@@ -1478,6 +1528,11 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
                   float controllerAxis) {
   game.player.previous = game.player.position;
   game.previousCameraX = game.cameraX;
+  if (game.stage3Tambourines.empty()) return;
+
+  for (auto& drum : game.stage3Tambourines) {
+    if (drum.compressionFrame > 0) --drum.compressionFrame;
+  }
 
   const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
                         keyboard[SDL_SCANCODE_A] ||
@@ -1485,21 +1540,25 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
   const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
                          keyboard[SDL_SCANCODE_D] ||
                          controllerAxis > 0.35F;
-  float targetSpeed = 0.0F;
-  if (moveLeft != moveRight) {
-    targetSpeed = moveLeft ? -205.0F : 235.0F;
-    game.player.facingRight = moveRight;
+
+  // Event 3 is node based in the ROM: the joystick chooses an adjacent
+  // tambourine during the first beats of a rebound. Once chosen, the whole
+  // arc is committed and ends exactly at that drum's center. There is no
+  // free horizontal drift and the grass is never a landing surface.
+  if (!game.stage3Traveling &&
+      game.stage3BounceFrame <= kStage3BounceFrames / 2 &&
+      moveLeft != moveRight) {
+    const int direction = moveLeft ? -1 : 1;
+    const int requested = game.stage3CurrentTambourine + direction;
+    if (requested >= 0 &&
+        requested < static_cast<int>(game.stage3Tambourines.size())) {
+      game.stage3TargetTambourine = requested;
+      game.stage3Traveling = true;
+      game.stage3TravelStartFrame = game.stage3BounceFrame;
+      game.stage3TravelStartX = game.player.position.x;
+      game.player.facingRight = direction > 0;
+    }
   }
-  game.player.runSpeed +=
-      (targetSpeed - game.player.runSpeed) * static_cast<float>(kFixedDt) *
-      (targetSpeed == 0.0F ? 18.0F : 13.0F);
-  if (std::abs(game.player.runSpeed) < 0.5F && targetSpeed == 0.0F) {
-    game.player.runSpeed = 0.0F;
-  }
-  game.player.position.x = std::max(
-      42.0F, game.player.position.x +
-                   game.player.runSpeed * static_cast<float>(kFixedDt));
-  game.cameraX = std::max(0.0F, game.player.position.x - 78.0F);
 
   const int previousBounceFrame = game.stage3BounceFrame;
   game.stage3BounceFrame =
@@ -1508,7 +1567,35 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
                          static_cast<float>(kStage3BounceFrames);
   const float oldProgress = static_cast<float>(previousBounceFrame) /
                             static_cast<float>(kStage3BounceFrames);
-  const float height = stage3BounceHeight(game.stage3BounceLevel);
+  const auto& currentDrum = game.stage3Tambourines[static_cast<std::size_t>(
+      game.stage3CurrentTambourine)];
+  const auto& targetDrum = game.stage3Tambourines[static_cast<std::size_t>(
+      game.stage3TargetTambourine)];
+  if (game.stage3Traveling) {
+    const int remainingFrames = std::max(
+        1, kStage3BounceFrames - game.stage3TravelStartFrame);
+    const float travelProgress = std::clamp(
+        static_cast<float>(game.stage3BounceFrame -
+                           game.stage3TravelStartFrame) /
+            static_cast<float>(remainingFrames),
+        0.0F, 1.0F);
+    const float eased = travelProgress * travelProgress *
+                        (3.0F - 2.0F * travelProgress);
+    game.player.position.x =
+        game.stage3TravelStartX +
+        (targetDrum.worldX - game.stage3TravelStartX) * eased;
+  } else {
+    game.player.position.x = currentDrum.worldX;
+    game.stage3TargetTambourine = game.stage3CurrentTambourine;
+    game.stage3TravelStartFrame = 0;
+    game.stage3TravelStartX = game.player.position.x;
+  }
+  game.player.runSpeed = 0.0F;
+  game.cameraX = std::max(0.0F, game.player.position.x - 78.0F);
+
+  const float height = game.stage3Traveling
+                           ? 118.0F
+                           : stage3BounceHeight(game.stage3BounceLevel);
   game.player.position.y =
       game.stage3BounceBaseY - std::sin(progress * kPi) * height;
   game.player.verticalVelocity =
@@ -1517,10 +1604,17 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
   game.player.jumpFrame = game.stage3BounceFrame;
   game.player.grounded = false;
 
-  // A third-height arc reaches the prize bag. The first two cannot touch it,
-  // preserving the original three-bounce setup instead of awarding it from
-  // an ordinary hop.
-  if (game.stage3BounceLevel >= 3) {
+  // The fourth stationary rebound stays front-facing and ends when Charlie's
+  // head reaches the underside of the circus fascia. Moving to a neighboring
+  // drum before that rebound commits instead produces the normal spiral arc.
+  if (!game.stage3Traveling && game.stage3BounceLevel == 4 &&
+      progress < 0.5F && game.player.position.y <= kStage3RoofImpactY) {
+    crashStage3Roof(game);
+    return;
+  }
+
+  // Only the third stationary bounce reaches the suspended money bag.
+  if (!game.stage3Traveling && game.stage3BounceLevel == 3) {
     for (auto& drum : game.stage3Tambourines) {
       if (!drum.bagAvailable) continue;
       const float bagY = kStage3TambourineTopY - 154.0F;
@@ -1535,31 +1629,25 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
   }
 
   if (game.stage3BounceFrame >= kStage3BounceFrames) {
-    Stage3Tambourine* landingDrum = nullptr;
-    float closest = 1000.0F;
-    for (auto& drum : game.stage3Tambourines) {
-      const float distance = std::abs(game.player.position.x - drum.worldX);
-      if (distance < 56.0F && distance < closest) {
-        closest = distance;
-        landingDrum = &drum;
-      }
+    if (game.stage3Traveling) {
+      game.stage3CurrentTambourine = game.stage3TargetTambourine;
+      game.stage3Traveling = false;
+      game.stage3BounceLevel = 1;
+    } else {
+      game.stage3BounceLevel =
+          std::min(4, game.stage3BounceLevel + 1);
     }
-    if (!landingDrum) {
-      crashPlayer(game);
-      return;
-    }
-    game.player.position.y = kStage3TambourineTopY;
+    auto& landingDrum = game.stage3Tambourines[static_cast<std::size_t>(
+        game.stage3CurrentTambourine)];
+    landingDrum.compressionFrame = 10;
+    game.player.position = {landingDrum.worldX, kStage3TambourineTopY};
+    game.player.previous = game.player.position;
+    game.stage3TargetTambourine = game.stage3CurrentTambourine;
     game.stage3BounceBaseY = kStage3TambourineTopY;
     game.stage3BounceFrame = 0;
-    game.stage3BounceLevel = game.stage3BounceLevel == 4
-                                 ? 1
-                                 : game.stage3BounceLevel + 1;
-    if (game.stage3BounceLevel == 4) {
-      ++game.stage3OverjumpAudioSerial;
-    } else {
-      ++game.stage3BounceAudioSerial;
-    }
-    if (landingDrum->worldX >= kStage3CourseLength - 260.0F) {
+    ++game.stage3BounceAudioSerial;
+    if (game.stage3CurrentTambourine ==
+        static_cast<int>(game.stage3Tambourines.size()) - 1) {
       finishStage(game);
       return;
     }
@@ -1605,6 +1693,13 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
 
   if (game.stage1ScorePopupFrame > 0) --game.stage1ScorePopupFrame;
   if (game.bonus > 0) --game.bonus;
+  if (game.bonus <= 0) {
+    // Event 3's timer is an absolute game limit in the recorded ROM run.
+    // Do not restart into an already-expired timer and crash repeatedly.
+    game.lives = 1;
+    crashPlayer(game);
+    return;
+  }
   awardScoreLives(game);
 }
 
@@ -3552,13 +3647,18 @@ void drawSheetFrame(SDL_Renderer* renderer, SDL_Texture* texture,
 }
 
 void drawStage3Tambourine(SDL_Renderer* renderer, SDL_Texture* texture,
-                          float x) {
+                          float x, int compressionFrame, bool goal) {
   if (!texture) return;
-  // The original Event 3 instrument is a tall leather cylinder. Keep the
-  // full height and narrow profile instead of flattening it into a platform.
-  const SDL_FRect destination{x - 47.0F, kStage3TambourineTopY,
-                              94.0F,
-                              kStage3GroundY - kStage3TambourineTopY + 9.0F};
+  const float normalHeight = kStage3GroundY - kStage3TambourineTopY + 9.0F;
+  const float compression =
+      static_cast<float>(std::clamp(compressionFrame, 0, 10)) / 10.0F;
+  const float height = normalHeight * (1.0F - compression * 0.18F);
+  const float width = goal ? 172.0F : 94.0F;
+  // Hold the cylinder's bottom fixed while the padded top compresses and
+  // recovers after every landing, matching the ROM's rebound sprite family.
+  const SDL_FRect destination{x - width * 0.5F,
+                              kStage3GroundY + 9.0F - height,
+                              width, height};
   SDL_RenderCopyF(renderer, texture, nullptr, &destination);
 }
 
@@ -3579,10 +3679,15 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
              kStage3GroundY - 16.0F, 0.95F, color(255, 225, 64), true);
   }
 
-  for (const auto& drum : game.stage3Tambourines) {
+  for (std::size_t index = 0; index < game.stage3Tambourines.size(); ++index) {
+    const auto& drum = game.stage3Tambourines[index];
     const float x = drum.worldX - camera;
-    if (x < -80.0F || x > kWorldWidth + 80.0F) continue;
-    drawStage3Tambourine(renderer, assets.stage3Tambourine, x);
+    const bool goal = index + 1 == game.stage3Tambourines.size();
+    if (x < -110.0F || x > kWorldWidth + 110.0F) continue;
+    drawStage3Tambourine(renderer,
+                         goal ? assets.stage3GoalTambourine
+                              : assets.stage3Tambourine,
+                         x, drum.compressionFrame, goal);
     if (drum.bagAvailable) {
       const float bagY = kStage3TambourineTopY - 154.0F;
       if (assets.rewardBag) {
@@ -3612,14 +3717,16 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
     if (!projectile.active) continue;
     const bool rising = projectile.age < 54;
     const int projectileFrame = (projectile.age / 5) & 3;
-    const int atlasFrame = knife ? 2 : 4 + projectileFrame;
+    const int atlasFrame = knife ? projectileFrame : 4 + projectileFrame;
+    const double projectileAngle =
+        knife ? static_cast<double>(projectile.age * 17) :
+                (rising ? -90.0 : 90.0);
     drawSheetFrame(renderer, assets.stage3Projectiles, 4, 2, atlasFrame,
                    projectile.position.x - camera,
                    projectile.position.y + (knife ? 16.0F : 20.0F),
                    knife ? 28.0F : 32.0F,
                    knife ? 36.0F : 40.0F,
-                   (!rising && knife) ? SDL_FLIP_VERTICAL : SDL_FLIP_NONE,
-                   knife ? 0.0 : (rising ? -90.0 : 90.0));
+                   SDL_FLIP_NONE, projectileAngle);
   }
 
   const float playerWorldX = game.player.previous.x +
@@ -3632,13 +3739,17 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
   SDL_Texture* charlieTexture = assets.stage3CharlieVertical;
   if (game.scene == Scene::Goal) {
     charlieFrame = 11;
-  } else if (game.stage3BounceLevel == 4) {
+  } else if (game.stage3RoofCrash) {
+    // Full extension is held with the top of Charlie's head aligned to the
+    // fascia; the fourth stationary bounce never changes into a spiral.
+    charlieFrame = 3;
+  } else if (game.stage3Traveling) {
     const float progress = static_cast<float>(game.stage3BounceFrame) /
                            static_cast<float>(kStage3BounceFrames);
-    // The fourth bounce is the sideways curled over-jump pose from the
-    // original; ordinary vertical bounces remain front-facing.
+    // Every center-to-center transfer uses the four curled rotation poses.
     charlieTexture = assets.stage3Charlie;
-    charlieFrame = std::clamp(3 + static_cast<int>(progress * 6.0F), 3, 9);
+    charlieFrame = 4 +
+        (static_cast<int>(progress * 8.0F) & 3);
   } else {
     const float progress = static_cast<float>(game.stage3BounceFrame) /
                            static_cast<float>(kStage3BounceFrames);
@@ -3968,13 +4079,18 @@ int main(int argc, char** argv) {
       startGame(game);
     }
     if (options.captureScene == "stage3") {
-      game.player.position = {798.0F, kStage3TambourineTopY - 118.0F};
+      game.stage3CurrentTambourine = 3;
+      game.stage3TargetTambourine = 3;
+      game.player.position = {
+          game.stage3Tambourines[3].worldX,
+          kStage3TambourineTopY - 118.0F};
       game.player.previous = game.player.position;
       game.player.runSpeed = 0.0F;
       game.player.grounded = false;
       game.stage3BounceLevel = 3;
       game.stage3BounceFrame = kStage3BounceFrames / 2;
       game.stage3BounceBaseY = kStage3TambourineTopY;
+      game.stage3Traveling = false;
       game.cameraX = game.player.position.x - 78.0F;
       game.previousCameraX = game.cameraX;
       for (std::size_t index = 0;
