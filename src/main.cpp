@@ -73,11 +73,11 @@ constexpr float kFirePotCollisionHalfWidth = 32.0F;
 constexpr float kFirePotClearance = 42.0F;
 constexpr float kHoopPotSafetyDistance = 76.0F;
 constexpr float kBigRingVisualHalfWidth = 27.0F;
-constexpr float kBonusRingCollisionHalfWidth = 6.0F;
-constexpr float kBonusRingOpeningHalfHeight = 72.0F;
+constexpr float kBonusRingCollisionHalfWidth = 4.0F;
+constexpr float kBonusRingOpeningHalfHeight = 80.0F;
 constexpr float kBonusRingVisualHalfWidth = 30.0F;
 constexpr float kBonusRingVisualHalfHeight = 115.0F;
-constexpr float kBonusRingCenterHeight = 164.0F;
+constexpr float kBonusRingCenterHeight = 172.0F;
 // The MAME sequence places the coin near its apex about 50 frames after the
 // launch and catches it on the descending half at frame 66. A 96-frame arc
 // matches both measurements and still returns visibly to the pot when missed.
@@ -87,7 +87,6 @@ constexpr int kCrashBurnFrames = 72;
 constexpr int kGoalArrivalFrames = 90;
 constexpr int kBirdArrivalFrames = 170;
 constexpr int kBagDropFrames = 45;
-constexpr int kBirdExitFrames = 18;
 constexpr int kCoinShowerFrames = 220;
 constexpr int kRewardCoinCount = 18;
 // Preserve the measured arcade cadence. This was briefly reduced to 0.85,
@@ -130,6 +129,7 @@ struct Hoop {
   float openingBottom = kGroundY - 20.0F;
   float openingTop = kGroundY - 154.0F;
   bool cleared = false;
+  float previousWorldX = 0.0F;
 };
 
 struct FirePot {
@@ -139,6 +139,8 @@ struct FirePot {
   bool coinActive = false;
   bool coinCollected = false;
   int coinFrame = 0;
+  bool retired = false;
+  bool scored = false;
 };
 
 struct BonusRing {
@@ -221,7 +223,8 @@ struct Game {
   int openingBackwardJumps = 0;
   bool extraCharlieActive = false;
   bool extraCharlieCollected = false;
-  float extraCharlieWorldX = 0.0F;
+  bool extraCharlieTriggered = false;
+  int extraCharlieHoopIndex = -1;
   int stage2JumpClears = 0;
   bool stage2JumpBrown = false;
   bool stage2JumpPurple = false;
@@ -362,7 +365,7 @@ void printUsage() {
       << "  --debug\n"
       << "  --lion-test\n"
       << "  --capture FILE.png\n"
-      << "  --capture-scene start|select|gameplay|stage2|stage2-goal|ring|crash|goal|tally\n";
+      << "  --capture-scene start|select|gameplay|stage2|stage2-goal|ring|extra|crash|goal|tally\n";
 }
 
 std::optional<Options> parseOptions(int argc, char** argv) {
@@ -385,11 +388,12 @@ std::optional<Options> parseOptions(int argc, char** argv) {
           options.captureScene != "stage2" &&
           options.captureScene != "stage2-goal" &&
           options.captureScene != "ring" &&
+          options.captureScene != "extra" &&
           options.captureScene != "crash" &&
           options.captureScene != "goal" &&
           options.captureScene != "tally") {
         std::cerr
-            << "Capture scene must be start, select, gameplay, stage2, stage2-goal, ring, crash, goal, or tally.\n";
+            << "Capture scene must be start, select, gameplay, stage2, stage2-goal, ring, extra, crash, goal, or tally.\n";
         return std::nullopt;
       }
     } else if (argument == "--mode" && index + 1 < argc) {
@@ -946,7 +950,8 @@ void resetCourse(Game& game) {
   game.openingBackwardJumps = 0;
   game.extraCharlieActive = false;
   game.extraCharlieCollected = false;
-  game.extraCharlieWorldX = 0.0F;
+  game.extraCharlieTriggered = false;
+  game.extraCharlieHoopIndex = -1;
   game.stage2JumpClears = 0;
   game.stage2JumpBrown = false;
   game.stage2JumpPurple = false;
@@ -1026,6 +1031,7 @@ void resetCourse(Game& game) {
       {railStartForIntercept(5650.0F), kBigHoopOpeningBottom,
        kBigHoopOpeningTop, false},
   };
+  for (auto& hoop : game.hoops) hoop.previousWorldX = hoop.worldX;
   game.firePots = {
       {1560.0F},
       {2040.0F},
@@ -1481,8 +1487,10 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   const float ringTravel =
       kRingRailSpeed * static_cast<float>(kFixedDt);
   for (auto& hoop : game.hoops) {
-    if (!hoop.cleared &&
-        hoop.worldX - game.cameraX <= kRingActivationLead) {
+    hoop.previousWorldX = hoop.worldX;
+    // Cleared hoops remain physical, visible, and movable. The arcade lets
+    // Charlie cross the same hoop in either direction after passing it.
+    if (hoop.worldX - game.cameraX <= kRingActivationLead) {
       hoop.worldX -= ringTravel;
     }
   }
@@ -1494,31 +1502,27 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     }
   }
 
-  if (game.extraCharlieActive) {
-    game.extraCharlieWorldX -= ringTravel;
-    if (std::abs(game.extraCharlieWorldX - game.player.position.x) < 42.0F) {
-      game.extraCharlieActive = false;
-      game.extraCharlieCollected = true;
-      ++game.lives;
-      game.score += 1000;
-      ++game.extraCharlieAudioSerial;
-    } else if (game.extraCharlieWorldX < game.player.position.x - 95.0F) {
-      game.extraCharlieActive = false;
-    }
-  }
-
   if (jumpPressed && game.player.grounded) {
     // In the recorded Event 1 opening, three reverse jumps summon a Charlie
     // doll on the overhead rail. The player earns the extra life only by
     // intercepting that moving doll, not at the instant of the third jump.
     const bool openingReverseJump =
         moveLeft && game.player.position.x < 240.0F &&
-        !game.extraCharlieActive && !game.extraCharlieCollected;
+        !game.extraCharlieTriggered;
     if (openingReverseJump) {
       ++game.openingBackwardJumps;
       if (game.openingBackwardJumps >= 3) {
-        game.extraCharlieActive = true;
-        game.extraCharlieWorldX = game.player.position.x + 430.0F;
+        const auto nextHoop = std::find_if(
+            game.hoops.begin(), game.hoops.end(),
+            [&game](const Hoop& hoop) {
+              return hoop.worldX > game.player.position.x + 80.0F;
+            });
+        if (nextHoop != game.hoops.end()) {
+          game.extraCharlieTriggered = true;
+          game.extraCharlieActive = true;
+          game.extraCharlieHoopIndex = static_cast<int>(
+              std::distance(game.hoops.begin(), nextHoop));
+        }
       }
     }
     game.player.grounded = false;
@@ -1552,18 +1556,61 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     }
   }
 
-  for (auto& hoop : game.hoops) {
-    if (!hoop.cleared && game.player.position.x > hoop.worldX + 46.0F) {
-      hoop.cleared = true;
-      game.score += 100;
-    }
-    if (!hoop.cleared && overlapsHoop(game.player, hoop)) {
+  for (std::size_t hoopIndex = 0; hoopIndex < game.hoops.size();
+       ++hoopIndex) {
+    auto& hoop = game.hoops[hoopIndex];
+    if (overlapsHoop(game.player, hoop)) {
       crashPlayer(game);
       return;
+    }
+
+    const float previousRelativeX =
+        game.player.previous.x - hoop.previousWorldX;
+    const float relativeX = game.player.position.x - hoop.worldX;
+    const bool crossedForward =
+        previousRelativeX <= 0.0F && relativeX > 0.0F;
+    const bool crossedBackward =
+        previousRelativeX >= 0.0F && relativeX < 0.0F;
+    if (!crossedForward && !crossedBackward) continue;
+
+    const bool previouslyCleared = hoop.cleared;
+    hoop.cleared = true;
+    game.score += 100;
+
+    // The verified circusc4 recording shows the secret Charlie hanging inside
+    // the next approaching hoop after a successful backward crossing. It can
+    // be triggered only once for the whole game, even after a death/restart.
+    if (crossedBackward && previouslyCleared &&
+        !game.extraCharlieTriggered) {
+      const auto nextHoop = std::find_if(
+          game.hoops.begin(), game.hoops.end(),
+          [&game](const Hoop& candidate) {
+            return candidate.worldX > game.player.position.x + 40.0F;
+          });
+      if (nextHoop != game.hoops.end()) {
+        game.extraCharlieTriggered = true;
+        game.extraCharlieActive = true;
+        game.extraCharlieHoopIndex = static_cast<int>(
+            std::distance(game.hoops.begin(), nextHoop));
+      }
+    } else if (crossedForward && game.extraCharlieActive &&
+               game.extraCharlieHoopIndex ==
+                   static_cast<int>(hoopIndex)) {
+      game.extraCharlieActive = false;
+      game.extraCharlieCollected = true;
+      ++game.lives;
+      ++game.extraCharlieAudioSerial;
     }
   }
 
   for (auto& firePot : game.firePots) {
+    if (firePot.retired) continue;
+    if (firePot.worldX - game.cameraX < -80.0F) {
+      firePot.retired = true;
+      firePot.coinPending = false;
+      firePot.coinActive = false;
+      continue;
+    }
     const float potDistance =
         game.player.position.x - firePot.worldX;
     const bool sharesHoopLane = std::any_of(
@@ -1613,7 +1660,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
           std::abs(riderCenterY - coinY) < 44.0F) {
         firePot.coinCollected = true;
         firePot.coinActive = false;
-        game.score += 500;
+        game.score += 5000;
         ++game.hiddenCoinAudioSerial;
       } else if (firePot.coinFrame >= kCoinFlightFrames) {
         firePot.coinActive = false;
@@ -1626,6 +1673,12 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         game.player.position.y > kGroundY - kFirePotClearance) {
       crashPlayer(game);
       return;
+    }
+    if (!firePot.scored &&
+        game.player.position.x >
+            firePot.worldX + kFirePotCollisionHalfWidth) {
+      firePot.scored = true;
+      game.score += 200;
     }
   }
 
@@ -1664,7 +1717,9 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
 
     if (!ring.collected) {
       ring.collected = true;
-      game.score += ring.containsPrize ? 500 : 200;
+      game.score += ring.containsPrize
+                        ? ((nextRandom(game) & 1U) == 0U ? 500 : 1000)
+                        : 0;
       if (ring.containsPrize) {
         ++game.prizeBagsCollected;
         ++game.prizeBagAudioSerial;
@@ -1900,7 +1955,7 @@ void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
 void drawHoop(SDL_Renderer* renderer, const Hoop& hoop, float cameraX,
               bool lowDetail, SDL_Texture* hoopTexture) {
   const float x = hoop.worldX - cameraX;
-  if (x < -80.0F || x > kWorldWidth + 80.0F || hoop.cleared) return;
+  if (x < -80.0F || x > kWorldWidth + 80.0F) return;
   const float centerY = (hoop.openingTop + hoop.openingBottom) * 0.5F;
   const float radiusY = (hoop.openingBottom - hoop.openingTop) * 0.5F;
 
@@ -1945,8 +2000,12 @@ void drawHoop(SDL_Renderer* renderer, const Hoop& hoop, float cameraX,
   }
 }
 
+void drawCoin(SDL_Renderer* renderer, float x, float y,
+              float squash = 1.0F);
+
 void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
-                    SDL_Texture* propsTexture) {
+                    SDL_Texture* propsTexture,
+                    SDL_Texture* rewardBagTexture) {
   if (!propsTexture) return;
   int textureWidth = 0;
   int textureHeight = 0;
@@ -1956,6 +2015,7 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
   const SDL_Rect fireSource{0, 0, cellWidth, textureHeight};
   const SDL_Rect bagSource{cellWidth, 0, cellWidth, textureHeight};
   for (const auto& firePot : game.firePots) {
+    if (firePot.retired) continue;
     const float screenX = firePot.worldX - cameraX;
     if (screenX < -80.0F || screenX > kWorldWidth + 80.0F) continue;
     const SDL_FRect destination{screenX - 31.0F, kGroundY - 102.0F, 62.0F,
@@ -1966,14 +2026,7 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
       const float flip = std::max(
           0.16F, std::abs(std::cos(static_cast<float>(firePot.coinFrame) *
                                   0.34F)));
-      const float coinWidth = 9.0F * flip;
-      ellipse(renderer, screenX, coinY, coinWidth, 9.0F,
-              color(255, 246, 115), 3);
-      ellipse(renderer, screenX, coinY, std::max(1.0F, coinWidth - 2.5F),
-              6.0F, color(226, 146, 20), 2);
-      fillRect(renderer, screenX - coinWidth * 0.35F, coinY - 5.0F,
-               std::max(1.0F, coinWidth * 0.20F), 3.0F,
-               color(255, 255, 221));
+      drawCoin(renderer, screenX, coinY, flip);
     }
   }
 
@@ -1986,16 +2039,22 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
     // Like the original board's category-0 tiles, the animated flame rim is
     // deferred to the foreground pass. The hanger and prize remain here.
     if (ring.containsPrize && !ring.collected) {
-      const SDL_FRect bagDestination{screenX - 22.0F, ringCenterY - 44.0F,
-                                     44.0F, 88.0F};
-      SDL_RenderCopyF(renderer, propsTexture, &bagSource, &bagDestination);
+      const SDL_FRect bagDestination{screenX - 22.0F, ringCenterY - 28.0F,
+                                     44.0F, 52.0F};
+      if (rewardBagTexture) {
+        SDL_RenderCopyF(renderer, rewardBagTexture, nullptr,
+                        &bagDestination);
+      } else {
+        SDL_RenderCopyF(renderer, propsTexture, &bagSource,
+                        &bagDestination);
+      }
     }
   }
 }
 
 void drawHoopForeground(SDL_Renderer* renderer, const Hoop& hoop,
                         float cameraX, SDL_Texture* hoopTexture) {
-  if (!hoopTexture || hoop.cleared) return;
+  if (!hoopTexture) return;
   const float x = hoop.worldX - cameraX;
   if (x < -80.0F || x > kWorldWidth + 80.0F) return;
 
@@ -2149,46 +2208,61 @@ void drawGoalPlatformFrontRim(SDL_Renderer* renderer, float screenX) {
 void drawExtraCharlie(SDL_Renderer* renderer, const Game& game,
                       float cameraX, double timeSeconds,
                       SDL_Texture* charlieTexture) {
-  if (!game.extraCharlieActive) return;
-  const float x = game.extraCharlieWorldX - cameraX;
+  if (!game.extraCharlieActive || game.extraCharlieHoopIndex < 0 ||
+      game.extraCharlieHoopIndex >= static_cast<int>(game.hoops.size())) {
+    return;
+  }
+  const Hoop& hoop = game.hoops[
+      static_cast<std::size_t>(game.extraCharlieHoopIndex)];
+  const float x = hoop.worldX - cameraX;
   if (x < -60.0F || x > kWorldWidth + 60.0F) return;
 
-  const float sway = std::sin(static_cast<float>(timeSeconds) * 5.0F) * 3.0F;
-  const float headY = 394.0F + sway;
-  line(renderer, x, kTrackY + 4.0F, x, headY - 19.0F,
-       color(220, 224, 230));
+  const float centerY = (hoop.openingTop + hoop.openingBottom) * 0.5F;
+  const float sway = std::sin(static_cast<float>(timeSeconds) * 4.0F) * 1.2F;
+  const float dollY = centerY + 9.0F + sway;
+  const float ropeTop = hoop.openingTop - 8.0F;
+  const float ropeBottom = dollY - 19.0F;
+  // The original reward is a round Charlie medallion on the hoop's thick,
+  // segmented blue/white hanger. Reproduce that hardware rather than adding
+  // a thin independent ceiling cord.
+  for (float segmentY = ropeTop; segmentY < ropeBottom; segmentY += 8.0F) {
+    const float height = std::min(8.0F, ropeBottom - segmentY);
+    const int segment = static_cast<int>((segmentY - ropeTop) / 8.0F);
+    fillRect(renderer, x - 4.0F, segmentY, 8.0F, height,
+             (segment & 1) == 0 ? color(224, 228, 226)
+                                : color(89, 137, 211));
+    fillRect(renderer, x - 4.0F, segmentY, 1.5F, height,
+             color(70, 70, 76));
+    fillRect(renderer, x + 2.5F, segmentY, 1.5F, height,
+             color(249, 249, 240));
+  }
+  filledCircle(renderer, x, dollY, 22.0F, color(109, 61, 22));
+  filledCircle(renderer, x, dollY, 19.0F, color(255, 222, 116));
+  filledCircle(renderer, x, dollY, 16.5F, color(247, 190, 192));
   if (charlieTexture) {
-    const SDL_FRect destination{x - 30.0F, headY - 25.0F, 60.0F, 60.0F};
+    const SDL_FRect destination{x - 17.0F, dollY - 17.0F, 34.0F, 34.0F};
     SDL_RenderCopyF(renderer, charlieTexture, nullptr, &destination);
     return;
   }
-  filledCircle(renderer, x, headY, 14.0F, color(250, 218, 186));
-  filledCircle(renderer, x + 12.0F, headY + 1.0F, 4.5F,
+  filledCircle(renderer, x, dollY, 10.0F, color(250, 218, 186));
+  filledCircle(renderer, x + 8.0F, dollY + 1.0F, 3.5F,
                color(224, 44, 47));
-  filledCircle(renderer, x - 5.0F, headY + 2.0F, 3.0F,
+  filledCircle(renderer, x - 3.0F, dollY + 1.0F, 2.3F,
                color(55, 126, 213));
-  fillRect(renderer, x - 12.0F, headY + 14.0F, 24.0F, 31.0F,
-           color(190, 31, 43));
-  line(renderer, x - 8.0F, headY + 42.0F, x - 14.0F, headY + 61.0F,
-       color(45, 106, 202));
-  line(renderer, x + 8.0F, headY + 42.0F, x + 14.0F, headY + 61.0F,
-       color(45, 106, 202));
-  const std::array<SDL_Vertex, 3> cap{{
-      {{x - 13.0F, headY - 10.0F}, color(43, 99, 190), {0, 0}},
-      {{x - 3.0F, headY - 34.0F}, color(72, 142, 224), {0, 0}},
-      {{x + 11.0F, headY - 11.0F}, color(43, 99, 190), {0, 0}},
-  }};
-  SDL_RenderGeometry(renderer, nullptr, cap.data(),
-                     static_cast<int>(cap.size()), nullptr, 0);
-  filledCircle(renderer, x - 4.0F, headY - 35.0F, 4.0F,
-               color(248, 204, 45));
 }
 
-void drawCoin(SDL_Renderer* renderer, float x, float y, float squash = 1.0F) {
-  const float width = 9.0F * std::max(0.25F, squash);
-  ellipse(renderer, x, y, width, 9.0F, color(255, 255, 123), 3);
-  ellipse(renderer, x, y, std::max(1.0F, width - 3.0F), 6.0F,
-          color(235, 155, 27), 2);
+void drawCoin(SDL_Renderer* renderer, float x, float y, float squash) {
+  const float width = 9.0F * std::max(0.18F, squash);
+  ellipse(renderer, x, y, width + 1.5F, 9.5F, color(91, 48, 8), 3);
+  ellipse(renderer, x, y, width, 8.0F, color(211, 127, 13), 3);
+  ellipse(renderer, x, y, std::max(1.0F, width - 2.5F), 5.5F,
+          color(247, 187, 45), 2);
+  if (width > 4.5F) {
+    line(renderer, x - 2.0F, y - 4.0F, x + 2.0F, y + 4.0F,
+         color(134, 76, 7));
+    line(renderer, x + 2.0F, y - 4.0F, x - 2.0F, y + 4.0F,
+         color(255, 222, 99));
+  }
 }
 
 void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
@@ -2232,8 +2306,7 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
   const int birdStart = kGoalArrivalFrames;
   const int bagDropStart = birdStart + kBirdArrivalFrames;
   const int showerStart = bagDropStart + kBagDropFrames;
-  if (birdTexture && game.goalFrame >= birdStart &&
-      game.goalFrame < bagDropStart + kBirdExitFrames) {
+  if (birdTexture && game.goalFrame >= birdStart) {
     int textureWidth = 0;
     int textureHeight = 0;
     SDL_QueryTexture(birdTexture, nullptr, nullptr, &textureWidth,
@@ -2249,12 +2322,10 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
       birdX = 510.0F + (kGoalScreenX - 510.0F) * progress;
       cell = (game.goalFrame / 8) & 1;
     } else {
-      const float exitProgress = std::clamp(
-          static_cast<float>(game.goalFrame - bagDropStart) /
-              static_cast<float>(kBirdExitFrames),
-          0.0F, 1.0F);
-      birdX = kGoalScreenX - exitProgress * 260.0F;
-      cell = 3;
+      // The reference bird remains beside the bag throughout the complete
+      // coin shower. It does not fly away while coins fall from empty air.
+      birdX = kGoalScreenX;
+      cell = 2 + ((game.goalFrame / 10) & 1);
     }
     const SDL_Rect source{cell * cellWidth, 0, cellWidth, textureHeight};
     // Keep the reward bird in the arena below the persistent LED/HUD panel.
@@ -3090,7 +3161,7 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
   for (const auto& hoop : game.hoops) {
     drawHoop(renderer, hoop, camera, lowDetail, hoopFrame);
   }
-  drawStageProps(renderer, game, camera, propsFrame);
+  drawStageProps(renderer, game, camera, propsFrame, assets.rewardBag);
   drawExtraCharlie(renderer, game, camera, timeSeconds, assets.charlieLife);
 
   if (game.scene != Scene::Title) {
@@ -3257,10 +3328,28 @@ int main(int argc, char** argv) {
       game.player.verticalVelocity = 0.0F;
       game.cameraX = game.player.position.x - 78.0F;
       game.previousCameraX = game.cameraX;
-      for (auto& hoop : game.hoops) hoop.cleared = true;
+      for (auto& hoop : game.hoops) {
+        hoop.worldX = -10000.0F;
+        hoop.previousWorldX = hoop.worldX;
+      }
       game.bonusRings.front().worldX = game.player.position.x;
       game.bonusRings.front().containsPrize = true;
-      game.bonusRings.front().collected = true;
+      game.bonusRings.front().collected = false;
+    } else if (options.captureScene == "extra") {
+      game.player.position = {800.0F, kGroundY};
+      game.player.previous = game.player.position;
+      game.cameraX = game.player.position.x - 78.0F;
+      game.previousCameraX = game.cameraX;
+      for (auto& ring : game.bonusRings) ring.worldX = -10000.0F;
+      for (std::size_t index = 0; index < game.hoops.size(); ++index) {
+        game.hoops[index].worldX = index == 0 ? game.player.position.x + 76.0F
+                                              : -10000.0F;
+        game.hoops[index].previousWorldX = game.hoops[index].worldX;
+      }
+      game.hoops.front().cleared = true;
+      game.extraCharlieTriggered = true;
+      game.extraCharlieActive = true;
+      game.extraCharlieHoopIndex = 0;
     } else if (options.captureScene == "crash") {
       game.scene = Scene::Crashed;
       game.player.position = {800.0F, kGroundY};
@@ -3289,7 +3378,10 @@ int main(int argc, char** argv) {
                            ? 100
                            : kGoalArrivalFrames + kBirdArrivalFrames +
                                  kBagDropFrames + 30;
-      for (auto& hoop : game.hoops) hoop.cleared = true;
+      for (auto& hoop : game.hoops) {
+        hoop.worldX = -10000.0F;
+        hoop.previousWorldX = hoop.worldX;
+      }
       for (auto& ring : game.bonusRings) ring.collected = true;
     } else if (options.captureScene == "tally") {
       game.scene = Scene::Tally;

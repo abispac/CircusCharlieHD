@@ -174,8 +174,8 @@ cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
 ```
 
 Pass `--capture-scene start`, `--capture-scene select`,
-`--capture-scene ring`, or `--capture-scene crash` to inspect those
-animation states; `goal` and `tally` are also available.
+`--capture-scene ring`, `--capture-scene extra`, or `--capture-scene crash`
+to inspect those animation states; `goal` and `tally` are also available.
 
 ## Reference analysis
 
