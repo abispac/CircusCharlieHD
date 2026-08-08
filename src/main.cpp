@@ -1223,19 +1223,19 @@ bool overlapsHoop(const Player& player, const Hoop& hoop) {
   const float hoopRight = hoop.worldX + kBigRingCollisionHalfWidth;
   if (playerRight < hoopLeft || playerLeft > hoopRight) return false;
 
+  // A reverse jump through an already-passed hoop is a deliberate arcade
+  // secret, not a precision challenge. Because both the rider and rail hoop
+  // travel left, their overlap can occur at either edge of the fixed jump
+  // arc. Treat the complete airborne reverse arc as a valid crossing. Merely
+  // walking backward into the flames remains fatal, and forward collision is
+  // completely unchanged.
+  if (!player.grounded && player.runSpeed < -20.0F) return false;
+
   const float playerTop = player.position.y - kLionCollisionTop;
   const float playerBottom = player.position.y - kLionCollisionBottom;
-  // Re-entering a cleared hoop is deliberately a little more forgiving.
-  // Charlie and the hoop travel toward the same side of the screen during a
-  // reverse crossing, so the exact arcade-looking overlap lasts fewer board
-  // samples than it does on the forward pass. Keep the narrow horizontal
-  // flame plane and the original forward collision intact; only widen the
-  // valid vertical window while the rider is genuinely moving backward.
-  const float reverseVerticalGrace =
-      player.runSpeed < -20.0F ? 16.0F : 0.0F;
   const bool withinOpening =
-      playerTop > hoop.openingTop + 3.0F - reverseVerticalGrace &&
-      playerBottom < hoop.openingBottom - 2.0F + reverseVerticalGrace;
+      playerTop > hoop.openingTop + 3.0F &&
+      playerBottom < hoop.openingBottom - 2.0F;
   return !withinOpening;
 }
 
@@ -1582,6 +1582,13 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   }
 
   if (jumpPressed && game.player.grounded) {
+    // Commit to reverse motion on the same board sample as LEFT + JUMP.
+    // Without this, the direction easing could leave one residual forward
+    // frame and let the hoop collision run before the reverse-jump exemption
+    // became active.
+    if (moveLeft && !moveRight) {
+      game.player.runSpeed = std::min(game.player.runSpeed, -75.0F);
+    }
     // In the recorded Event 1 opening, three reverse jumps summon a Charlie
     // doll on the overhead rail. The player earns the extra life only by
     // intercepting that moving doll, not at the instant of the third jump.
@@ -2541,7 +2548,9 @@ void drawRiderWalkTest(SDL_Renderer* renderer, float screenX, float groundY,
   // Side-by-side calibration against the 224x256 MAME frame puts the visible
   // lion/rider composite near 110 source-corrected logical pixels wide. The
   // old 170-unit render made Charlie sit near mid-screen and dwarfed hoops.
-  constexpr float kTestWidth = 108.0F;
+  // Ten percent more visual presence, requested after the calibrated Stage 1
+  // layout pass. Collision remains on the measured logical body above.
+  constexpr float kTestWidth = 118.8F;
   const float kTestHeight =
       kTestWidth * static_cast<float>(cellHeight) /
       static_cast<float>(cellWidth);
@@ -2551,7 +2560,8 @@ void drawRiderWalkTest(SDL_Renderer* renderer, float screenX, float groundY,
                                           : kJumpFrameBottom;
   const float visualGroundOffset =
       sourceGroundLine / static_cast<float>(cellHeight) * kTestHeight;
-  const SDL_FRect destination{screenX - 44.0F,
+  // Preserve the old composite's visual center at screenX + 10 while scaling.
+  const SDL_FRect destination{screenX + 10.0F - kTestWidth * 0.5F,
                               groundY - visualGroundOffset,
                               kTestWidth, kTestHeight};
   SDL_SetTextureColorMod(riderTexture, 255, alive ? 255 : 128,

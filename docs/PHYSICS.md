@@ -122,10 +122,16 @@ Current user-control model:
   table; holding the button does not alter height or duration.
 - Backtracking never turns Charlie or the lion around; they remain facing
   forward and move or jump in reverse.
-- A genuine reverse crossing keeps the same narrow horizontal flame plane but
-  receives `16` logical units of vertical opening grace. This compensates for
-  the shorter relative crossing interval when both the hoop and rider travel
-  left, while leaving forward-jump collision unchanged.
+- A genuine airborne reverse crossing is accepted across the complete fixed
+  jump arc. This makes the original backward-hoop secret reliable despite the
+  shorter relative crossing interval when both the hoop and rider travel
+  left. A LEFT + JUMP command also commits to reverse velocity on that same
+  board sample, preventing a residual forward frame from causing a false
+  collision. Walking backward into a hoop is still fatal, and forward
+  collision is unchanged.
+- The regular Stage 1 rider/lion sheet renders `10%` larger than the initial
+  calibrated pass, around the same visual center and ground contact. Its
+  measured collision body and jump table remain unchanged.
 - Only the one secretly selected fire pot can reveal a coin, and only during
   a backward jump. Forward jumps and every other pot leave the secret dormant.
 
