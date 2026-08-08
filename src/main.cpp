@@ -590,7 +590,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.stage3CharlieVertical =
       loadAsset(renderer, "stage3-charlie-vertical-front-12-v2.png");
   assets.stage3CharlieRoofHead =
-      loadAsset(renderer, "stage3-charlie-roof-head-4-v1.png");
+      loadAsset(renderer, "stage3-charlie-roof-head-4-v2.png");
   assets.stage3Tambourine =
       loadAsset(renderer, "stage3-tambourine-v1.png");
   assets.stage3GoalTambourine =
@@ -602,7 +602,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.stage3Projectiles =
       loadAsset(renderer, "stage3-projectiles-8-v1.png");
   assets.stage3FlameProjectile =
-      loadAsset(renderer, "stage3-flame-projectile-4-v2.png");
+      loadAsset(renderer, "stage3-flame-projectile-4-v3.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.rider || !assets.riderWalkTest ||
       !assets.burnRider || !assets.hoop ||
@@ -1708,8 +1708,11 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
     projectile.position.y = kStage3GroundY - 72.0F -
                             std::sin(projectileProgress * kPi) *
                                 (knife ? 286.0F : 180.0F);
-    const float collisionHalfWidth = knife ? 18.0F : 34.0F;
-    const float collisionHalfHeight = knife ? 24.0F : 52.0F;
+    // The original fireball is narrow, and only its bright core is lethal.
+    // Keeping the collision area inside the painted flame leaves the same
+    // pass-by timing window visible in the arcade recording.
+    const float collisionHalfWidth = knife ? 18.0F : 11.0F;
+    const float collisionHalfHeight = knife ? 24.0F : 28.0F;
     if (std::abs(game.player.position.x - projectile.position.x) <
             collisionHalfWidth &&
         std::abs((game.player.position.y - 44.0F) -
@@ -3757,7 +3760,7 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
       // projectile is retired at the end of its vertical cycle.
       drawSheetFrame(renderer, assets.stage3FlameProjectile, 4, 1,
                      projectileFrame, projectile.position.x - camera,
-                     projectile.position.y + 48.0F, 52.0F, 96.0F);
+                     projectile.position.y + 71.0F, 80.0F, 140.0F);
     }
   }
 
