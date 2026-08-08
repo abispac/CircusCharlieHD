@@ -3803,7 +3803,7 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
   if (game.stage3RoofCrash) {
     const int roofFrame = std::min(game.crashFrame / 5, 3);
     drawSheetFrame(renderer, assets.stage3CharlieRoofHead, 4, 1,
-                   roofFrame, 195.0F, 82.0F,
+                   roofFrame, kStage3PlayerScreenX, 132.0F,
                    78.0F, 70.0F);
 
     const auto drawOhNo = [&](float x, float y) {
