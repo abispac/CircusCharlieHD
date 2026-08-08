@@ -2329,13 +2329,13 @@ void drawRiderWalkTest(SDL_Renderer* renderer, float screenX, float groundY,
   if (!grounded) {
     frame = 3;
   } else if (std::abs(runSpeed) > 5.0F) {
-    constexpr double kRiderTestFramesPerSecond = 14.0;
+    constexpr double kRiderTestFramesPerSecond = 12.0;
     frame = static_cast<int>(timeSeconds * kRiderTestFramesPerSecond) % 12;
   }
 
   const SDL_Rect source{(frame % 4) * cellWidth, (frame / 4) * cellHeight,
                         cellWidth, cellHeight};
-  constexpr float kTestWidth = 190.0F;
+  constexpr float kTestWidth = 170.0F;
   const float kTestHeight =
       kTestWidth * static_cast<float>(cellHeight) /
       static_cast<float>(cellWidth);
@@ -2495,7 +2495,7 @@ void drawBurningRider(SDL_Renderer* renderer, float screenX, float groundY,
   const SDL_Rect source{frame * cellWidth, 0, cellWidth, textureHeight};
   constexpr std::array<float, 4> kFrameBottoms{
       383.0F, 401.0F, 402.0F, 351.0F};
-  constexpr float kBurnWidth = 190.0F;
+  constexpr float kBurnWidth = 170.0F;
   const float burnHeight =
       kBurnWidth * static_cast<float>(textureHeight) /
       static_cast<float>(cellWidth);
