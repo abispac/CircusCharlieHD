@@ -73,16 +73,23 @@ constexpr float kFirePotCollisionHalfWidth = 32.0F;
 constexpr float kFirePotClearance = 42.0F;
 constexpr float kHoopPotSafetyDistance = 76.0F;
 constexpr float kBigRingVisualHalfWidth = 27.0F;
-constexpr float kBonusRingCollisionHalfWidth = 4.0F;
-constexpr float kBonusRingOpeningHalfHeight = 80.0F;
-constexpr float kBonusRingVisualHalfWidth = 30.0F;
-constexpr float kBonusRingVisualHalfHeight = 115.0F;
-constexpr float kBonusRingCenterHeight = 172.0F;
+// Both ring types use the arcade board's narrow foreground collision plane.
+// Testing the full visible width makes reverse crossings fail before the
+// rider has actually reached the flame edge.
+constexpr float kBigRingCollisionHalfWidth = 7.0F;
+constexpr float kBonusRingCollisionHalfWidth = 3.5F;
+// The small ring is about three quarters the large ring's height in the
+// circusc4 frames.  The old 230-unit render was taller than the large hoop,
+// which made the rider appear to pass beside it instead of through it.
+constexpr float kBonusRingOpeningHalfHeight = 58.0F;
+constexpr float kBonusRingVisualHalfWidth = 24.0F;
+constexpr float kBonusRingVisualHalfHeight = 72.0F;
+constexpr float kBonusRingCenterHeight = 176.0F;
 // The MAME sequence places the coin near its apex about 50 frames after the
 // launch and catches it on the descending half at frame 66. A 96-frame arc
 // matches both measurements and still returns visibly to the pot when missed.
 constexpr int kCoinFlightFrames = 96;
-constexpr float kCoinArcHeight = 151.0F;
+constexpr float kCoinArcHeight = 170.0F;
 constexpr int kCrashBurnFrames = 72;
 constexpr int kGoalArrivalFrames = 90;
 constexpr int kBirdArrivalFrames = 170;
@@ -266,6 +273,7 @@ struct Assets {
   SDL_Texture* bird = nullptr;
   SDL_Texture* rewardBag = nullptr;
   SDL_Texture* charlieLife = nullptr;
+  SDL_Texture* extraCharlie = nullptr;
   SDL_Texture* goalPlatform = nullptr;
   SDL_Texture* finishRider = nullptr;
   SDL_Texture* eventSelectProps = nullptr;
@@ -461,6 +469,8 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.bird = loadAsset(renderer, "stage1-bird-sheet.png");
   assets.rewardBag = loadAsset(renderer, "stage1-reward-bag.png");
   assets.charlieLife = loadAsset(renderer, "stage1-charlie-life-v2.png");
+  assets.extraCharlie =
+      loadAsset(renderer, "stage1-extra-charlie-hang-v1.png");
   assets.goalPlatform = loadAsset(renderer, "stage1-goal-platform-v4.png");
   assets.finishRider =
       loadAsset(renderer, "stage1-finish-rider-v2.png");
@@ -483,6 +493,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
       !assets.burnRider || !assets.hoop ||
       !assets.hoopFlare || !assets.props || !assets.propsFlare ||
       !assets.bird || !assets.rewardBag || !assets.charlieLife ||
+      !assets.extraCharlie ||
       !assets.goalPlatform || !assets.finishRider ||
       !assets.eventSelectProps || !assets.eventSelectChosen ||
       !assets.stage2Charlie || !assets.stage2BrownWalk ||
@@ -510,6 +521,7 @@ void destroyAssets(Assets& assets) {
   if (assets.bird) SDL_DestroyTexture(assets.bird);
   if (assets.rewardBag) SDL_DestroyTexture(assets.rewardBag);
   if (assets.charlieLife) SDL_DestroyTexture(assets.charlieLife);
+  if (assets.extraCharlie) SDL_DestroyTexture(assets.extraCharlie);
   if (assets.goalPlatform) SDL_DestroyTexture(assets.goalPlatform);
   if (assets.finishRider) SDL_DestroyTexture(assets.finishRider);
   if (assets.eventSelectProps) SDL_DestroyTexture(assets.eventSelectProps);
@@ -1166,15 +1178,15 @@ int timeBonusFor(int bonus) {
 bool overlapsHoop(const Player& player, const Hoop& hoop) {
   const float playerLeft = player.position.x - kLionCollisionLeft;
   const float playerRight = player.position.x + kLionCollisionRight;
-  const float hoopLeft = hoop.worldX - 15.0F;
-  const float hoopRight = hoop.worldX + 15.0F;
+  const float hoopLeft = hoop.worldX - kBigRingCollisionHalfWidth;
+  const float hoopRight = hoop.worldX + kBigRingCollisionHalfWidth;
   if (playerRight < hoopLeft || playerLeft > hoopRight) return false;
 
   const float playerTop = player.position.y - kLionCollisionTop;
   const float playerBottom = player.position.y - kLionCollisionBottom;
   const bool withinOpening =
-      playerTop > hoop.openingTop + 8.0F &&
-      playerBottom < hoop.openingBottom - 3.0F;
+      playerTop > hoop.openingTop + 3.0F &&
+      playerBottom < hoop.openingBottom - 2.0F;
   return !withinOpening;
 }
 
@@ -1468,9 +1480,18 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   if (moveLeft != moveRight) {
     targetSpeed = moveLeft ? kBackSpeed : kForwardSpeed;
   }
+  const bool reversing =
+      targetSpeed != 0.0F && game.player.runSpeed != 0.0F &&
+      ((targetSpeed < 0.0F) != (game.player.runSpeed < 0.0F));
+  // A direction change on the original board brakes almost immediately.
+  // The previous generic easing carried Charlie forward for several frames
+  // after LEFT was pressed, creating the visible "walking on ice" slide and
+  // making a backward hoop jump unnecessarily hard to time.
+  const float movementResponse =
+      targetSpeed == 0.0F ? 24.0F : (reversing ? 32.0F : 18.0F);
   game.player.runSpeed +=
       (targetSpeed - game.player.runSpeed) * static_cast<float>(kFixedDt) *
-      (targetSpeed == 0.0F ? 12.0F : 9.0F);
+      movementResponse;
   if (std::abs(game.player.runSpeed) < 0.5F && targetSpeed == 0.0F) {
     game.player.runSpeed = 0.0F;
   }
@@ -2035,12 +2056,13 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
     if (screenX < -100.0F || screenX > kWorldWidth + 100.0F) continue;
     const float ringCenterY = kGroundY - ring.height;
     line(renderer, screenX, kTrackY + 5.0F, screenX,
-         ringCenterY - 55.0F, color(119, 101, 73));
+         ringCenterY - kBonusRingVisualHalfHeight + 8.0F,
+         color(119, 101, 73));
     // Like the original board's category-0 tiles, the animated flame rim is
     // deferred to the foreground pass. The hanger and prize remain here.
     if (ring.containsPrize && !ring.collected) {
-      const SDL_FRect bagDestination{screenX - 22.0F, ringCenterY - 28.0F,
-                                     44.0F, 52.0F};
+      const SDL_FRect bagDestination{screenX - 17.0F, ringCenterY - 21.0F,
+                                     34.0F, 40.0F};
       if (rewardBagTexture) {
         SDL_RenderCopyF(renderer, rewardBagTexture, nullptr,
                         &bagDestination);
@@ -2217,38 +2239,38 @@ void drawExtraCharlie(SDL_Renderer* renderer, const Game& game,
   const float x = hoop.worldX - cameraX;
   if (x < -60.0F || x > kWorldWidth + 60.0F) return;
 
-  const float centerY = (hoop.openingTop + hoop.openingBottom) * 0.5F;
-  const float sway = std::sin(static_cast<float>(timeSeconds) * 4.0F) * 1.2F;
-  const float dollY = centerY + 9.0F + sway;
+  const float sway = std::sin(static_cast<float>(timeSeconds) * 3.4F);
+  const float spriteX = x + sway * 2.4F;
+  const float spriteTop = hoop.openingTop + 17.0F;
   const float ropeTop = hoop.openingTop - 8.0F;
-  const float ropeBottom = dollY - 19.0F;
-  // The original reward is a round Charlie medallion on the hoop's thick,
-  // segmented blue/white hanger. Reproduce that hardware rather than adding
-  // a thin independent ceiling cord.
+  const float ropeBottom = spriteTop + 8.0F;
+  // The circusc4 reward is a complete Charlie hanging by both hands, not a
+  // face medallion. Keep the arcade's thick segmented hanger and let the
+  // character's diagonal pose provide the gentle swinging silhouette.
   for (float segmentY = ropeTop; segmentY < ropeBottom; segmentY += 8.0F) {
     const float height = std::min(8.0F, ropeBottom - segmentY);
     const int segment = static_cast<int>((segmentY - ropeTop) / 8.0F);
-    fillRect(renderer, x - 4.0F, segmentY, 8.0F, height,
+    fillRect(renderer, spriteX - 4.0F, segmentY, 8.0F, height,
              (segment & 1) == 0 ? color(224, 228, 226)
                                 : color(89, 137, 211));
-    fillRect(renderer, x - 4.0F, segmentY, 1.5F, height,
+    fillRect(renderer, spriteX - 4.0F, segmentY, 1.5F, height,
              color(70, 70, 76));
-    fillRect(renderer, x + 2.5F, segmentY, 1.5F, height,
+    fillRect(renderer, spriteX + 2.5F, segmentY, 1.5F, height,
              color(249, 249, 240));
   }
-  filledCircle(renderer, x, dollY, 22.0F, color(109, 61, 22));
-  filledCircle(renderer, x, dollY, 19.0F, color(255, 222, 116));
-  filledCircle(renderer, x, dollY, 16.5F, color(247, 190, 192));
   if (charlieTexture) {
-    const SDL_FRect destination{x - 17.0F, dollY - 17.0F, 34.0F, 34.0F};
+    const SDL_FRect destination{spriteX - 27.0F, spriteTop, 54.0F, 88.0F};
     SDL_RenderCopyF(renderer, charlieTexture, nullptr, &destination);
     return;
   }
-  filledCircle(renderer, x, dollY, 10.0F, color(250, 218, 186));
-  filledCircle(renderer, x + 8.0F, dollY + 1.0F, 3.5F,
-               color(224, 44, 47));
-  filledCircle(renderer, x - 3.0F, dollY + 1.0F, 2.3F,
-               color(55, 126, 213));
+  filledCircle(renderer, spriteX, spriteTop + 27.0F, 11.0F,
+               color(250, 218, 186));
+  fillRect(renderer, spriteX - 8.0F, spriteTop + 37.0F, 16.0F, 30.0F,
+           color(218, 39, 42));
+  line(renderer, spriteX - 3.0F, spriteTop + 65.0F,
+       spriteX - 10.0F, spriteTop + 84.0F, color(44, 105, 190));
+  line(renderer, spriteX + 3.0F, spriteTop + 65.0F,
+       spriteX + 13.0F, spriteTop + 82.0F, color(44, 105, 190));
 }
 
 void drawCoin(SDL_Renderer* renderer, float x, float y, float squash) {
@@ -3162,7 +3184,8 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
     drawHoop(renderer, hoop, camera, lowDetail, hoopFrame);
   }
   drawStageProps(renderer, game, camera, propsFrame, assets.rewardBag);
-  drawExtraCharlie(renderer, game, camera, timeSeconds, assets.charlieLife);
+  drawExtraCharlie(renderer, game, camera, timeSeconds,
+                   assets.extraCharlie);
 
   if (game.scene != Scene::Title) {
     const float playerWorldX =

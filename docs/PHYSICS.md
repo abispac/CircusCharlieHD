@@ -45,9 +45,9 @@ audio, or code are included in this project.
   `92` source pixels above the rider's floor contact. The first ring spans
   roughly `80` to `16` source pixels above that contact, with its usable
   opening approximately `74` to `24` source pixels above it.
-- The first measured HD placement was raised by a further `20` logical pixels
-  after hands-on collision testing. The rail is at logical `y = 282`; the
-  first opening runs from logical `y = 327` to `y = 452`. This aligns the
+- The measured HD placement was raised after hands-on collision testing. The
+  rail is at logical `y = 282`; the large-ring opening runs from logical
+  `y = 309` to `y = 446`. This aligns the
   lion's collision body with the opening at the fixed jump apex. The long
   decorative pole in the HD source image is cropped out so the ring rides
   close beneath the tube like the arcade assembly.
@@ -82,7 +82,9 @@ Current user-control model:
 - Right accelerates toward `195 units/second`; the incoming ring supplies the
   remaining `65 units/second` of relative approach.
 - Left accelerates toward `-150 units/second`.
-- Releasing both directions decelerates to a stop.
+- Releasing both directions decelerates quickly to a stop. Reversing uses a
+  stronger response so the rider brakes in roughly one board frame instead of
+  sliding forward after LEFT is pressed.
 - Large and small fire rings continue moving along the overhead rail even when
   the lion is stopped or reversing.
 - Large rings use approximately `476` logical units of separation. A small
@@ -93,8 +95,10 @@ Current user-control model:
   like the recorded arcade sequence instead of reading as two separate tests.
 - Passing through a small ring consumes its randomized prize once but never
   stops, hides, or removes the moving ring itself.
-- Small rings use a `12`-logical-unit collision plane, thinner than the
-  regular ring, plus a `144`-unit vertical safe opening. Contact outside that
+- Small rings use a `7`-logical-unit collision plane, thinner than the
+  regular ring, plus a `116`-unit vertical safe opening. Their `48 x 144`
+  visual is about three quarters the large hoop's height, matching the ROM
+  frames instead of the oversized `60 x 230` prototype. Contact outside that
   opening while airborne burns both Charlie and the lion; running beneath the
   suspended ring is safe. A centered arcade jump passes and collects the
   randomized prize.
