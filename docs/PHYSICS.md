@@ -41,13 +41,19 @@ audio, or code are included in this project.
 - Charlie and the lion use a six-tile composite: `48 × 32` source pixels. The
   visible grounded pose is approximately `47 × 28` source pixels, which maps
   to approximately `101 × 70` pixels on the `480 × 640` logical canvas.
+- A permanent `layout` capture scene places the MAME frame and remake on the
+  same `480 × 640` grid. It calibrates the fixed marquee to `0–110`, the HUD
+  to `110–202`, the rail to `y = 235`, the crowd/fascia to `235–350`, grass
+  to `350–640`, and the rider's ground contact to `y = 590`. The decorative
+  front-stage curtain is intentionally cropped out because it is absent from
+  the Event 1 playfield.
 - In the same grounded reference frame, the ceiling tube is approximately
   `92` source pixels above the rider's floor contact. The first ring spans
   roughly `80` to `16` source pixels above that contact, with its usable
   opening approximately `74` to `24` source pixels above it.
 - The measured HD placement was raised after hands-on collision testing. The
-  rail is at logical `y = 282`; the large-ring opening runs from logical
-  `y = 309` to `y = 446`. This aligns the
+  rail is at logical `y = 235`; the large-ring opening runs from logical
+  `y = 367` to `y = 504`. This aligns the
   lion's collision body with the opening at the fixed jump apex. The long
   decorative pole in the HD source image is cropped out so the ring rides
   close beneath the tube like the arcade assembly.
@@ -67,10 +73,12 @@ Measured motion targets:
 - Jump: exact 64-entry source-pixel displacement table sampled at board rate
 - Peak displacement: `55 source pixels` / `137.5 logical units`
 - Takeoff-to-landing time: `63 frames` / approximately `1.0395 seconds`
-- Ground height: `532 logical units`
-- Ceiling tube height: `282 logical units`
+- Ground height: `590 logical units`
+- Ceiling tube height: `235 logical units`
 - Lion collision box: follows the lion's body rather than the transparent
-  margins, mane, tail, or Charlie's upper-body artwork
+  margins, mane, tail, or Charlie's upper-body artwork. Its horizontal center
+  is offset `20` logical units from the sprite's world anchor, measured from
+  the calibrated atlas frame, so rings and pots meet the visible lion body.
 - Floor fire-pot collision uses a `32`-unit half-width and requires `42` units
   of vertical clearance, leaving a broad safe interval within the jump arc.
 - Fire animation follows the original two-state cadence: the renderer swaps
@@ -96,7 +104,9 @@ Current user-control model:
 - Passing through a small ring consumes its randomized prize once but never
   stops, hides, or removes the moving ring itself.
 - Small rings use a `7`-logical-unit collision plane, thinner than the
-  regular ring, plus a `152`-unit vertical safe opening. Their `90 x 190`
+  regular ring, plus a `98`-unit vertical safe opening. Their `112 x 198`
+  target rectangle produces an approximately `50 x 110` visible oval because
+  the source texture contains transparent horizontal padding. The
   visual preserves the broad oval surrounding the arcade money bag while the
   physical flame crossing remains narrow. Contact outside that
   opening while airborne burns both Charlie and the lion; running beneath the
