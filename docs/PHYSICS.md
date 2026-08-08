@@ -122,6 +122,10 @@ Current user-control model:
   table; holding the button does not alter height or duration.
 - Backtracking never turns Charlie or the lion around; they remain facing
   forward and move or jump in reverse.
+- A genuine reverse crossing keeps the same narrow horizontal flame plane but
+  receives `16` logical units of vertical opening grace. This compensates for
+  the shorter relative crossing interval when both the hoop and rider travel
+  left, while leaving forward-jump collision unchanged.
 - Only the one secretly selected fire pot can reveal a coin, and only during
   a backward jump. Forward jumps and every other pot leave the secret dormant.
 

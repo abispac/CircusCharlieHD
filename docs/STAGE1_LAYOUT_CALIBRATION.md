@@ -20,7 +20,9 @@ This avoids estimating positions from differently sized screenshots.
 The HD arena source is rendered as two independently scaled slices. The crowd
 and grandstand fascia are compressed into their arcade-height band, while the
 grass slice fills the remainder of the screen. The source painting's lower
-curtain-and-stars foreground is excluded from Stage 1.
+curtain-and-stars foreground is excluded from Stage 1. The grass crop ends at
+`85%` of the source height, before the old curtain's gold finials, so no
+decorative fragments leak through the bottom edge.
 
 Use this command after building to produce a clean remake reference frame:
 

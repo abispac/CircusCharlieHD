@@ -54,7 +54,10 @@ constexpr float kGrassTop = 350.0F;
 // curtain does not exist in the Stage 1 cabinet playfield.
 constexpr float kArenaContentSourceTop = 0.485F;
 constexpr float kArenaGrassSourceTop = 0.738F;
-constexpr float kArenaContentSourceBottom = 0.870F;
+// Stop inside the grass. The source's gold curtain finials begin immediately
+// below this point and used to leak into the bottom edge of the playfield as
+// unexplained yellow semicircles.
+constexpr float kArenaContentSourceBottom = 0.850F;
 constexpr float kBigHoopOpeningTop = kGroundY - 223.0F;
 constexpr float kBigHoopOpeningBottom = kGroundY - 86.0F;
 constexpr float kSourceToLogicalY =
@@ -1222,9 +1225,17 @@ bool overlapsHoop(const Player& player, const Hoop& hoop) {
 
   const float playerTop = player.position.y - kLionCollisionTop;
   const float playerBottom = player.position.y - kLionCollisionBottom;
+  // Re-entering a cleared hoop is deliberately a little more forgiving.
+  // Charlie and the hoop travel toward the same side of the screen during a
+  // reverse crossing, so the exact arcade-looking overlap lasts fewer board
+  // samples than it does on the forward pass. Keep the narrow horizontal
+  // flame plane and the original forward collision intact; only widen the
+  // valid vertical window while the rider is genuinely moving backward.
+  const float reverseVerticalGrace =
+      player.runSpeed < -20.0F ? 16.0F : 0.0F;
   const bool withinOpening =
-      playerTop > hoop.openingTop + 3.0F &&
-      playerBottom < hoop.openingBottom - 2.0F;
+      playerTop > hoop.openingTop + 3.0F - reverseVerticalGrace &&
+      playerBottom < hoop.openingBottom - 2.0F + reverseVerticalGrace;
   return !withinOpening;
 }
 
@@ -2320,7 +2331,10 @@ void drawFinishRider(SDL_Renderer* renderer, SDL_Texture* finishTexture,
   const float arrivalY = (1.0F - landingProgress) * -19.0F;
   const SDL_FRect destination{
       screenX - kFinishWidth * 0.5F + arrivalX,
-      kGoalPlatformTop - kFinishHeight + 3.0F + arrivalY,
+      // The generated sheet has a few transparent pixels below the paws.
+      // Lower the composite onto the visible green cushion instead of
+      // aligning that transparent source edge to the platform rectangle.
+      kGoalPlatformTop - kFinishHeight + 12.0F + arrivalY,
       kFinishWidth, kFinishHeight};
   SDL_RenderCopyF(renderer, finishTexture, &source, &destination);
 }
