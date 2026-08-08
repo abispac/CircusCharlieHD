@@ -37,13 +37,14 @@ The next production step is to use the WAM skeleton and timing underneath a
 properly sculpted Blender lion, rather than trying to polish WAM's procedural
 body into the final character.
 
-## Lion-only visual test
+## Twelve-frame rider visual test
 
-The first visual test deliberately omits Charlie. The protected rider sheet
-remains the default; start with `--lion-test` or press F2 at runtime to switch
-between the current rider and the 12-frame lion-only atlas.
+The first visual test deliberately omitted Charlie. The approved lion cycle
+now carries a restrained Charlie pose in all twelve frames. The protected
+six-frame rider sheet remains the default; start with `--lion-test` or press
+F2 at runtime to switch to the new twelve-frame composite.
 
-The test atlas is `../assets/stage1-lion-walk-12-v1.png`. Its source sheet,
-alpha-cleaned sheet, individual frames, and three-view modeling reference are
-kept under `../assets/source-art/`. `../tools/split_lion_walk_sheet.py`
-rebuilds the normalized atlas and animated preview from the cleaned source.
+The test atlas is `../assets/stage1-rider-walk-12-v9.png`. Its chroma source,
+alpha-cleaned source, and individual normalized frames are kept under
+`../assets/source-art/`. `../tools/normalize_stage1_rider_assets.py` rebuilds
+the rider, burn, and finish atlases with stable frame anchors.

@@ -253,7 +253,8 @@ struct Assets {
   SDL_Texture* ferrisWheel = nullptr;
   SDL_Texture* ferrisGondola = nullptr;
   SDL_Texture* rider = nullptr;
-  SDL_Texture* lionWalkTest = nullptr;
+  SDL_Texture* riderWalkTest = nullptr;
+  SDL_Texture* burnRider = nullptr;
   SDL_Texture* hoop = nullptr;
   SDL_Texture* hoopFlare = nullptr;
   SDL_Texture* props = nullptr;
@@ -445,8 +446,9 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.ferrisWheel = loadAsset(renderer, "stage1-ferris-wheel.png");
   assets.ferrisGondola = loadAsset(renderer, "stage1-ferris-gondola.png");
   assets.rider = loadAsset(renderer, "stage1-rider-sheet-v8.png");
-  assets.lionWalkTest =
-      loadAsset(renderer, "stage1-lion-walk-12-v1.png");
+  assets.riderWalkTest =
+      loadAsset(renderer, "stage1-rider-walk-12-v9.png");
+  assets.burnRider = loadAsset(renderer, "stage1-burn-rider-v1.png");
   assets.hoop = loadAsset(renderer, "stage1-hoop.png");
   assets.hoopFlare = loadAsset(renderer, "stage1-hoop-flare.png");
   assets.props = loadAsset(renderer, "stage1-props.png");
@@ -456,7 +458,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.charlieLife = loadAsset(renderer, "stage1-charlie-life-v2.png");
   assets.goalPlatform = loadAsset(renderer, "stage1-goal-platform-v4.png");
   assets.finishRider =
-      loadAsset(renderer, "stage1-finish-rider-sheet.png");
+      loadAsset(renderer, "stage1-finish-rider-v2.png");
   assets.eventSelectProps =
       loadAsset(renderer, "event-select-props-v3.png");
   assets.eventSelectChosen =
@@ -472,7 +474,8 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.stage2GoalRig =
       loadAsset(renderer, "stage2-goal-rig-v1.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
-      !assets.ferrisGondola || !assets.rider || !assets.hoop ||
+      !assets.ferrisGondola || !assets.rider || !assets.riderWalkTest ||
+      !assets.burnRider || !assets.hoop ||
       !assets.hoopFlare || !assets.props || !assets.propsFlare ||
       !assets.bird || !assets.rewardBag || !assets.charlieLife ||
       !assets.goalPlatform || !assets.finishRider ||
@@ -493,7 +496,8 @@ void destroyAssets(Assets& assets) {
   if (assets.ferrisWheel) SDL_DestroyTexture(assets.ferrisWheel);
   if (assets.ferrisGondola) SDL_DestroyTexture(assets.ferrisGondola);
   if (assets.rider) SDL_DestroyTexture(assets.rider);
-  if (assets.lionWalkTest) SDL_DestroyTexture(assets.lionWalkTest);
+  if (assets.riderWalkTest) SDL_DestroyTexture(assets.riderWalkTest);
+  if (assets.burnRider) SDL_DestroyTexture(assets.burnRider);
   if (assets.hoop) SDL_DestroyTexture(assets.hoop);
   if (assets.hoopFlare) SDL_DestroyTexture(assets.hoopFlare);
   if (assets.props) SDL_DestroyTexture(assets.props);
@@ -2310,13 +2314,13 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
   }
 }
 
-void drawLionOnlyTest(SDL_Renderer* renderer, float screenX, float groundY,
-                      double timeSeconds, bool alive,
-                      SDL_Texture* lionTexture, float runSpeed, bool grounded,
-                      bool facingRight) {
+void drawRiderWalkTest(SDL_Renderer* renderer, float screenX, float groundY,
+                       double timeSeconds, bool alive,
+                       SDL_Texture* riderTexture, float runSpeed,
+                       bool grounded, bool facingRight) {
   int textureWidth = 0;
   int textureHeight = 0;
-  SDL_QueryTexture(lionTexture, nullptr, nullptr, &textureWidth,
+  SDL_QueryTexture(riderTexture, nullptr, nullptr, &textureWidth,
                    &textureHeight);
   const int cellWidth = textureWidth / 4;
   const int cellHeight = textureHeight / 3;
@@ -2325,16 +2329,18 @@ void drawLionOnlyTest(SDL_Renderer* renderer, float screenX, float groundY,
   if (!grounded) {
     frame = 3;
   } else if (std::abs(runSpeed) > 5.0F) {
-    constexpr double kLionTestFramesPerSecond = 14.0;
-    frame = static_cast<int>(timeSeconds * kLionTestFramesPerSecond) % 12;
+    constexpr double kRiderTestFramesPerSecond = 14.0;
+    frame = static_cast<int>(timeSeconds * kRiderTestFramesPerSecond) % 12;
   }
 
   const SDL_Rect source{(frame % 4) * cellWidth, (frame / 4) * cellHeight,
                         cellWidth, cellHeight};
   constexpr float kTestWidth = 190.0F;
-  constexpr float kTestHeight = 118.75F;
-  constexpr float kAtlasGroundLine = 215.0F;
-  constexpr float kJumpFrameBottom = 189.0F;
+  const float kTestHeight =
+      kTestWidth * static_cast<float>(cellHeight) /
+      static_cast<float>(cellWidth);
+  constexpr float kAtlasGroundLine = 348.0F;
+  constexpr float kJumpFrameBottom = 312.0F;
   const float sourceGroundLine = grounded ? kAtlasGroundLine
                                           : kJumpFrameBottom;
   const float visualGroundOffset =
@@ -2342,22 +2348,23 @@ void drawLionOnlyTest(SDL_Renderer* renderer, float screenX, float groundY,
   const SDL_FRect destination{screenX - 76.0F,
                               groundY - visualGroundOffset,
                               kTestWidth, kTestHeight};
-  SDL_SetTextureColorMod(lionTexture, 255, alive ? 255 : 128,
+  SDL_SetTextureColorMod(riderTexture, 255, alive ? 255 : 128,
                          alive ? 255 : 58);
-  SDL_RenderCopyExF(renderer, lionTexture, &source, &destination, 0.0,
+  SDL_RenderCopyExF(renderer, riderTexture, &source, &destination, 0.0,
                     nullptr,
                     facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
-  SDL_SetTextureColorMod(lionTexture, 255, 255, 255);
+  SDL_SetTextureColorMod(riderTexture, 255, 255, 255);
 }
 
 void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
                       double timeSeconds, bool alive, bool lowDetail,
-                      SDL_Texture* riderTexture, SDL_Texture* lionTestTexture,
+                      SDL_Texture* riderTexture,
+                      SDL_Texture* riderWalkTestTexture,
                       bool lionOnlyTest, float runSpeed, bool grounded,
                       bool facingRight) {
-  if (lionOnlyTest && lionTestTexture) {
-    drawLionOnlyTest(renderer, screenX, groundY, timeSeconds, alive,
-                     lionTestTexture, runSpeed, grounded, facingRight);
+  if (lionOnlyTest && riderWalkTestTexture) {
+    drawRiderWalkTest(renderer, screenX, groundY, timeSeconds, alive,
+                      riderWalkTestTexture, runSpeed, grounded, facingRight);
     return;
   }
   if (riderTexture) {
@@ -2476,44 +2483,36 @@ void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
 }
 
 void drawBurningRider(SDL_Renderer* renderer, float screenX, float groundY,
-                      SDL_Texture* propsTexture, int crashFrame) {
-  if (!propsTexture) return;
+                      SDL_Texture* burnTexture, int crashFrame) {
+  if (!burnTexture) return;
 
   int textureWidth = 0;
   int textureHeight = 0;
-  SDL_QueryTexture(propsTexture, nullptr, nullptr, &textureWidth,
+  SDL_QueryTexture(burnTexture, nullptr, nullptr, &textureWidth,
                    &textureHeight);
-  const int cellWidth = textureWidth / 3;
-  // Crop only the living flame from the first prop cell, leaving its floor
-  // cauldron behind. Three overlapping copies engulf Charlie and the lion as
-  // one crash animation rather than making either character simply vanish.
-  const SDL_Rect flameSource{
-      static_cast<int>(cellWidth * 0.34F),
-      static_cast<int>(textureHeight * 0.15F),
-      static_cast<int>(cellWidth * 0.56F),
-      static_cast<int>(textureHeight * 0.47F),
-  };
+  const int cellWidth = textureWidth / 4;
+  const int frame = (crashFrame / 4) % 4;
+  const SDL_Rect source{frame * cellWidth, 0, cellWidth, textureHeight};
+  constexpr std::array<float, 4> kFrameBottoms{
+      383.0F, 401.0F, 402.0F, 351.0F};
+  constexpr float kBurnWidth = 190.0F;
+  const float burnHeight =
+      kBurnWidth * static_cast<float>(textureHeight) /
+      static_cast<float>(cellWidth);
+  const float visualGroundOffset =
+      kFrameBottoms[static_cast<size_t>(frame)] /
+      static_cast<float>(textureHeight) * burnHeight;
   const float arrival =
       std::clamp(static_cast<float>(crashFrame) / 10.0F, 0.15F, 1.0F);
-  const float flicker = ((crashFrame / 5) & 1) == 0 ? 0.0F : 5.0F;
-  SDL_SetTextureAlphaMod(
-      propsTexture, static_cast<Uint8>(100.0F + arrival * 45.0F));
-
-  const SDL_FRect lionRear{
-      screenX - 58.0F, groundY - 94.0F - flicker * 0.35F,
-      70.0F * arrival, 100.0F * arrival};
-  const SDL_FRect lionFront{
-      screenX - 3.0F, groundY - 121.0F + flicker * 0.25F,
-      77.0F * arrival, 129.0F * arrival};
-  const SDL_FRect charlie{
-      screenX - 28.0F, groundY - 165.0F - flicker,
-      61.0F * arrival, 116.0F * arrival};
-  SDL_RenderCopyExF(renderer, propsTexture, &flameSource, &lionRear, 0.0,
-                    nullptr, SDL_FLIP_HORIZONTAL);
-  SDL_RenderCopyF(renderer, propsTexture, &flameSource, &lionFront);
-  SDL_RenderCopyExF(renderer, propsTexture, &flameSource, &charlie, 0.0,
-                    nullptr, SDL_FLIP_HORIZONTAL);
-  SDL_SetTextureAlphaMod(propsTexture, 255);
+  const float width = kBurnWidth * arrival;
+  const float height = burnHeight * arrival;
+  const SDL_FRect destination{
+      screenX - width * 0.5F,
+      groundY - visualGroundOffset * arrival,
+      width,
+      height,
+  };
+  SDL_RenderCopyF(renderer, burnTexture, &source, &destination);
 }
 
 void drawCharlieLifeIcon(SDL_Renderer* renderer, SDL_Texture* charlieTexture,
@@ -3105,10 +3104,11 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
     if (game.scene == Scene::Goal && assets.finishRider) {
       drawFinishRider(renderer, assets.finishRider, playerWorldX - camera,
                       game.goalFrame);
-    } else {
+    } else if (!(game.scene == Scene::Crashed &&
+                 game.crashFrame < kCrashBurnFrames && assets.burnRider)) {
       drawLionAndRider(renderer, playerWorldX - camera, playerY, timeSeconds,
                        game.player.alive, lowDetail, assets.rider,
-                       assets.lionWalkTest, game.lionOnlyTest,
+                       assets.riderWalkTest, game.lionOnlyTest,
                        game.player.runSpeed, game.player.grounded,
                        game.player.facingRight);
     }
@@ -3121,14 +3121,8 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
     }
     if (game.scene == Scene::Crashed &&
         game.crashFrame < kCrashBurnFrames) {
-      drawBurningRider(renderer, playerWorldX - camera, playerY, propsFrame,
-                       game.crashFrame);
-      // Redraw the heat-tinted rider over the fire bed so both Charlie and the
-      // lion remain readable while the flames surround and cross their edges.
-      drawLionAndRider(renderer, playerWorldX - camera, playerY, timeSeconds,
-                       false, lowDetail, assets.rider, assets.lionWalkTest,
-                       game.lionOnlyTest, 0.0F, true,
-                       game.player.facingRight);
+      drawBurningRider(renderer, playerWorldX - camera, playerY,
+                       assets.burnRider, game.crashFrame);
     }
     if (game.scene == Scene::Goal) {
       drawGoalPresentation(renderer, game, assets.bird, assets.rewardBag,
