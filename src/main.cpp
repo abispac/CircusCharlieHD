@@ -348,6 +348,7 @@ struct Assets {
   SDL_Texture* stage2PurpleJump = nullptr;
   SDL_Texture* stage2GoalRig = nullptr;
   SDL_Texture* stage3Charlie = nullptr;
+  SDL_Texture* stage3CharlieVertical = nullptr;
   SDL_Texture* stage3Tambourine = nullptr;
   SDL_Texture* stage3KnifeThrower = nullptr;
   SDL_Texture* stage3FlameThrower = nullptr;
@@ -566,12 +567,14 @@ Assets loadAssets(SDL_Renderer* renderer) {
       loadAsset(renderer, "stage2-goal-rig-v1.png");
   assets.stage3Charlie =
       loadAsset(renderer, "stage3-charlie-bounce-12-v1.png");
+  assets.stage3CharlieVertical =
+      loadAsset(renderer, "stage3-charlie-vertical-front-12-v2.png");
   assets.stage3Tambourine =
       loadAsset(renderer, "stage3-tambourine-v1.png");
   assets.stage3KnifeThrower =
       loadAsset(renderer, "stage3-knife-thrower-8-v1.png");
   assets.stage3FlameThrower =
-      loadAsset(renderer, "stage3-fire-breather-8-v1.png");
+      loadAsset(renderer, "stage3-fire-breather-vertical-8-v2.png");
   assets.stage3Projectiles =
       loadAsset(renderer, "stage3-projectiles-8-v1.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
@@ -585,6 +588,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
       !assets.stage2Charlie || !assets.stage2BrownWalk ||
       !assets.stage2PurpleWalk || !assets.stage2PurpleJump ||
       !assets.stage2GoalRig || !assets.stage3Charlie ||
+      !assets.stage3CharlieVertical ||
       !assets.stage3Tambourine || !assets.stage3KnifeThrower ||
       !assets.stage3FlameThrower || !assets.stage3Projectiles) {
     std::cerr << "Some HD assets could not be loaded; vector fallbacks remain "
@@ -620,6 +624,8 @@ void destroyAssets(Assets& assets) {
   if (assets.stage2PurpleJump) SDL_DestroyTexture(assets.stage2PurpleJump);
   if (assets.stage2GoalRig) SDL_DestroyTexture(assets.stage2GoalRig);
   if (assets.stage3Charlie) SDL_DestroyTexture(assets.stage3Charlie);
+  if (assets.stage3CharlieVertical)
+    SDL_DestroyTexture(assets.stage3CharlieVertical);
   if (assets.stage3Tambourine) SDL_DestroyTexture(assets.stage3Tambourine);
   if (assets.stage3KnifeThrower) SDL_DestroyTexture(assets.stage3KnifeThrower);
   if (assets.stage3FlameThrower) SDL_DestroyTexture(assets.stage3FlameThrower);
@@ -3623,21 +3629,25 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
       (game.player.position.y - game.player.previous.y) *
           static_cast<float>(interpolation);
   int charlieFrame = 0;
+  SDL_Texture* charlieTexture = assets.stage3CharlieVertical;
   if (game.scene == Scene::Goal) {
     charlieFrame = 11;
   } else if (game.stage3BounceLevel == 4) {
     const float progress = static_cast<float>(game.stage3BounceFrame) /
                            static_cast<float>(kStage3BounceFrames);
+    // The fourth bounce is the sideways curled over-jump pose from the
+    // original; ordinary vertical bounces remain front-facing.
+    charlieTexture = assets.stage3Charlie;
     charlieFrame = std::clamp(3 + static_cast<int>(progress * 6.0F), 3, 9);
   } else {
     const float progress = static_cast<float>(game.stage3BounceFrame) /
                            static_cast<float>(kStage3BounceFrames);
-    charlieFrame = progress < 0.16F ? 1 :
-                   (progress < 0.34F ? 2 :
-                    (progress < 0.67F ? 3 :
-                     (progress < 0.86F ? 8 : 9)));
+    // Twelve-frame loop built around the ROM's three front-facing poses:
+    // compressed, upright, and fully extended.
+    charlieFrame = std::clamp(
+        static_cast<int>(progress * 12.0F), 0, 11);
   }
-  drawSheetFrame(renderer, assets.stage3Charlie, 4, 3, charlieFrame,
+  drawSheetFrame(renderer, charlieTexture, 4, 3, charlieFrame,
                  playerWorldX - camera, playerY + 15.0F,
                  76.0F, 104.0F,
                  game.player.facingRight ? SDL_FLIP_NONE
