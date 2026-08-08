@@ -34,10 +34,15 @@ constexpr float kStage2GoalX = 5700.0F;
 constexpr float kStage3GroundY = 592.0F;
 constexpr float kStage3TambourineTopY = 482.0F;
 constexpr float kStage3TambourineSpacing = 180.0F;
-constexpr float kStage3CourseLength = 4398.0F;
+// The arcade opening frames keep Charlie on the left drum of one centered
+// pair.  Holding that drum at x=150 leaves its partner at x=330.
+constexpr float kStage3PlayerScreenX = 150.0F;
+constexpr float kStage3FirstTambourineX = kStage3PlayerScreenX;
+constexpr float kStage3CourseLength =
+    kStage3FirstTambourineX + 24.0F * kStage3TambourineSpacing;
 constexpr int kStage3BounceFrames = 48;
-// Baseline used by the dedicated roof-impact atlas. Its padded cells place
-// Charlie's hat at the underside of the HUD fascia when this reaches 251.
+// Trigger height for the fourth rebound. The ROM then removes the arena
+// sprite and presents the separate roof-burst tile in the fixed marquee.
 constexpr float kStage3RoofImpactY = 251.0F;
 // The original board places the ring tube directly below the crowd fascia
 // (about source y=140), not at the top of the crowd.
@@ -360,7 +365,7 @@ struct Assets {
   SDL_Texture* stage2GoalRig = nullptr;
   SDL_Texture* stage3Charlie = nullptr;
   SDL_Texture* stage3CharlieVertical = nullptr;
-  SDL_Texture* stage3CharlieRoofImpact = nullptr;
+  SDL_Texture* stage3CharlieRoofHead = nullptr;
   SDL_Texture* stage3Tambourine = nullptr;
   SDL_Texture* stage3GoalTambourine = nullptr;
   SDL_Texture* stage3KnifeThrower = nullptr;
@@ -584,8 +589,8 @@ Assets loadAssets(SDL_Renderer* renderer) {
       loadAsset(renderer, "stage3-charlie-bounce-12-v1.png");
   assets.stage3CharlieVertical =
       loadAsset(renderer, "stage3-charlie-vertical-front-12-v2.png");
-  assets.stage3CharlieRoofImpact =
-      loadAsset(renderer, "stage3-charlie-roof-impact-8-v2.png");
+  assets.stage3CharlieRoofHead =
+      loadAsset(renderer, "stage3-charlie-roof-head-4-v1.png");
   assets.stage3Tambourine =
       loadAsset(renderer, "stage3-tambourine-v1.png");
   assets.stage3GoalTambourine =
@@ -610,7 +615,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
       !assets.stage2PurpleWalk || !assets.stage2PurpleJump ||
       !assets.stage2GoalRig || !assets.stage3Charlie ||
       !assets.stage3CharlieVertical ||
-      !assets.stage3CharlieRoofImpact ||
+      !assets.stage3CharlieRoofHead ||
       !assets.stage3Tambourine || !assets.stage3GoalTambourine ||
       !assets.stage3KnifeThrower ||
       !assets.stage3FlameThrower || !assets.stage3Projectiles ||
@@ -650,8 +655,8 @@ void destroyAssets(Assets& assets) {
   if (assets.stage3Charlie) SDL_DestroyTexture(assets.stage3Charlie);
   if (assets.stage3CharlieVertical)
     SDL_DestroyTexture(assets.stage3CharlieVertical);
-  if (assets.stage3CharlieRoofImpact)
-    SDL_DestroyTexture(assets.stage3CharlieRoofImpact);
+  if (assets.stage3CharlieRoofHead)
+    SDL_DestroyTexture(assets.stage3CharlieRoofHead);
   if (assets.stage3Tambourine) SDL_DestroyTexture(assets.stage3Tambourine);
   if (assets.stage3GoalTambourine)
     SDL_DestroyTexture(assets.stage3GoalTambourine);
@@ -1213,8 +1218,8 @@ void resetCourse(Game& game) {
     game.bonusRings.clear();
     game.stage2Monkeys.clear();
     game.meterMarkers = {
-        {618.0F, 50}, {1338.0F, 40}, {2058.0F, 30},
-        {2778.0F, 20}, {3498.0F, 10},
+        {690.0F, 50}, {1410.0F, 40}, {2130.0F, 30},
+        {2850.0F, 20}, {3570.0F, 10},
     };
     // Event 3's drums are tall leather cylinders, not flattened versions of
     // the Event 1 goal pad. Their measured spacing leaves a clear performer
@@ -1223,7 +1228,8 @@ void resetCourse(Game& game) {
     for (int index = 0; index < 25; ++index) {
       const bool bag = index > 0 && index < 24 && index % 4 == 3;
       game.stage3Tambourines.push_back(
-          {78.0F + static_cast<float>(index) * kStage3TambourineSpacing,
+          {kStage3FirstTambourineX +
+               static_cast<float>(index) * kStage3TambourineSpacing,
            bag});
     }
     // The ROM frames place each act exactly halfway between its surrounding
@@ -1232,8 +1238,9 @@ void resetCourse(Game& game) {
     game.stage3Performers.reserve(12);
     for (int index = 0; index < 12; ++index) {
       game.stage3Performers.push_back({
-          348.0F + static_cast<float>(index) *
-                       (kStage3TambourineSpacing * 2.0F),
+          kStage3FirstTambourineX + 1.5F * kStage3TambourineSpacing +
+              static_cast<float>(index) *
+                  (kStage3TambourineSpacing * 2.0F),
           (index & 1) == 0 ? Stage3PerformerKind::KnifeThrower
                            : Stage3PerformerKind::FlameThrower});
     }
@@ -1408,6 +1415,9 @@ void restartAfterCrash(Game& game) {
     game.stage3TravelStartFrame = 0;
     game.stage3TravelStartX = game.player.position.x;
     game.stage3RoofCrash = false;
+    game.cameraX = std::max(
+        0.0F, game.player.position.x - kStage3PlayerScreenX);
+    game.previousCameraX = game.cameraX;
   }
 }
 
@@ -1511,7 +1521,7 @@ void finishStage(Game& game) {
   game.player.verticalVelocity = 0.0F;
   game.player.jumpFrame = -1;
   game.player.grounded = true;
-  game.cameraX = finishX - (stage2 ? 340.0F : (stage3 ? 78.0F
+  game.cameraX = finishX - (stage2 ? 340.0F : (stage3 ? kStage3PlayerScreenX
                                                        : kGoalScreenX));
   game.previousCameraX = game.cameraX;
   game.perfectClear =
@@ -1604,7 +1614,8 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
     game.stage3TravelStartX = game.player.position.x;
   }
   game.player.runSpeed = 0.0F;
-  game.cameraX = std::max(0.0F, game.player.position.x - 78.0F);
+  game.cameraX = std::max(
+      0.0F, game.player.position.x - kStage3PlayerScreenX);
 
   const float height = game.stage3Traveling
                            ? 118.0F
@@ -1696,9 +1707,9 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
     projectile.position.x = performer.worldX;
     projectile.position.y = kStage3GroundY - 72.0F -
                             std::sin(projectileProgress * kPi) *
-                                (knife ? 286.0F : 238.0F);
+                                (knife ? 286.0F : 180.0F);
     const float collisionHalfWidth = knife ? 18.0F : 34.0F;
-    const float collisionHalfHeight = knife ? 24.0F : 68.0F;
+    const float collisionHalfHeight = knife ? 24.0F : 52.0F;
     if (std::abs(game.player.position.x - projectile.position.x) <
             collisionHalfWidth &&
         std::abs((game.player.position.y - 44.0F) -
@@ -3746,7 +3757,7 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
       // projectile is retired at the end of its vertical cycle.
       drawSheetFrame(renderer, assets.stage3FlameProjectile, 4, 1,
                      projectileFrame, projectile.position.x - camera,
-                     projectile.position.y + 54.0F, 58.0F, 108.0F);
+                     projectile.position.y + 48.0F, 52.0F, 96.0F);
     }
   }
 
@@ -3761,14 +3772,6 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
   SDL_Texture* charlieTexture = assets.stage3CharlieVertical;
   if (game.scene == Scene::Goal) {
     charlieFrame = 11;
-  } else if (game.stage3RoofCrash) {
-    // Dedicated front-facing roof-impact sequence: rise, squash against the
-    // fascia, recoil, and begin falling. The atlas keeps the contact poses
-    // registered to one shared ceiling line instead of floating the entire
-    // vertical-jump sprite at the roof.
-    charlieTexture = assets.stage3CharlieRoofImpact;
-    charlieRows = 2;
-    charlieFrame = std::min(game.crashFrame / 5, 7);
   } else if (game.stage3Traveling) {
     const float progress = static_cast<float>(game.stage3BounceFrame) /
                            static_cast<float>(kStage3BounceFrames);
@@ -3784,17 +3787,41 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
     charlieFrame = std::clamp(
         static_cast<int>(progress * 12.0F), 0, 11);
   }
-  drawSheetFrame(renderer, charlieTexture, 4, charlieRows, charlieFrame,
-                 playerWorldX - camera, playerY + 15.0F,
-                 76.0F, 104.0F,
-                 game.player.facingRight ? SDL_FLIP_NONE
-                                         : SDL_FLIP_HORIZONTAL);
+  // On an over-jump the board removes Charlie from the arena and draws a
+  // separate shocked head bursting through the fixed circus marquee.  Moving
+  // a full body through the HUD is both visually wrong and unlike the ROM.
+  if (!game.stage3RoofCrash) {
+    drawSheetFrame(renderer, charlieTexture, 4, charlieRows, charlieFrame,
+                   playerWorldX - camera, playerY + 15.0F,
+                   76.0F, 104.0F,
+                   game.player.facingRight ? SDL_FLIP_NONE
+                                           : SDL_FLIP_HORIZONTAL);
+  }
 
   drawStage1ScorePopup(renderer, game, camera);
   drawHud(renderer, game, assets.charlieLife);
+  if (game.stage3RoofCrash) {
+    const int roofFrame = std::min(game.crashFrame / 5, 3);
+    drawSheetFrame(renderer, assets.stage3CharlieRoofHead, 4, 1,
+                   roofFrame, 195.0F, 82.0F,
+                   78.0F, 70.0F);
+
+    const auto drawOhNo = [&](float x, float y) {
+      constexpr float scale = 1.55F;
+      const SDL_Color outline = color(255, 239, 26);
+      drawText(renderer, "OH NO!!", x - 2.0F, y, scale, outline, true);
+      drawText(renderer, "OH NO!!", x + 2.0F, y, scale, outline, true);
+      drawText(renderer, "OH NO!!", x, y - 2.0F, scale, outline, true);
+      drawText(renderer, "OH NO!!", x, y + 2.0F, scale, outline, true);
+      drawText(renderer, "OH NO!!", x, y, scale,
+               color(255, 82, 28), true);
+    };
+    drawOhNo(154.0F, 242.0F);
+    drawOhNo(354.0F, 300.0F);
+  }
   if (game.scene == Scene::Crashed &&
-      game.crashFrame >= kCrashBurnFrames) {
-    const float overlayY = game.stage3RoofCrash ? 430.0F : 220.0F;
+      game.crashFrame >= kCrashBurnFrames && !game.stage3RoofCrash) {
+    const float overlayY = 220.0F;
     fillRect(renderer, 55.0F, overlayY, 370.0F, 134.0F,
              color(33, 5, 8, 232));
     drawText(renderer, "OH NO!!", kWorldWidth * 0.5F,
@@ -4121,7 +4148,8 @@ int main(int argc, char** argv) {
       game.stage3Traveling = false;
       game.scene = Scene::Crashed;
       game.crashFrame = 16;
-      game.cameraX = game.player.position.x - 78.0F;
+      game.cameraX = std::max(
+          0.0F, game.player.position.x - kStage3PlayerScreenX);
       game.previousCameraX = game.cameraX;
     } else if (options.captureScene == "stage3") {
       game.stage3CurrentTambourine = 3;
@@ -4136,7 +4164,8 @@ int main(int argc, char** argv) {
       game.stage3BounceFrame = kStage3BounceFrames / 2;
       game.stage3BounceBaseY = kStage3TambourineTopY;
       game.stage3Traveling = false;
-      game.cameraX = game.player.position.x - 78.0F;
+      game.cameraX = std::max(
+          0.0F, game.player.position.x - kStage3PlayerScreenX);
       game.previousCameraX = game.cameraX;
       for (std::size_t index = 0;
            index < game.stage3Projectiles.size(); ++index) {
