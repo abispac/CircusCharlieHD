@@ -366,6 +366,7 @@ struct Assets {
   SDL_Texture* stage3KnifeThrower = nullptr;
   SDL_Texture* stage3FlameThrower = nullptr;
   SDL_Texture* stage3Projectiles = nullptr;
+  SDL_Texture* stage3FlameProjectile = nullptr;
 };
 
 struct AudioClip {
@@ -595,6 +596,8 @@ Assets loadAssets(SDL_Renderer* renderer) {
       loadAsset(renderer, "stage3-fire-breather-vertical-8-v2.png");
   assets.stage3Projectiles =
       loadAsset(renderer, "stage3-projectiles-8-v1.png");
+  assets.stage3FlameProjectile =
+      loadAsset(renderer, "stage3-flame-projectile-4-v2.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.rider || !assets.riderWalkTest ||
       !assets.burnRider || !assets.hoop ||
@@ -610,7 +613,8 @@ Assets loadAssets(SDL_Renderer* renderer) {
       !assets.stage3CharlieRoofImpact ||
       !assets.stage3Tambourine || !assets.stage3GoalTambourine ||
       !assets.stage3KnifeThrower ||
-      !assets.stage3FlameThrower || !assets.stage3Projectiles) {
+      !assets.stage3FlameThrower || !assets.stage3Projectiles ||
+      !assets.stage3FlameProjectile) {
     std::cerr << "Some HD assets could not be loaded; vector fallbacks remain "
                  "available. SDL_image: "
               << IMG_GetError() << '\n';
@@ -654,6 +658,8 @@ void destroyAssets(Assets& assets) {
   if (assets.stage3KnifeThrower) SDL_DestroyTexture(assets.stage3KnifeThrower);
   if (assets.stage3FlameThrower) SDL_DestroyTexture(assets.stage3FlameThrower);
   if (assets.stage3Projectiles) SDL_DestroyTexture(assets.stage3Projectiles);
+  if (assets.stage3FlameProjectile)
+    SDL_DestroyTexture(assets.stage3FlameProjectile);
   assets = {};
 }
 
@@ -1527,7 +1533,7 @@ float stage2MonkeyY(const Stage2Monkey& monkey) {
 }
 
 float stage3BounceHeight(int level) {
-  constexpr std::array<float, 4> heights{72.0F, 108.0F, 152.0F, 205.0F};
+  constexpr std::array<float, 4> heights{72.0F, 108.0F, 152.0F, 245.0F};
   return heights[static_cast<std::size_t>(std::clamp(level, 1, 4) - 1)];
 }
 
@@ -1615,7 +1621,7 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
   // head reaches the underside of the circus fascia. Moving to a neighboring
   // drum before that rebound commits instead produces the normal spiral arc.
   if (!game.stage3Traveling && game.stage3BounceLevel == 4 &&
-      progress < 0.5F && game.player.position.y <= kStage3RoofImpactY) {
+      (game.player.position.y <= kStage3RoofImpactY || progress >= 0.5F)) {
     crashStage3Roof(game);
     return;
   }
@@ -1663,7 +1669,8 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
   // Both Event 3 performers throw straight upward. Their projectile stays in
   // the performer's vertical lane, rises, then falls back; it never homes in
   // on Charlie or travels horizontally across the stage.
-  constexpr int kProjectileFrames = 108;
+  constexpr int kKnifeProjectileFrames = 108;
+  constexpr int kFlameProjectileFrames = 72;
   for (std::size_t index = 0; index < game.stage3Performers.size(); ++index) {
     auto& performer = game.stage3Performers[index];
     auto& projectile = game.stage3Projectiles[index];
@@ -1679,18 +1686,17 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
     }
     if (!projectile.active) continue;
     ++projectile.age;
+    const bool knife =
+        performer.kind == Stage3PerformerKind::KnifeThrower;
+    const int projectileFrames =
+        knife ? kKnifeProjectileFrames : kFlameProjectileFrames;
     const float projectileProgress =
         static_cast<float>(projectile.age) /
-        static_cast<float>(kProjectileFrames);
+        static_cast<float>(projectileFrames);
     projectile.position.x = performer.worldX;
     projectile.position.y = kStage3GroundY - 72.0F -
                             std::sin(projectileProgress * kPi) *
-                                (performer.kind ==
-                                         Stage3PerformerKind::KnifeThrower
-                                     ? 286.0F
-                                     : 238.0F);
-    const bool knife =
-        performer.kind == Stage3PerformerKind::KnifeThrower;
+                                (knife ? 286.0F : 238.0F);
     const float collisionHalfWidth = knife ? 18.0F : 34.0F;
     const float collisionHalfHeight = knife ? 24.0F : 68.0F;
     if (std::abs(game.player.position.x - projectile.position.x) <
@@ -1700,7 +1706,7 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
       crashPlayer(game);
       return;
     }
-    if (projectile.age >= kProjectileFrames) projectile.active = false;
+    if (projectile.age >= projectileFrames) projectile.active = false;
   }
 
   if (game.stage1ScorePopupFrame > 0) --game.stage1ScorePopupFrame;
@@ -3727,18 +3733,21 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
 
     const auto& projectile = game.stage3Projectiles[index];
     if (!projectile.active) continue;
-    const bool rising = projectile.age < 54;
-    const int projectileFrame = (projectile.age / 5) & 3;
-    const int atlasFrame = knife ? projectileFrame : 4 + projectileFrame;
-    const double projectileAngle =
-        knife ? static_cast<double>(projectile.age * 17) :
-                (rising ? -90.0 : 90.0);
-    drawSheetFrame(renderer, assets.stage3Projectiles, 4, 2, atlasFrame,
-                   projectile.position.x - camera,
-                   projectile.position.y + (knife ? 16.0F : 100.0F),
-                   knife ? 28.0F : 160.0F,
-                   knife ? 36.0F : 200.0F,
-                   SDL_FLIP_NONE, projectileAngle);
+    const int projectileFrame = (projectile.age / 4) & 3;
+    if (knife) {
+      drawSheetFrame(renderer, assets.stage3Projectiles, 4, 2,
+                     projectileFrame, projectile.position.x - camera,
+                     projectile.position.y + 16.0F, 28.0F, 36.0F,
+                     SDL_FLIP_NONE,
+                     static_cast<double>(projectile.age * 17));
+    } else {
+      // The ROM flame is a compact upright droplet. It never rotates into a
+      // sideways fireball; its four frames only flicker internally before the
+      // projectile is retired at the end of its vertical cycle.
+      drawSheetFrame(renderer, assets.stage3FlameProjectile, 4, 1,
+                     projectileFrame, projectile.position.x - camera,
+                     projectile.position.y + 54.0F, 58.0F, 108.0F);
+    }
   }
 
   const float playerWorldX = game.player.previous.x +

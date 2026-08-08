@@ -61,8 +61,9 @@ can kill Charlie. The final target is a separate double-width goal tambourine.
 - `assets/stage3-knife-thrower-8-v1.png`: 4x2 knife-thrower atlas.
 - `assets/stage3-fire-breather-vertical-8-v2.png`: 4x2 vertical fire-thrower
   atlas selected by the project owner.
-- `assets/stage3-projectiles-8-v1.png`: four knife rotations and four fireball
-  animation frames.
+- `assets/stage3-projectiles-8-v1.png`: four rotating knife frames.
+- `assets/stage3-flame-projectile-4-v2.png`: four upright HD teardrop flame
+  frames; the projectile never rotates or develops a sideways tail.
 
 Original chroma-key generations remain under `assets/source-art/`; runtime
 assets have transparent alpha and despilled edges.
