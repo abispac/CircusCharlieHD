@@ -96,9 +96,9 @@ Current user-control model:
 - Passing through a small ring consumes its randomized prize once but never
   stops, hides, or removes the moving ring itself.
 - Small rings use a `7`-logical-unit collision plane, thinner than the
-  regular ring, plus a `116`-unit vertical safe opening. Their `48 x 144`
-  visual is about three quarters the large hoop's height, matching the ROM
-  frames instead of the oversized `60 x 230` prototype. Contact outside that
+  regular ring, plus a `152`-unit vertical safe opening. Their `90 x 190`
+  visual preserves the broad oval surrounding the arcade money bag while the
+  physical flame crossing remains narrow. Contact outside that
   opening while airborne burns both Charlie and the lion; running beneath the
   suspended ring is safe. A centered arcade jump passes and collects the
   randomized prize.

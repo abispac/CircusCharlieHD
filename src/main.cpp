@@ -78,12 +78,12 @@ constexpr float kBigRingVisualHalfWidth = 27.0F;
 // rider has actually reached the flame edge.
 constexpr float kBigRingCollisionHalfWidth = 7.0F;
 constexpr float kBonusRingCollisionHalfWidth = 3.5F;
-// The small ring is about three quarters the large ring's height in the
-// circusc4 frames.  The old 230-unit render was taller than the large hoop,
-// which made the rider appear to pass beside it instead of through it.
-constexpr float kBonusRingOpeningHalfHeight = 58.0F;
-constexpr float kBonusRingVisualHalfWidth = 24.0F;
-constexpr float kBonusRingVisualHalfHeight = 72.0F;
+// The prize hoop is called "small" by its gameplay role, but the original
+// frames show a substantial oval surrounding the complete money bag. Keep
+// its collision plane thin while drawing the wide, tall arcade silhouette.
+constexpr float kBonusRingOpeningHalfHeight = 76.0F;
+constexpr float kBonusRingVisualHalfWidth = 45.0F;
+constexpr float kBonusRingVisualHalfHeight = 95.0F;
 constexpr float kBonusRingCenterHeight = 176.0F;
 // The MAME sequence places the coin near its apex about 50 frames after the
 // launch and catches it on the descending half at frame 66. A 96-frame arc
@@ -2061,8 +2061,8 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
     // Like the original board's category-0 tiles, the animated flame rim is
     // deferred to the foreground pass. The hanger and prize remain here.
     if (ring.containsPrize && !ring.collected) {
-      const SDL_FRect bagDestination{screenX - 17.0F, ringCenterY - 21.0F,
-                                     34.0F, 40.0F};
+      const SDL_FRect bagDestination{screenX - 24.0F, ringCenterY - 28.0F,
+                                     48.0F, 56.0F};
       if (rewardBagTexture) {
         SDL_RenderCopyF(renderer, rewardBagTexture, nullptr,
                         &bagDestination);

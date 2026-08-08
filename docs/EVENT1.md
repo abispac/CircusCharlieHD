@@ -15,8 +15,8 @@ requirements supplied through hands-on play knowledge.
   double-ring test and a denser final 10M gauntlet.
 - The small ring center is approximately `62–68` source pixels above the
   rider's floor contact. Hands-on comparison places the HD center `176`
-  logical pixels above `kGroundY`; the outer flame is `48 x 144`, roughly
-  three quarters the large hoop's height.
+  logical pixels above `kGroundY`; the broad outer flame is `90 x 190`, large
+  enough to frame the full money bag as it does in the cabinet recording.
 - Distance is communicated by physical `60M`, `50M`, `40M`, `30M`, `20M`,
   and `10M` floor signs. It is not a HUD field.
 - The goal is a striped pedestal with a `GOAL` plaque. Charlie stops on it
@@ -32,7 +32,7 @@ requirements supplied through hands-on play knowledge.
 - The small ring is still a fire obstacle. Its narrow center-plane collision
   burns the rider when the airborne lion is below or above the opening.
   Running beneath a small ring without jumping is safe. At the fixed jump apex
-  the collision body fits inside a `116`-logical-unit vertical opening. The
+  the collision body fits inside a `152`-logical-unit vertical opening. The
   ring is centered on the complete airborne sprite. Its tall, narrow flame rim
   is rendered in full after the rider, matching the original foreground-tile
   priority and making the rider visibly cross through the transparent center.
