@@ -6,9 +6,8 @@ contain extracted graphics, program code, names, or logos. User-supplied
 soundtrack and effects are loaded only from the ignored local `assets/audio`
 folder and are not stored in this repository.
 
-The current milestone is a playable Stage 1 prototype with original
-hand-painted HD rider, green Stage 1 arena, marquee, Ferris-wheel, and
-fire-hoop assets, plus a faithful six-event HD selection screen.
+The current milestone includes playable Event 1, Event 2, and an Event 3
+tambourine first pass, plus a faithful six-event HD selection screen.
 The friendly blond Charlie rider uses a six-pose sheet while retaining the
 original HD lion artwork. Vector rendering remains only as a fallback if an
 asset cannot be loaded.
@@ -96,9 +95,8 @@ left/right directions move Charlie. The selection cycles through Events 1–6
 in order and wraps at both ends; up/down input does nothing. `Space`, `Z`,
 `1`, `Enter`, controller A, or controller Start confirms the current cell.
 Track 02 plays once and automatically confirms the cell where Charlie is
-standing when it ends. Confirmation consumes the credit. Until later events
-are implemented, every cell deliberately launches the finished Event 1
-course while preserving the chosen event in game state.
+standing when it ends. Confirmation consumes the credit. Events 1–3 launch
+their own courses; later cells temporarily route to Event 1 until implemented.
 
 The cabinet-standard keyboard mappings are `5` for coin and `1` for start, so
 a physical coin acceptor can use a normal arcade USB encoder configured like
@@ -130,12 +128,17 @@ The local build uses these standardized 48 kHz mono files:
   exact WAV duration controls automatic confirmation
 - `event-select-move.wav`: isolated command `0x52` (catalog RMS 927),
   restarted on every valid move between event cells
+- `event-select-confirm.wav`: isolated command `0x4d` (catalog RMS 495),
+  played when the current event is confirmed
 - `event1-stage.wav`: track 03, looped during Event 1, stopped immediately on
   a miss or goal arrival, and restarted from the beginning when Charlie
   respawns. Its playback switches to the arcade-style double-speed warning
   as soon as the Zeppelin bonus reaches `0999`.
 - `jump.wav`: track 08, restarted on every valid jump
-- `miss.wav` and `miss-2.wav`: tracks 07 and 09, started together on every
+- `event3-stage.wav`: full track 06 (`Trombonanza`), looped during Event 3
+- `stage3-bounce.wav`: isolated command `0x46` (catalog RMS 1279), played on
+  ordinary tambourine rebounds; the fourth over-jump uses RMS 1239
+- `miss.wav` (isolated command `0x4f`, RMS 1239) and `miss-2.wav`: started together on every
   fire collision
 - `crowd-cheer.wav`: played once when Charlie and the lion reach the goal
 - `bird-coin-drop.wav`: played with the perfect-clear coin shower
@@ -143,7 +146,8 @@ The local build uses these standardized 48 kHz mono files:
   screen
 - `extra-charlie.wav`: isolated command `0x42` (catalog RMS 1007), played only
   when the extra Charlie is actually collected
-- `prize-bag.wav` and `hidden-coin.wav`: optional, separate reward effects.
+- `prize-bag.wav`: isolated command `0x49` (catalog RMS 1567)
+- `hidden-coin.wav`: optional, separate reward effect.
   They remain silent when absent so the known credit-insert sound is never
   substituted for a gameplay reward.
 - `coin.wav`: reserved for the physical/software coin switch and played only
@@ -173,7 +177,7 @@ cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
 ./build/big_top_run --mode 480x640 --capture /tmp/big-top-preview.png
 ```
 
-Pass `--capture-scene start`, `--capture-scene select`,
+Pass `--capture-scene start`, `--capture-scene select`, `--capture-scene stage3`,
 `--capture-scene ring`, `--capture-scene extra`, or `--capture-scene crash`
 to inspect those animation states; `goal` and `tally` are also available.
 

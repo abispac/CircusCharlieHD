@@ -31,6 +31,10 @@ constexpr float kStage2MonkeySpeed = 52.0F;
 constexpr float kStage2PurpleSpeed = 61.0F;
 constexpr float kStage2GoalTopY = kStage2RopeY - 76.0F;
 constexpr float kStage2GoalX = 5700.0F;
+constexpr float kStage3GroundY = 592.0F;
+constexpr float kStage3TambourineTopY = 482.0F;
+constexpr float kStage3CourseLength = 5838.0F;
+constexpr int kStage3BounceFrames = 62;
 // The original board places the ring tube directly below the crowd fascia
 // (about source y=140), not at the top of the crowd.
 constexpr float kTrackY = 350.0F;
@@ -197,6 +201,30 @@ struct Stage2Monkey {
   int leapFrame = 0;
 };
 
+struct Stage3Tambourine {
+  float worldX = 0.0F;
+  bool bagAvailable = false;
+};
+
+enum class Stage3PerformerKind {
+  KnifeThrower,
+  FlameThrower,
+};
+
+struct Stage3Performer {
+  float worldX = 0.0F;
+  Stage3PerformerKind kind = Stage3PerformerKind::KnifeThrower;
+  int actionFrame = 0;
+};
+
+struct Stage3Projectile {
+  Vec2 position{};
+  Vec2 velocity{};
+  Stage3PerformerKind kind = Stage3PerformerKind::KnifeThrower;
+  int age = 0;
+  bool active = false;
+};
+
 struct Player {
   Vec2 position{78.0F, kGroundY};
   Vec2 previous = position;
@@ -226,6 +254,9 @@ struct Game {
   std::vector<BonusRing> bonusRings;
   std::vector<MeterMarker> meterMarkers;
   std::vector<Stage2Monkey> stage2Monkeys;
+  std::vector<Stage3Tambourine> stage3Tambourines;
+  std::vector<Stage3Performer> stage3Performers;
+  std::vector<Stage3Projectile> stage3Projectiles;
   float cameraX = 0.0F;
   float previousCameraX = 0.0F;
   int score = 0;
@@ -264,6 +295,10 @@ struct Game {
   int stage1ScorePopupFrame = 0;
   float stage1ScorePopupWorldX = 0.0F;
   float stage1ScorePopupY = 0.0F;
+  int stage3BounceLevel = 0;
+  int stage3BounceFrame = 0;
+  float stage3BounceBaseY = kStage3GroundY;
+  bool stage3OnTambourine = false;
   std::uint32_t jumpAudioSerial = 0;
   std::uint32_t crashAudioSerial = 0;
   std::uint32_t extraCharlieAudioSerial = 0;
@@ -271,6 +306,9 @@ struct Game {
   std::uint32_t hiddenCoinAudioSerial = 0;
   std::uint32_t coinAudioSerial = 0;
   std::uint32_t eventSelectMoveAudioSerial = 0;
+  std::uint32_t eventSelectConfirmAudioSerial = 0;
+  std::uint32_t stage3BounceAudioSerial = 0;
+  std::uint32_t stage3OverjumpAudioSerial = 0;
   std::uint32_t randomState = 0x6d2b79f5U;
   bool highScoreDirty = false;
   bool debug = false;
@@ -309,6 +347,11 @@ struct Assets {
   SDL_Texture* stage2PurpleWalk = nullptr;
   SDL_Texture* stage2PurpleJump = nullptr;
   SDL_Texture* stage2GoalRig = nullptr;
+  SDL_Texture* stage3Charlie = nullptr;
+  SDL_Texture* stage3Tambourine = nullptr;
+  SDL_Texture* stage3KnifeThrower = nullptr;
+  SDL_Texture* stage3FlameThrower = nullptr;
+  SDL_Texture* stage3Projectiles = nullptr;
 };
 
 struct AudioClip {
@@ -331,6 +374,8 @@ struct AudioEngine {
   SDL_AudioSpec deviceSpec{};
   AudioClip stageMusic;
   AudioClip stage2Music;
+  AudioClip stage3Music;
+  AudioClip stage3Bounce;
   AudioClip jump;
   AudioClip miss;
   AudioClip missTwo;
@@ -343,6 +388,7 @@ struct AudioEngine {
   AudioClip creditInsert;
   AudioClip eventSelectMusic;
   AudioClip eventSelectMove;
+  AudioClip eventSelectConfirm;
   std::array<AudioVoice, 12> voices{};
   bool available = false;
 };
@@ -399,7 +445,7 @@ void printUsage() {
       << "  --debug\n"
       << "  --lion-test\n"
       << "  --capture FILE.png\n"
-      << "  --capture-scene start|select|layout|large|prize|gameplay|stage2|stage2-goal|ring|extra|crash|goal|tally\n";
+      << "  --capture-scene start|select|layout|large|prize|gameplay|stage2|stage2-goal|stage3|ring|extra|crash|goal|tally\n";
 }
 
 std::optional<Options> parseOptions(int argc, char** argv) {
@@ -424,13 +470,14 @@ std::optional<Options> parseOptions(int argc, char** argv) {
           options.captureScene != "gameplay" &&
           options.captureScene != "stage2" &&
           options.captureScene != "stage2-goal" &&
+          options.captureScene != "stage3" &&
           options.captureScene != "ring" &&
           options.captureScene != "extra" &&
           options.captureScene != "crash" &&
           options.captureScene != "goal" &&
           options.captureScene != "tally") {
         std::cerr
-            << "Capture scene must be start, select, layout, large, prize, gameplay, stage2, stage2-goal, ring, extra, crash, goal, or tally.\n";
+            << "Capture scene must be start, select, layout, large, prize, gameplay, stage2, stage2-goal, stage3, ring, extra, crash, goal, or tally.\n";
         return std::nullopt;
       }
     } else if (argument == "--mode" && index + 1 < argc) {
@@ -517,6 +564,16 @@ Assets loadAssets(SDL_Renderer* renderer) {
       loadAsset(renderer, "stage2-purple-jump-v1.png");
   assets.stage2GoalRig =
       loadAsset(renderer, "stage2-goal-rig-v1.png");
+  assets.stage3Charlie =
+      loadAsset(renderer, "stage3-charlie-bounce-12-v1.png");
+  assets.stage3Tambourine =
+      loadAsset(renderer, "stage3-tambourine-v1.png");
+  assets.stage3KnifeThrower =
+      loadAsset(renderer, "stage3-knife-thrower-8-v1.png");
+  assets.stage3FlameThrower =
+      loadAsset(renderer, "stage3-fire-breather-8-v1.png");
+  assets.stage3Projectiles =
+      loadAsset(renderer, "stage3-projectiles-8-v1.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.rider || !assets.riderWalkTest ||
       !assets.burnRider || !assets.hoop ||
@@ -527,7 +584,9 @@ Assets loadAssets(SDL_Renderer* renderer) {
       !assets.eventSelectProps || !assets.eventSelectChosen ||
       !assets.stage2Charlie || !assets.stage2BrownWalk ||
       !assets.stage2PurpleWalk || !assets.stage2PurpleJump ||
-      !assets.stage2GoalRig) {
+      !assets.stage2GoalRig || !assets.stage3Charlie ||
+      !assets.stage3Tambourine || !assets.stage3KnifeThrower ||
+      !assets.stage3FlameThrower || !assets.stage3Projectiles) {
     std::cerr << "Some HD assets could not be loaded; vector fallbacks remain "
                  "available. SDL_image: "
               << IMG_GetError() << '\n';
@@ -560,6 +619,11 @@ void destroyAssets(Assets& assets) {
   if (assets.stage2PurpleWalk) SDL_DestroyTexture(assets.stage2PurpleWalk);
   if (assets.stage2PurpleJump) SDL_DestroyTexture(assets.stage2PurpleJump);
   if (assets.stage2GoalRig) SDL_DestroyTexture(assets.stage2GoalRig);
+  if (assets.stage3Charlie) SDL_DestroyTexture(assets.stage3Charlie);
+  if (assets.stage3Tambourine) SDL_DestroyTexture(assets.stage3Tambourine);
+  if (assets.stage3KnifeThrower) SDL_DestroyTexture(assets.stage3KnifeThrower);
+  if (assets.stage3FlameThrower) SDL_DestroyTexture(assets.stage3FlameThrower);
+  if (assets.stage3Projectiles) SDL_DestroyTexture(assets.stage3Projectiles);
   assets = {};
 }
 
@@ -646,6 +710,8 @@ bool loadAudio(AudioEngine& audio) {
   const bool loaded =
       loadAudioAsset("event1-stage.wav", audio.stageMusic) &&
       loadAudioAsset("event2-stage.wav", audio.stage2Music) &&
+      loadAudioAsset("event3-stage.wav", audio.stage3Music) &&
+      loadAudioAsset("stage3-bounce.wav", audio.stage3Bounce) &&
       loadAudioAsset("jump.wav", audio.jump) &&
       loadAudioAsset("miss.wav", audio.miss) &&
       loadAudioAsset("miss-2.wav", audio.missTwo) &&
@@ -653,7 +719,8 @@ bool loadAudio(AudioEngine& audio) {
       loadAudioAsset("bird-coin-drop.wav", audio.birdCoinDrop) &&
       loadAudioAsset("bonus-count.wav", audio.bonusCount) &&
       loadAudioAsset("event-select.wav", audio.eventSelectMusic) &&
-      loadAudioAsset("event-select-move.wav", audio.eventSelectMove);
+      loadAudioAsset("event-select-move.wav", audio.eventSelectMove) &&
+      loadAudioAsset("event-select-confirm.wav", audio.eventSelectConfirm);
   if (!loaded) {
     std::cerr << "One or more audio assets could not be loaded: "
               << SDL_GetError() << '\n';
@@ -682,7 +749,10 @@ bool loadAudio(AudioEngine& audio) {
       !matchesReference(audio.bonusCount) ||
       !matchesReference(audio.eventSelectMusic) ||
       !matchesReference(audio.eventSelectMove) ||
+      !matchesReference(audio.eventSelectConfirm) ||
       !matchesReference(audio.stage2Music) ||
+      !matchesReference(audio.stage3Music) ||
+      !matchesReference(audio.stage3Bounce) ||
       (audio.extraCharlie.data && !matchesReference(audio.extraCharlie)) ||
       (audio.prizeBag.data && !matchesReference(audio.prizeBag)) ||
       (audio.hiddenCoin.data && !matchesReference(audio.hiddenCoin)) ||
@@ -724,7 +794,8 @@ void setStageMusicFast(AudioEngine& audio, bool fast) {
   auto& musicVoice = audio.voices[0];
   if (musicVoice.active &&
       (musicVoice.clip == &audio.stageMusic ||
-       musicVoice.clip == &audio.stage2Music)) {
+       musicVoice.clip == &audio.stage2Music ||
+       musicVoice.clip == &audio.stage3Music)) {
     musicVoice.playbackStep = fast ? 2U : 1U;
   }
   SDL_UnlockAudioDevice(audio.device);
@@ -732,7 +803,9 @@ void setStageMusicFast(AudioEngine& audio, bool fast) {
 
 void playStageMusic(AudioEngine& audio, int selectedEvent, bool fast) {
   const AudioClip& music =
-      selectedEvent == 1 ? audio.stage2Music : audio.stageMusic;
+      selectedEvent == 1 ? audio.stage2Music
+                         : (selectedEvent == 2 ? audio.stage3Music
+                                               : audio.stageMusic);
   setAudioVoice(audio, 0, music,
                 static_cast<int>(SDL_MIX_MAXVOLUME * 0.58F), true);
   setStageMusicFast(audio, fast);
@@ -795,6 +868,20 @@ void playEventSelectMoveSound(AudioEngine& audio) {
   setAudioVoice(audio, 11, audio.eventSelectMove, SDL_MIX_MAXVOLUME, false);
 }
 
+void playEventSelectConfirmSound(AudioEngine& audio) {
+  setAudioVoice(audio, 11, audio.eventSelectConfirm,
+                SDL_MIX_MAXVOLUME, false);
+}
+
+void playStage3BounceSound(AudioEngine& audio) {
+  setAudioVoice(audio, 1, audio.stage3Bounce, SDL_MIX_MAXVOLUME, false);
+}
+
+void playStage3OverjumpSound(AudioEngine& audio) {
+  setAudioVoice(audio, 1, audio.miss,
+                static_cast<int>(SDL_MIX_MAXVOLUME * 0.92F), false);
+}
+
 int audioDurationInBoardFrames(const AudioClip& clip) {
   const int bytesPerSample = SDL_AUDIO_BITSIZE(clip.spec.format) / 8;
   const int bytesPerFrame = bytesPerSample * clip.spec.channels;
@@ -812,6 +899,8 @@ void destroyAudio(AudioEngine& audio) {
   }
   if (audio.stageMusic.data) SDL_FreeWAV(audio.stageMusic.data);
   if (audio.stage2Music.data) SDL_FreeWAV(audio.stage2Music.data);
+  if (audio.stage3Music.data) SDL_FreeWAV(audio.stage3Music.data);
+  if (audio.stage3Bounce.data) SDL_FreeWAV(audio.stage3Bounce.data);
   if (audio.jump.data) SDL_FreeWAV(audio.jump.data);
   if (audio.miss.data) SDL_FreeWAV(audio.miss.data);
   if (audio.missTwo.data) SDL_FreeWAV(audio.missTwo.data);
@@ -824,6 +913,8 @@ void destroyAudio(AudioEngine& audio) {
   if (audio.creditInsert.data) SDL_FreeWAV(audio.creditInsert.data);
   if (audio.eventSelectMusic.data) SDL_FreeWAV(audio.eventSelectMusic.data);
   if (audio.eventSelectMove.data) SDL_FreeWAV(audio.eventSelectMove.data);
+  if (audio.eventSelectConfirm.data)
+    SDL_FreeWAV(audio.eventSelectConfirm.data);
   audio = {};
 }
 
@@ -1009,6 +1100,13 @@ void resetCourse(Game& game) {
   game.stage1ScorePopupFrame = 0;
   game.stage1ScorePopupWorldX = 0.0F;
   game.stage1ScorePopupY = 0.0F;
+  game.stage3BounceLevel = 0;
+  game.stage3BounceFrame = 0;
+  game.stage3BounceBaseY = kStage3GroundY;
+  game.stage3OnTambourine = false;
+  game.stage3Tambourines.clear();
+  game.stage3Performers.clear();
+  game.stage3Projectiles.clear();
 
   if (game.selectedEvent == 1) {
     game.player.position = {78.0F, kStage2RopeY};
@@ -1050,6 +1148,55 @@ void resetCourse(Game& game) {
         {5410.0F, Stage2MonkeyKind::Brown},
         {5500.0F, Stage2MonkeyKind::Purple},
     };
+    return;
+  }
+
+  if (game.selectedEvent == 2) {
+    game.player.position = {78.0F, kStage3TambourineTopY};
+    game.player.previous = game.player.position;
+    game.player.grounded = false;
+    game.player.jumpFrame = 0;
+    game.stage3BounceFrame = 0;
+    game.stage3BounceLevel = 1;
+    game.stage3BounceBaseY = kStage3TambourineTopY;
+    game.stage3OnTambourine = true;
+    game.hoops.clear();
+    game.firePots.clear();
+    game.bonusRings.clear();
+    game.stage2Monkeys.clear();
+    game.meterMarkers = {
+        {720.0F, 50}, {1680.0F, 40}, {2640.0F, 30},
+        {3600.0F, 20}, {4560.0F, 10},
+    };
+    // Event 3's drums are tall leather cylinders, not flattened versions of
+    // the Event 1 goal pad. Their measured spacing leaves a clear performer
+    // lane between successive bounce targets.
+    game.stage3Tambourines = {
+        {78.0F, false},   {318.0F, false},  {558.0F, false},
+        {798.0F, true},   {1038.0F, false}, {1278.0F, false},
+        {1518.0F, false}, {1758.0F, true},  {1998.0F, false},
+        {2238.0F, false}, {2478.0F, false}, {2718.0F, true},
+        {2958.0F, false}, {3198.0F, false}, {3438.0F, false},
+        {3678.0F, true},  {3918.0F, false}, {4158.0F, false},
+        {4398.0F, false}, {4638.0F, true},  {4878.0F, false},
+        {5118.0F, false}, {5358.0F, false}, {5598.0F, true},
+        {5838.0F, false},
+    };
+    game.stage3Performers = {
+        {438.0F, Stage3PerformerKind::KnifeThrower},
+        {918.0F, Stage3PerformerKind::FlameThrower},
+        {1398.0F, Stage3PerformerKind::KnifeThrower},
+        {1878.0F, Stage3PerformerKind::FlameThrower},
+        {2358.0F, Stage3PerformerKind::KnifeThrower},
+        {2838.0F, Stage3PerformerKind::FlameThrower},
+        {3318.0F, Stage3PerformerKind::KnifeThrower},
+        {3798.0F, Stage3PerformerKind::FlameThrower},
+        {4278.0F, Stage3PerformerKind::KnifeThrower},
+        {4758.0F, Stage3PerformerKind::FlameThrower},
+        {5238.0F, Stage3PerformerKind::KnifeThrower},
+        {5718.0F, Stage3PerformerKind::FlameThrower},
+    };
+    game.stage3Projectiles.resize(game.stage3Performers.size());
     return;
   }
 
@@ -1140,14 +1287,15 @@ void enterEventSelect(Game& game) {
 }
 
 void confirmEventSelection(Game& game) {
-  // Events 1 and 2 are playable. Later selections remain routed to Event 1
+  // Events 1, 2, and 3 are playable. Later selections remain routed to Event 1
   // until their own ROM-measured implementations are ready. Do not substitute
   // another effect for the still-unidentified arcade confirmation sound.
   if (game.credits <= 0) {
     game.scene = Scene::Title;
     return;
   }
-  if (game.selectedEvent > 1) game.selectedEvent = 0;
+  if (game.selectedEvent > 2) game.selectedEvent = 0;
+  ++game.eventSelectConfirmAudioSerial;
   --game.credits;
   startGame(game);
 }
@@ -1188,8 +1336,11 @@ void restartAfterCrash(Game& game) {
   }
   game.scene = Scene::Playing;
   game.player.position.x = std::max(78.0F, game.player.position.x - 145.0F);
-  game.player.position.y =
-      game.selectedEvent == 1 ? kStage2RopeY : kGroundY;
+  game.player.position.y = game.selectedEvent == 1
+                               ? kStage2RopeY
+                               : (game.selectedEvent == 2
+                                      ? kStage3TambourineTopY
+                                      : kGroundY);
   game.player.previous = game.player.position;
   game.player.verticalVelocity = 0.0F;
   game.player.runSpeed = 0.0F;
@@ -1199,6 +1350,12 @@ void restartAfterCrash(Game& game) {
   game.crashFrame = 0;
   game.cameraX = std::max(0.0F, game.player.position.x - 78.0F);
   game.previousCameraX = game.cameraX;
+  if (game.selectedEvent == 2) {
+    game.player.grounded = false;
+    game.stage3BounceLevel = 1;
+    game.stage3BounceFrame = 0;
+    game.stage3BounceBaseY = kStage3TambourineTopY;
+  }
 }
 
 int timeBonusFor(int bonus) {
@@ -1272,20 +1429,26 @@ void showStage1Score(Game& game, int points, float worldX, float y) {
 
 void finishStage(Game& game) {
   const bool stage2 = game.selectedEvent == 1;
-  const float finishX = stage2 ? kStage2GoalX : kCourseLength;
-  const float finishY = stage2 ? kStage2GoalTopY : kGoalLandingY;
+  const bool stage3 = game.selectedEvent == 2;
+  const float finishX = stage2 ? kStage2GoalX
+                               : (stage3 ? kStage3CourseLength
+                                         : kCourseLength);
+  const float finishY = stage2 ? kStage2GoalTopY
+                               : (stage3 ? kStage3TambourineTopY
+                                         : kGoalLandingY);
   game.player.position = {finishX, finishY};
   game.player.previous = game.player.position;
   game.player.runSpeed = 0.0F;
   game.player.verticalVelocity = 0.0F;
   game.player.jumpFrame = -1;
   game.player.grounded = true;
-  game.cameraX = finishX - (stage2 ? 340.0F : kGoalScreenX);
+  game.cameraX = finishX - (stage2 ? 340.0F : (stage3 ? 330.0F
+                                                       : kGoalScreenX));
   game.previousCameraX = game.cameraX;
   game.perfectClear =
       !stage2 && !game.deathOccurred && game.prizeBagsAvailable > 0 &&
       game.prizeBagsCollected == game.prizeBagsAvailable;
-  game.score += stage2 ? 5000 : 500;
+  game.score += stage2 ? 5000 : (stage3 ? 3000 : 500);
   game.goalFrame = 0;
   game.scene = Scene::Goal;
 }
@@ -1298,6 +1461,145 @@ float stage2MonkeyY(const Stage2Monkey& monkey) {
           static_cast<float>(kLeapFrames),
       0.0F, 1.0F);
   return kStage2RopeY - std::sin(progress * kPi) * 82.0F;
+}
+
+float stage3BounceHeight(int level) {
+  constexpr std::array<float, 4> heights{72.0F, 108.0F, 152.0F, 205.0F};
+  return heights[static_cast<std::size_t>(std::clamp(level, 1, 4) - 1)];
+}
+
+void updateStage3(Game& game, const Uint8* keyboard, bool,
+                  float controllerAxis) {
+  game.player.previous = game.player.position;
+  game.previousCameraX = game.cameraX;
+
+  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
+                        keyboard[SDL_SCANCODE_A] ||
+                        controllerAxis < -0.35F;
+  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
+                         keyboard[SDL_SCANCODE_D] ||
+                         controllerAxis > 0.35F;
+  float targetSpeed = 0.0F;
+  if (moveLeft != moveRight) {
+    targetSpeed = moveLeft ? -205.0F : 235.0F;
+    game.player.facingRight = moveRight;
+  }
+  game.player.runSpeed +=
+      (targetSpeed - game.player.runSpeed) * static_cast<float>(kFixedDt) *
+      (targetSpeed == 0.0F ? 18.0F : 13.0F);
+  if (std::abs(game.player.runSpeed) < 0.5F && targetSpeed == 0.0F) {
+    game.player.runSpeed = 0.0F;
+  }
+  game.player.position.x = std::max(
+      42.0F, game.player.position.x +
+                   game.player.runSpeed * static_cast<float>(kFixedDt));
+  game.cameraX = std::max(0.0F, game.player.position.x - 78.0F);
+
+  const int previousBounceFrame = game.stage3BounceFrame;
+  game.stage3BounceFrame =
+      std::min(game.stage3BounceFrame + 1, kStage3BounceFrames);
+  const float progress = static_cast<float>(game.stage3BounceFrame) /
+                         static_cast<float>(kStage3BounceFrames);
+  const float oldProgress = static_cast<float>(previousBounceFrame) /
+                            static_cast<float>(kStage3BounceFrames);
+  const float height = stage3BounceHeight(game.stage3BounceLevel);
+  game.player.position.y =
+      game.stage3BounceBaseY - std::sin(progress * kPi) * height;
+  game.player.verticalVelocity =
+      (std::sin(oldProgress * kPi) - std::sin(progress * kPi)) * height /
+      static_cast<float>(kFixedDt);
+  game.player.jumpFrame = game.stage3BounceFrame;
+  game.player.grounded = false;
+
+  // A third-height arc reaches the prize bag. The first two cannot touch it,
+  // preserving the original three-bounce setup instead of awarding it from
+  // an ordinary hop.
+  if (game.stage3BounceLevel >= 3) {
+    for (auto& drum : game.stage3Tambourines) {
+      if (!drum.bagAvailable) continue;
+      const float bagY = kStage3TambourineTopY - 154.0F;
+      if (std::abs(game.player.position.x - drum.worldX) < 34.0F &&
+          std::abs((game.player.position.y - 42.0F) - bagY) < 46.0F) {
+        drum.bagAvailable = false;
+        game.score += 500;
+        showStage1Score(game, 500, drum.worldX, bagY);
+        ++game.prizeBagAudioSerial;
+      }
+    }
+  }
+
+  if (game.stage3BounceFrame >= kStage3BounceFrames) {
+    Stage3Tambourine* landingDrum = nullptr;
+    float closest = 1000.0F;
+    for (auto& drum : game.stage3Tambourines) {
+      const float distance = std::abs(game.player.position.x - drum.worldX);
+      if (distance < 56.0F && distance < closest) {
+        closest = distance;
+        landingDrum = &drum;
+      }
+    }
+    if (!landingDrum) {
+      crashPlayer(game);
+      return;
+    }
+    game.player.position.y = kStage3TambourineTopY;
+    game.stage3BounceBaseY = kStage3TambourineTopY;
+    game.stage3BounceFrame = 0;
+    game.stage3BounceLevel = game.stage3BounceLevel == 4
+                                 ? 1
+                                 : game.stage3BounceLevel + 1;
+    if (game.stage3BounceLevel == 4) {
+      ++game.stage3OverjumpAudioSerial;
+    } else {
+      ++game.stage3BounceAudioSerial;
+    }
+    if (landingDrum->worldX >= kStage3CourseLength - 260.0F) {
+      finishStage(game);
+      return;
+    }
+  }
+
+  // Both Event 3 performers throw straight upward. Their projectile stays in
+  // the performer's vertical lane, rises, then falls back; it never homes in
+  // on Charlie or travels horizontally across the stage.
+  constexpr int kProjectileFrames = 108;
+  for (std::size_t index = 0; index < game.stage3Performers.size(); ++index) {
+    auto& performer = game.stage3Performers[index];
+    auto& projectile = game.stage3Projectiles[index];
+    ++performer.actionFrame;
+    if (!projectile.active && performer.worldX - game.cameraX < 560.0F &&
+        performer.worldX - game.cameraX > -80.0F &&
+        performer.actionFrame >= 58 + static_cast<int>(index % 3U) * 16) {
+      projectile.active = true;
+      projectile.age = 0;
+      projectile.kind = performer.kind;
+      projectile.position = {performer.worldX, kStage3GroundY - 72.0F};
+      performer.actionFrame = 0;
+    }
+    if (!projectile.active) continue;
+    ++projectile.age;
+    const float projectileProgress =
+        static_cast<float>(projectile.age) /
+        static_cast<float>(kProjectileFrames);
+    projectile.position.x = performer.worldX;
+    projectile.position.y = kStage3GroundY - 72.0F -
+                            std::sin(projectileProgress * kPi) *
+                                (performer.kind ==
+                                         Stage3PerformerKind::KnifeThrower
+                                     ? 190.0F
+                                     : 172.0F);
+    if (std::abs(game.player.position.x - projectile.position.x) < 22.0F &&
+        std::abs((game.player.position.y - 44.0F) -
+                 projectile.position.y) < 28.0F) {
+      crashPlayer(game);
+      return;
+    }
+    if (projectile.age >= kProjectileFrames) projectile.active = false;
+  }
+
+  if (game.stage1ScorePopupFrame > 0) --game.stage1ScorePopupFrame;
+  if (game.bonus > 0) --game.bonus;
+  awardScoreLives(game);
 }
 
 void updateStage2(Game& game, const Uint8* keyboard, bool jumpPressed,
@@ -1473,12 +1775,16 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     game.previousCameraX = game.cameraX;
     game.player.runSpeed = 0.0F;
     const bool stage2 = game.selectedEvent == 1;
-    game.player.position.y = stage2 ? kStage2GoalTopY : kGoalLandingY;
+    const bool stage3 = game.selectedEvent == 2;
+    game.player.position.y = stage2 ? kStage2GoalTopY
+                                    : (stage3 ? kStage3TambourineTopY
+                                              : kGoalLandingY);
     game.player.previous.y = game.player.position.y;
     game.player.grounded = true;
     game.player.jumpFrame = -1;
     game.cameraX =
-        game.player.position.x - (stage2 ? 340.0F : kGoalScreenX);
+        game.player.position.x -
+        (stage2 ? 340.0F : (stage3 ? 330.0F : kGoalScreenX));
     game.previousCameraX = game.cameraX;
     ++game.goalFrame;
 
@@ -1495,7 +1801,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     }
 
     const int presentationFrames =
-        stage2 ? 210 : game.perfectClear
+        (stage2 || stage3) ? 210 : game.perfectClear
             ? showerStart + kCoinShowerFrames
             : kGoalArrivalFrames + 120;
     if (game.goalFrame >= presentationFrames) {
@@ -1520,6 +1826,10 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
 
   if (game.selectedEvent == 1) {
     updateStage2(game, keyboard, jumpPressed, controllerAxis);
+    return;
+  }
+  if (game.selectedEvent == 2) {
+    updateStage3(game, keyboard, jumpPressed, controllerAxis);
     return;
   }
 
@@ -3214,6 +3524,138 @@ void drawStage2Scene(SDL_Renderer* renderer, const Game& game,
   }
 }
 
+void drawSheetFrame(SDL_Renderer* renderer, SDL_Texture* texture,
+                    int columns, int rows, int frame, float centerX,
+                    float baselineY, float width, float height,
+                    SDL_RendererFlip flip = SDL_FLIP_NONE,
+                    double angle = 0.0) {
+  if (!texture || columns <= 0 || rows <= 0) return;
+  int textureWidth = 0;
+  int textureHeight = 0;
+  SDL_QueryTexture(texture, nullptr, nullptr, &textureWidth, &textureHeight);
+  const int cellWidth = textureWidth / columns;
+  const int cellHeight = textureHeight / rows;
+  frame = std::clamp(frame, 0, columns * rows - 1);
+  const SDL_Rect source{(frame % columns) * cellWidth,
+                        (frame / columns) * cellHeight,
+                        cellWidth, cellHeight};
+  const SDL_FRect destination{centerX - width * 0.5F,
+                              baselineY - height, width, height};
+  SDL_RenderCopyExF(renderer, texture, &source, &destination, angle, nullptr,
+                    flip);
+}
+
+void drawStage3Tambourine(SDL_Renderer* renderer, SDL_Texture* texture,
+                          float x) {
+  if (!texture) return;
+  // The original Event 3 instrument is a tall leather cylinder. Keep the
+  // full height and narrow profile instead of flattening it into a platform.
+  const SDL_FRect destination{x - 47.0F, kStage3TambourineTopY,
+                              94.0F,
+                              kStage3GroundY - kStage3TambourineTopY + 9.0F};
+  SDL_RenderCopyF(renderer, texture, nullptr, &destination);
+}
+
+void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
+                     const Assets& assets, double timeSeconds,
+                     double interpolation) {
+  const float camera = game.previousCameraX +
+                       (game.cameraX - game.previousCameraX) *
+                           static_cast<float>(interpolation);
+  drawBackdrop(renderer, camera, false, assets, game, timeSeconds);
+
+  for (const auto& marker : game.meterMarkers) {
+    const float x = marker.worldX - camera;
+    if (x < -50.0F || x > kWorldWidth + 50.0F) continue;
+    fillRect(renderer, x - 26.0F, kStage3GroundY - 21.0F, 52.0F, 20.0F,
+             color(21, 104, 197));
+    drawText(renderer, std::to_string(marker.meters) + "M", x,
+             kStage3GroundY - 16.0F, 0.95F, color(255, 225, 64), true);
+  }
+
+  for (const auto& drum : game.stage3Tambourines) {
+    const float x = drum.worldX - camera;
+    if (x < -80.0F || x > kWorldWidth + 80.0F) continue;
+    drawStage3Tambourine(renderer, assets.stage3Tambourine, x);
+    if (drum.bagAvailable) {
+      const float bagY = kStage3TambourineTopY - 154.0F;
+      if (assets.rewardBag) {
+        const SDL_FRect bagDestination{x - 24.0F, bagY - 31.0F,
+                                       48.0F, 52.0F};
+        SDL_RenderCopyF(renderer, assets.rewardBag, nullptr,
+                        &bagDestination);
+      }
+    }
+  }
+
+  for (std::size_t index = 0; index < game.stage3Performers.size(); ++index) {
+    const auto& performer = game.stage3Performers[index];
+    const float x = performer.worldX - camera;
+    if (x < -80.0F || x > kWorldWidth + 80.0F) continue;
+    const bool knife =
+        performer.kind == Stage3PerformerKind::KnifeThrower;
+    const int cycle = performer.actionFrame % 72;
+    int frame = cycle < 22 ? 0 : (cycle < 36 ? 1 :
+                (cycle < 48 ? 2 : (cycle < 59 ? 3 : 4)));
+    SDL_Texture* texture = knife ? assets.stage3KnifeThrower
+                                 : assets.stage3FlameThrower;
+    drawSheetFrame(renderer, texture, 4, 2, frame, x, kStage3GroundY,
+                   knife ? 88.0F : 94.0F, knife ? 112.0F : 116.0F);
+
+    const auto& projectile = game.stage3Projectiles[index];
+    if (!projectile.active) continue;
+    const bool rising = projectile.age < 54;
+    const int projectileFrame = (projectile.age / 5) & 3;
+    const int atlasFrame = knife ? 2 : 4 + projectileFrame;
+    drawSheetFrame(renderer, assets.stage3Projectiles, 4, 2, atlasFrame,
+                   projectile.position.x - camera,
+                   projectile.position.y + (knife ? 16.0F : 20.0F),
+                   knife ? 28.0F : 32.0F,
+                   knife ? 36.0F : 40.0F,
+                   (!rising && knife) ? SDL_FLIP_VERTICAL : SDL_FLIP_NONE,
+                   knife ? 0.0 : (rising ? -90.0 : 90.0));
+  }
+
+  const float playerWorldX = game.player.previous.x +
+      (game.player.position.x - game.player.previous.x) *
+          static_cast<float>(interpolation);
+  const float playerY = game.player.previous.y +
+      (game.player.position.y - game.player.previous.y) *
+          static_cast<float>(interpolation);
+  int charlieFrame = 0;
+  if (game.scene == Scene::Goal) {
+    charlieFrame = 11;
+  } else if (game.stage3BounceLevel == 4) {
+    const float progress = static_cast<float>(game.stage3BounceFrame) /
+                           static_cast<float>(kStage3BounceFrames);
+    charlieFrame = std::clamp(3 + static_cast<int>(progress * 6.0F), 3, 9);
+  } else {
+    const float progress = static_cast<float>(game.stage3BounceFrame) /
+                           static_cast<float>(kStage3BounceFrames);
+    charlieFrame = progress < 0.16F ? 1 :
+                   (progress < 0.34F ? 2 :
+                    (progress < 0.67F ? 3 :
+                     (progress < 0.86F ? 8 : 9)));
+  }
+  drawSheetFrame(renderer, assets.stage3Charlie, 4, 3, charlieFrame,
+                 playerWorldX - camera, playerY + 15.0F,
+                 76.0F, 104.0F,
+                 game.player.facingRight ? SDL_FLIP_NONE
+                                         : SDL_FLIP_HORIZONTAL);
+
+  drawStage1ScorePopup(renderer, game, camera);
+  drawHud(renderer, game, assets.charlieLife);
+  if (game.scene == Scene::Crashed &&
+      game.crashFrame >= kCrashBurnFrames) {
+    fillRect(renderer, 55.0F, 220.0F, 370.0F, 134.0F,
+             color(33, 5, 8, 232));
+    drawText(renderer, "OH NO!!", kWorldWidth * 0.5F, 246.0F, 3.0F,
+             color(255, 96, 64), true);
+    drawText(renderer, "SPACE OR Z TO RETRY", kWorldWidth * 0.5F,
+             300.0F, 1.8F, color(255, 255, 255), true);
+  }
+}
+
 void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
                      bool complete, const Assets& assets,
                      double timeSeconds) {
@@ -3294,7 +3736,9 @@ void drawDebug(SDL_Renderer* renderer, const Game& game,
   drawText(renderer, "JUMP " + std::to_string(static_cast<int>(
                                   std::lround((game.selectedEvent == 1
                                                    ? kStage2RopeY
-                                                   : kGroundY) -
+                                                   : (game.selectedEvent == 2
+                                                          ? kStage3TambourineTopY
+                                                          : kGroundY)) -
                                               game.player.position.y))),
            15.0F, kArenaTop + 47.0F, 1.4F, color(255, 255, 255));
   drawText(renderer,
@@ -3327,6 +3771,11 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
   }
   if (game.selectedEvent == 1) {
     drawStage2Scene(renderer, game, assets, timeSeconds, interpolation);
+    if (game.debug) drawDebug(renderer, game, surface);
+    return;
+  }
+  if (game.selectedEvent == 2) {
+    drawStage3Scene(renderer, game, assets, timeSeconds, interpolation);
     if (game.debug) drawDebug(renderer, game, surface);
     return;
   }
@@ -3503,10 +3952,32 @@ int main(int argc, char** argv) {
       if (options.captureScene == "stage2" ||
           options.captureScene == "stage2-goal") {
         game.selectedEvent = 1;
+      } else if (options.captureScene == "stage3") {
+        game.selectedEvent = 2;
       }
       startGame(game);
     }
-    if (options.captureScene == "layout") {
+    if (options.captureScene == "stage3") {
+      game.player.position = {798.0F, kStage3TambourineTopY - 118.0F};
+      game.player.previous = game.player.position;
+      game.player.runSpeed = 0.0F;
+      game.player.grounded = false;
+      game.stage3BounceLevel = 3;
+      game.stage3BounceFrame = kStage3BounceFrames / 2;
+      game.stage3BounceBaseY = kStage3TambourineTopY;
+      game.cameraX = game.player.position.x - 78.0F;
+      game.previousCameraX = game.cameraX;
+      for (std::size_t index = 0;
+           index < game.stage3Projectiles.size(); ++index) {
+        game.stage3Projectiles[index].active = index < 2;
+        game.stage3Projectiles[index].age = index == 0 ? 27 : 42;
+        game.stage3Projectiles[index].kind =
+            game.stage3Performers[index].kind;
+        game.stage3Projectiles[index].position = {
+            game.stage3Performers[index].worldX,
+            kStage3GroundY - (index == 0 ? 210.0F : 188.0F)};
+      }
+    } else if (options.captureScene == "layout") {
       game.player.position = {78.0F, kGroundY};
       game.player.previous = game.player.position;
       game.player.runSpeed = 0.0F;
@@ -3658,6 +4129,12 @@ int main(int argc, char** argv) {
   std::uint32_t observedCoinAudioSerial = game.coinAudioSerial;
   std::uint32_t observedEventSelectMoveAudioSerial =
       game.eventSelectMoveAudioSerial;
+  std::uint32_t observedEventSelectConfirmAudioSerial =
+      game.eventSelectConfirmAudioSerial;
+  std::uint32_t observedStage3BounceAudioSerial =
+      game.stage3BounceAudioSerial;
+  std::uint32_t observedStage3OverjumpAudioSerial =
+      game.stage3OverjumpAudioSerial;
   Scene observedScene = game.scene;
   int observedGoalFrame = game.goalFrame;
   double accumulator = 0.0;
@@ -3876,6 +4353,23 @@ int main(int argc, char** argv) {
       playEventSelectMoveSound(audio);
       observedEventSelectMoveAudioSerial =
           game.eventSelectMoveAudioSerial;
+    }
+    if (observedEventSelectConfirmAudioSerial !=
+        game.eventSelectConfirmAudioSerial) {
+      playEventSelectConfirmSound(audio);
+      observedEventSelectConfirmAudioSerial =
+          game.eventSelectConfirmAudioSerial;
+    }
+    if (observedStage3BounceAudioSerial !=
+        game.stage3BounceAudioSerial) {
+      playStage3BounceSound(audio);
+      observedStage3BounceAudioSerial = game.stage3BounceAudioSerial;
+    }
+    if (observedStage3OverjumpAudioSerial !=
+        game.stage3OverjumpAudioSerial) {
+      playStage3OverjumpSound(audio);
+      observedStage3OverjumpAudioSerial =
+          game.stage3OverjumpAudioSerial;
     }
     if (game.scene != observedScene) {
       if (game.highScoreDirty &&
