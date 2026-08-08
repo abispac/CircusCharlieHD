@@ -43,7 +43,7 @@ audio, or code are included in this project.
   to approximately `101 × 70` pixels on the `480 × 640` logical canvas.
 - A permanent `layout` capture scene places the MAME frame and remake on the
   same `480 × 640` grid. It calibrates the fixed marquee to `0–110`, the HUD
-  to `110–202`, the rail to `y = 235`, the crowd/fascia to `235–350`, grass
+  to `110–202`, the crowd/fascia to `235–350`, the rail to `y = 350`, grass
   to `350–640`, and the rider's ground contact to `y = 590`. The decorative
   front-stage curtain is intentionally cropped out because it is absent from
   the Event 1 playfield.
@@ -52,7 +52,7 @@ audio, or code are included in this project.
   roughly `80` to `16` source pixels above that contact, with its usable
   opening approximately `74` to `24` source pixels above it.
 - The measured HD placement was raised after hands-on collision testing. The
-  rail is at logical `y = 235`; the large-ring opening runs from logical
+  rail is at logical `y = 350`; the large-ring opening runs from logical
   `y = 367` to `y = 504`. This aligns the
   lion's collision body with the opening at the fixed jump apex. The long
   decorative pole in the HD source image is cropped out so the ring rides
@@ -74,7 +74,7 @@ Measured motion targets:
 - Peak displacement: `55 source pixels` / `137.5 logical units`
 - Takeoff-to-landing time: `63 frames` / approximately `1.0395 seconds`
 - Ground height: `590 logical units`
-- Ceiling tube height: `235 logical units`
+- Ceiling tube height: `350 logical units`
 - Lion collision box: follows the lion's body rather than the transparent
   margins, mane, tail, or Charlie's upper-body artwork. Its horizontal center
   is offset `20` logical units from the sprite's world anchor, measured from

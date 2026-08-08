@@ -31,9 +31,9 @@ constexpr float kStage2MonkeySpeed = 52.0F;
 constexpr float kStage2PurpleSpeed = 61.0F;
 constexpr float kStage2GoalTopY = kStage2RopeY - 76.0F;
 constexpr float kStage2GoalX = 5700.0F;
-// The ring rail sits directly beneath the score panel/crowd header in the
-// original board (about source y=94), not above a large empty sky gap.
-constexpr float kTrackY = 235.0F;
+// The original board places the ring tube directly below the crowd fascia
+// (about source y=140), not at the top of the crowd.
+constexpr float kTrackY = 350.0F;
 constexpr float kBackSpeed = -150.0F;
 constexpr float kForwardSpeed = 195.0F;
 constexpr float kRingRailSpeed = 65.0F;
@@ -1850,15 +1850,23 @@ RenderSurface buildRenderSurface(SDL_Renderer* renderer, SDL_Window* window,
 }
 
 void drawCeilingTrack(SDL_Renderer* renderer, float cameraX) {
-  fillRect(renderer, 0.0F, kTrackY, kWorldWidth, 8.0F,
-           color(104, 117, 133));
-  fillRect(renderer, 0.0F, kTrackY + 2.0F, kWorldWidth, 2.0F,
-           color(214, 222, 226));
+  // The cabinet uses a slim blue multi-line tube under the crowd fascia.
+  // Preserve that silhouette in HD instead of drawing railroad-like ties.
+  fillRect(renderer, 0.0F, kTrackY - 2.0F, kWorldWidth, 8.0F,
+           color(8, 24, 92));
+  fillRect(renderer, 0.0F, kTrackY, kWorldWidth, 4.0F,
+           color(31, 83, 202));
+  fillRect(renderer, 0.0F, kTrackY, kWorldWidth, 1.25F,
+           color(92, 206, 255));
+  fillRect(renderer, 0.0F, kTrackY + 4.0F, kWorldWidth, 1.0F,
+           color(17, 42, 132));
   for (int clamp = -1; clamp < 14; ++clamp) {
     const float x = static_cast<float>(clamp * 42) -
                     std::fmod(cameraX, 42.0F);
-    fillRect(renderer, x, kTrackY - 6.0F, 8.0F, 18.0F,
-             color(70, 76, 88));
+    fillRect(renderer, x, kTrackY - 3.0F, 4.0F, 10.0F,
+             color(16, 35, 93));
+    fillRect(renderer, x + 1.0F, kTrackY - 2.0F, 1.0F, 8.0F,
+             color(76, 130, 225));
   }
 }
 
@@ -1911,6 +1919,13 @@ void drawZeppelinBonus(SDL_Renderer* renderer, int bonus) {
            color(255, 255, 255), true);
 }
 
+void drawReddishMarqueeSky(SDL_Renderer* renderer) {
+  // A translucent carnival-red wash brings the HD night painting closer to
+  // the original board's red sky without replacing the existing tent art.
+  fillRect(renderer, 0.0F, 0.0F, kWorldWidth, kMarqueeHeight,
+           color(112, 12, 18, 64));
+}
+
 void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
                   const Assets& assets, const Game& game,
                   double timeSeconds) {
@@ -1925,6 +1940,7 @@ void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
         0.0F, 0.0F, static_cast<float>(kWorldWidth), kMarqueeHeight};
     SDL_RenderCopyF(renderer, assets.marquee, nullptr,
                     &marqueeDestination);
+    drawReddishMarqueeSky(renderer);
   } else {
     if (!lowDetail) {
       for (int index = 0; index < 24; ++index) {
@@ -2087,9 +2103,10 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
     const float screenX = ring.worldX - cameraX;
     if (screenX < -100.0F || screenX > kWorldWidth + 100.0F) continue;
     const float ringCenterY = kGroundY - ring.height;
+    // The texture's target rectangle contains transparent vertical padding.
+    // Connect the trolley to the visible flame crown, not the target top.
     line(renderer, screenX, kTrackY + 5.0F, screenX,
-         ringCenterY - kBonusRingVisualHalfHeight + 8.0F,
-         color(119, 101, 73));
+         ringCenterY - 58.0F, color(119, 101, 73));
     // Like the original board's category-0 tiles, the animated flame rim is
     // deferred to the foreground pass. The hanger and prize remain here.
     if (ring.containsPrize && !ring.collected) {
@@ -2686,6 +2703,29 @@ void drawHudBulbs(SDL_Renderer* renderer) {
   }
 }
 
+void drawHighScoreBulbs(SDL_Renderer* renderer) {
+  constexpr float left = 190.0F;
+  constexpr float top = kHudTop + 25.0F;
+  constexpr float width = 100.0F;
+  constexpr float height = 31.0F;
+  const std::array<SDL_Color, 3> bulbs{
+      color(48, 104, 255), color(53, 204, 255), color(76, 83, 239)};
+  for (int index = 0; index <= 20; ++index) {
+    const float x = left + static_cast<float>(index) * 5.0F;
+    const SDL_Color glow = bulbs[static_cast<std::size_t>(index % 3)];
+    filledCircle(renderer, x, top, 1.35F, glow);
+    filledCircle(renderer, x, top + height, 1.35F,
+                 bulbs[static_cast<std::size_t>((index + 1) % 3)]);
+  }
+  for (int index = 1; index < 6; ++index) {
+    const float y = top + static_cast<float>(index) * 5.0F;
+    filledCircle(renderer, left, y, 1.35F,
+                 bulbs[static_cast<std::size_t>((index + 2) % 3)]);
+    filledCircle(renderer, left + width, y, 1.35F,
+                 bulbs[static_cast<std::size_t>(index % 3)]);
+  }
+}
+
 void drawHud(SDL_Renderer* renderer, const Game& game,
              SDL_Texture* charlieTexture) {
   fillRect(renderer, 0.0F, kHudTop, kWorldWidth, kHudHeight,
@@ -2704,6 +2744,7 @@ void drawHud(SDL_Renderer* renderer, const Game& game,
 
   drawText(renderer, "HIGH SCORE", kWorldWidth * 0.5F, kHudTop + 8.0F,
            1.25F, color(245, 70, 37), true);
+  drawHighScoreBulbs(renderer);
   drawText(renderer, std::to_string(game.highScore),
            kWorldWidth * 0.5F, kHudTop + 28.0F, 1.65F,
            color(51, 213, 57), true);
@@ -2729,6 +2770,7 @@ void drawCoinWaitingScreen(SDL_Renderer* renderer, const Game& game,
     const SDL_FRect marqueeDestination{
         0.0F, 0.0F, static_cast<float>(kWorldWidth), kMarqueeHeight};
     SDL_RenderCopyF(renderer, assets.marquee, nullptr, &marqueeDestination);
+    drawReddishMarqueeSky(renderer);
   }
   drawFerrisWheel(renderer, assets.ferrisWheel, assets.ferrisGondola,
                   timeSeconds);
@@ -2814,6 +2856,7 @@ void drawEventSelectionScreen(SDL_Renderer* renderer, const Game& game,
     const SDL_FRect marqueeDestination{
         0.0F, 0.0F, static_cast<float>(kWorldWidth), kMarqueeHeight};
     SDL_RenderCopyF(renderer, assets.marquee, nullptr, &marqueeDestination);
+    drawReddishMarqueeSky(renderer);
   }
   drawFerrisWheel(renderer, assets.ferrisWheel, assets.ferrisGondola,
                   timeSeconds);
@@ -2912,6 +2955,7 @@ void drawStage2Backdrop(SDL_Renderer* renderer, const Game& game,
     const SDL_FRect marqueeDestination{
         0.0F, 0.0F, static_cast<float>(kWorldWidth), kMarqueeHeight};
     SDL_RenderCopyF(renderer, assets.marquee, nullptr, &marqueeDestination);
+    drawReddishMarqueeSky(renderer);
   }
   drawFerrisWheel(renderer, assets.ferrisWheel, assets.ferrisGondola,
                   timeSeconds);
@@ -3098,6 +3142,7 @@ void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
     const SDL_FRect marqueeDestination{
         0.0F, 0.0F, static_cast<float>(kWorldWidth), kMarqueeHeight};
     SDL_RenderCopyF(renderer, assets.marquee, nullptr, &marqueeDestination);
+    drawReddishMarqueeSky(renderer);
   }
   drawFerrisWheel(renderer, assets.ferrisWheel, assets.ferrisGondola,
                   timeSeconds);

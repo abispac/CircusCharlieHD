@@ -9,8 +9,9 @@ This avoids estimating positions from differently sized screenshots.
 - Fixed marquee: `y = 0–110`
 - Score and lives panel: `y = 110–202`
 - Black separation band: `y = 202–235`
-- Moving ring rail and top of crowd: `y = 235`
+- Top of crowd: `y = 235`
 - Crowd plus grandstand fascia: `y = 235–350`
+- Moving ring rail directly below the crowd fascia: `y = 350`
 - Uninterrupted grass: `y = 350–640`
 - Grounded lion contact: `y = 590`
 - Grounded rider/lion visible size: approximately `100 x 70`
