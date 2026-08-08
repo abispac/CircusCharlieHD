@@ -1569,7 +1569,7 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
   // arc is committed and ends exactly at that drum's center. There is no
   // free horizontal drift and the grass is never a landing surface.
   if (!game.stage3Traveling &&
-      game.stage3BounceFrame <= kStage3BounceFrames / 2 &&
+      game.stage3BounceFrame < kStage3BounceFrames / 2 &&
       moveLeft != moveRight) {
     const int direction = moveLeft ? -1 : 1;
     const int requested = game.stage3CurrentTambourine + direction;
@@ -1595,8 +1595,11 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
   const auto& targetDrum = game.stage3Tambourines[static_cast<std::size_t>(
       game.stage3TargetTambourine)];
   if (game.stage3Traveling) {
+    // Sideways control belongs only to the rising half of the bounce. Reach
+    // the neighboring drum's X coordinate at the apex, then hold that X while
+    // Charlie drops vertically into its center.
     const int remainingFrames = std::max(
-        1, kStage3BounceFrames - game.stage3TravelStartFrame);
+        1, kStage3BounceFrames / 2 - game.stage3TravelStartFrame);
     const float travelProgress = std::clamp(
         static_cast<float>(game.stage3BounceFrame -
                            game.stage3TravelStartFrame) /
@@ -3786,28 +3789,40 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
   int charlieRows = 3;
   SDL_Texture* charlieTexture = assets.stage3CharlieVertical;
   if (game.scene == Scene::Goal) {
-    charlieFrame = 11;
+    // A compact crouch-rise-cheer loop keeps Charlie celebrating on the goal
+    // drum instead of freezing on one pose.
+    constexpr std::array<int, 6> celebrationFrames{0, 1, 2, 3, 2, 1};
+    charlieFrame = celebrationFrames[static_cast<std::size_t>(
+        (game.goalFrame / 7) % static_cast<int>(celebrationFrames.size()))];
   } else if (game.stage3Traveling) {
     const float progress = static_cast<float>(game.stage3BounceFrame) /
                            static_cast<float>(kStage3BounceFrames);
-    // Every center-to-center transfer uses the four curled rotation poses.
+    // Use the complete generated rotation sequence instead of repeatedly
+    // cycling four widely separated poses. This reads as one smooth somersault
+    // from takeoff to landing.
     charlieTexture = assets.stage3Charlie;
-    charlieFrame = 4 +
-        (static_cast<int>(progress * 8.0F) & 3);
+    charlieFrame = 3 + std::clamp(static_cast<int>(progress * 7.0F), 0, 6);
   } else {
     const float progress = static_cast<float>(game.stage3BounceFrame) /
                            static_cast<float>(kStage3BounceFrames);
-    // Twelve-frame loop built around the ROM's three front-facing poses:
-    // compressed, upright, and fully extended.
+    // Drive the pose directly from physical bounce height: compress at both
+    // drum contacts and extend at the apex. The previous linear 0..11 walk
+    // showed crouched frames at the apex and upright frames at landing.
+    const float extension = std::sin(progress * kPi);
     charlieFrame = std::clamp(
-        static_cast<int>(progress * 12.0F), 0, 11);
+        static_cast<int>(std::lround(extension * 5.0F)), 0, 5);
   }
   // On an over-jump the board removes Charlie from the arena and draws a
   // separate shocked head bursting through the fixed circus marquee.  Moving
   // a full body through the HUD is both visually wrong and unlike the ROM.
   if (!game.stage3RoofCrash) {
+    // The goal artwork contains transparent pixels above its white cushion.
+    // Its visible top is 22 logical pixels below the texture rectangle; use
+    // that actual surface as Charlie's baseline so he no longer floats.
+    const float playerBaseline =
+        game.scene == Scene::Goal ? playerY + 22.0F : playerY + 15.0F;
     drawSheetFrame(renderer, charlieTexture, 4, charlieRows, charlieFrame,
-                   playerWorldX - camera, playerY + 15.0F,
+                   playerWorldX - camera, playerBaseline,
                    76.0F, 104.0F,
                    game.player.facingRight ? SDL_FLIP_NONE
                                            : SDL_FLIP_HORIZONTAL);
