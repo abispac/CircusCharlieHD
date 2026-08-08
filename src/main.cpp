@@ -1677,18 +1677,25 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
     }
   }
 
-  // Both Event 3 performers throw straight upward. Their projectile stays in
-  // the performer's vertical lane, rises, then falls back; it never homes in
-  // on Charlie or travels horizontally across the stage.
+  // Both Event 3 performers throw straight upward in their own lane. Knives
+  // complete the arcade up/down toss, but the fire-breather's flame is a
+  // one-way burst: it rises to its cutoff height, disappears, and leaves a
+  // deliberate clear interval long enough for Charlie to cross one drum.
   constexpr int kKnifeProjectileFrames = 108;
-  constexpr int kFlameProjectileFrames = 72;
+  constexpr int kFlameProjectileFrames = 46;
+  constexpr int kFlameClearFrames = 104;
   for (std::size_t index = 0; index < game.stage3Performers.size(); ++index) {
     auto& performer = game.stage3Performers[index];
     auto& projectile = game.stage3Projectiles[index];
     ++performer.actionFrame;
+    const bool flamePerformer =
+        performer.kind == Stage3PerformerKind::FlameThrower;
+    const int launchDelay =
+        (flamePerformer ? kFlameClearFrames : 58) +
+        static_cast<int>(index % 3U) * 16;
     if (!projectile.active && performer.worldX - game.cameraX < 560.0F &&
         performer.worldX - game.cameraX > -80.0F &&
-        performer.actionFrame >= 58 + static_cast<int>(index % 3U) * 16) {
+        performer.actionFrame >= launchDelay) {
       projectile.active = true;
       projectile.age = 0;
       projectile.kind = performer.kind;
@@ -1701,13 +1708,15 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
         performer.kind == Stage3PerformerKind::KnifeThrower;
     const int projectileFrames =
         knife ? kKnifeProjectileFrames : kFlameProjectileFrames;
-    const float projectileProgress =
+    const float projectileProgress = std::clamp(
         static_cast<float>(projectile.age) /
-        static_cast<float>(projectileFrames);
+            static_cast<float>(projectileFrames),
+        0.0F, 1.0F);
     projectile.position.x = performer.worldX;
-    projectile.position.y = kStage3GroundY - 72.0F -
-                            std::sin(projectileProgress * kPi) *
-                                (knife ? 286.0F : 180.0F);
+    projectile.position.y =
+        kStage3GroundY - 72.0F -
+        (knife ? std::sin(projectileProgress * kPi) * 286.0F
+               : projectileProgress * 220.0F);
     // The original fireball is narrow, and only its bright core is lethal.
     // Keeping the collision area inside the painted flame leaves the same
     // pass-by timing window visible in the arcade recording.
@@ -1720,7 +1729,10 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
       crashPlayer(game);
       return;
     }
-    if (projectile.age >= projectileFrames) projectile.active = false;
+    if (projectile.age >= projectileFrames) {
+      projectile.active = false;
+      performer.actionFrame = 0;
+    }
   }
 
   if (game.stage1ScorePopupFrame > 0) --game.stage1ScorePopupFrame;
