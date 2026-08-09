@@ -57,7 +57,7 @@ constexpr int kStage3DirectionWindowFrames = 8;
 // sprite and presents the separate roof-burst tile in the fixed marquee.
 constexpr float kStage3RoofImpactY = 251.0F;
 constexpr float kStage4BallCenterY = 526.0F;
-constexpr float kStage4BallRadius = 32.0F;
+constexpr float kStage4BallRadius = 40.0F;
 constexpr float kStage4CharlieBaselineY = kStage4BallCenterY - kStage4BallRadius;
 constexpr float kStage4PlayerScreenX = 118.0F;
 constexpr float kStage4GoalScreenX = 396.0F;
@@ -654,7 +654,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
       loadAsset(renderer, "stage3-projectiles-8-v1.png");
   assets.stage3FlameProjectile =
       loadAsset(renderer, "stage3-flame-projectile-4-v3.png");
-  assets.stage4Charlie = loadAsset(renderer, "stage4-charlie-12-v1.png");
+  assets.stage4Charlie = loadAsset(renderer, "stage4-charlie-12-v2.png");
   assets.stage4Ball = loadAsset(renderer, "stage4-ball-8-v1.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.rider || !assets.riderWalkTest ||
@@ -1341,8 +1341,11 @@ void resetCourse(Game& game) {
     game.stage4Balls.push_back({x, 82.0F, 0.0F});
     for (std::size_t index = 0; index < gaps.size(); ++index) {
       x += gaps[index];
-      const float drift = (index % 3U == 0U) ? -16.0F
-                          : (index % 3U == 1U) ? 10.0F : -4.0F;
+      // Unridden balls enter from the right and roll left toward Charlie in
+      // the recorded board sequence. Their staggered speeds create the
+      // bunching and separation patterns visible in the arcade footage.
+      const float drift = (index % 3U == 0U) ? -72.0F
+                          : (index % 3U == 1U) ? -88.0F : -62.0F;
       game.stage4Balls.push_back({x, drift, static_cast<float>(index * 29U)});
     }
     // Keep the final approach fixed like the arcade board: the last rolling
@@ -4214,12 +4217,6 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
   }
 }
 
-int stage4BallFrame(float rotation) {
-  const float turns = rotation / (2.0F * kPi);
-  const float wrapped = turns - std::floor(turns);
-  return static_cast<int>(wrapped * 8.0F) & 7;
-}
-
 void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
                      const Assets& assets, double timeSeconds,
                      double interpolation) {
@@ -4243,10 +4240,13 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
     const auto& ball = game.stage4Balls[index];
     const float x = ball.worldX - camera;
     if (x < -80.0F || x > kWorldWidth + 80.0F) continue;
-    drawSheetFrame(renderer, assets.stage4Ball, 4, 2,
-                   stage4BallFrame(ball.rotation), x,
+    // Rotate the painted ball continuously. Swapping among eight nearly
+    // identical atlas cells made the first version appear static.
+    drawSheetFrame(renderer, assets.stage4Ball, 4, 2, 0, x,
                    kStage4BallCenterY + kStage4BallRadius,
-                   kStage4BallRadius * 2.0F, kStage4BallRadius * 2.0F);
+                   kStage4BallRadius * 2.0F, kStage4BallRadius * 2.0F,
+                   SDL_FLIP_NONE,
+                   static_cast<double>(ball.rotation * 180.0F / kPi));
   }
 
   const float goalX = kStage4CourseLength - camera;
@@ -4266,9 +4266,9 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
   int frame = 0;
   // The generated atlas retains transparent padding below Charlie's shoes.
   // Anchor the painted feet to the physical ball surface, not the cell edge.
-  float baseline = playerY + 34.0F;
-  float width = 120.0F;
-  float height = 120.0F;
+  float baseline = playerY + 43.0F;
+  float width = 150.0F;
+  float height = 150.0F;
   if (game.scene == Scene::Crashed && game.stage4PinnedCrash) {
     frame = 8 + std::min(3, game.stage4FallFrame / 6);
     baseline = kStage4BallCenterY + 70.0F;
@@ -4277,14 +4277,16 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
   } else if (game.scene == Scene::Goal) {
     constexpr std::array<int, 8> celebration{0, 1, 2, 3, 2, 1, 0, 1};
     frame = celebration[static_cast<std::size_t>((game.goalFrame / 7) % 8)];
-    baseline = kStage4GoalTopY + 39.0F;
+    baseline = kStage4GoalTopY + 49.0F;
   } else {
     frame = (static_cast<int>(timeSeconds * 60.606F) / 7) & 3;
   }
   drawSheetFrame(renderer, assets.stage4Charlie, 4, 3, frame,
                  playerWorldX - camera, baseline, width, height,
-                 game.player.facingRight ? SDL_FLIP_NONE
-                                         : SDL_FLIP_HORIZONTAL);
+                 // The atlas master faces left; mirror it while traveling
+                 // right so Charlie looks toward the course like the ROM.
+                 game.player.facingRight ? SDL_FLIP_HORIZONTAL
+                                         : SDL_FLIP_NONE);
 
   drawHud(renderer, game, assets.charlieLife);
   if (game.scene == Scene::Crashed && game.stage4PinnedCrash) {
