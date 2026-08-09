@@ -1,0 +1,135 @@
+model stage3_charlie
+  height 1.36
+  style fine
+
+palette
+  skin       #f0b184
+  hair       #f4b735
+  red        #b91f25
+  red_dark   #7d1420
+  blue       #155fc2
+  blue_dark  #123a88
+  yellow     #f4ce32
+  white      #f7f3e8
+  nose_red   #d9292f
+  black      #211713
+  green      #42a847
+
+skeleton
+  root pelvis at (0,0.48,0)
+  bone spine parent=pelvis dir=up len=0.20
+  bone chest parent=spine dir=up len=0.20
+  bone neck parent=chest dir=up len=0.08
+  bone head parent=neck dir=up len=0.22
+  bone nose parent=head at=0.58 fwd=0.07 dir=fwd len=0.10
+  bone cap1 parent=head at=0.88 up=0.03 dir=up pitch=-18 len=0.18
+  bone cap2 parent=cap1 dir=up pitch=-38 len=0.16
+  bone cap3 parent=cap2 dir=side tilt=-42 len=0.13
+  mirror
+    bone upperarm parent=chest at=0.78 side=0.11 dir=side tilt=12 len=0.20
+    bone forearm parent=upperarm dir=side tilt=-15 len=0.18
+    bone hand parent=forearm dir=side len=0.10
+    bone thigh parent=pelvis side=0.075 dir=down pitch=3 len=0.24
+    bone shin parent=thigh dir=down pitch=-4 len=0.22
+    bone foot parent=shin dir=fwd pitch=-72 len=0.18
+  end
+
+parts
+  loft torso bones=pelvis..chest frame=fwd material=red_dark
+    ring 0.00 w=0.27 d=0.18
+    ring 0.50 w=0.30 d=0.20
+    ring 1.00 w=0.25 d=0.18
+    cap start=dome end=dome
+
+  loft head_mass bones=neck..head frame=fwd material=skin
+    ring 0.00 w=0.20 d=0.19
+    ring 0.45 w=0.32 d=0.29
+    ring 1.00 w=0.27 d=0.25
+    cap start=dome end=dome
+
+  attach nose_ball bone=nose at=1.0 kind=sphere w=0.13 h=0.12 d=0.12 material=nose_red
+  mirror
+    attach eye_white bone=head at=0.62 offset=(0.095,0.03,0.12) kind=eye size=0.047 material=white
+    attach pupil_part bone=head at=0.63 offset=(0.112,0.03,0.14) kind=eye size=0.019 material=black
+    attach cheek bone=head at=0.40 offset=(0.12,-0.015,0.125) kind=sphere w=0.055 h=0.035 d=0.018 material=blue
+  end
+
+  loft cap bones=head..cap3 frame=fwd material=blue
+    ring 0.00 w=0.25 d=0.22
+    ring 0.35 w=0.18 d=0.16 material=blue_dark
+    ring 0.70 w=0.11 d=0.10 material=blue
+    ring 1.00 w=0.035 d=0.035 tip
+    cap start=dome end=point
+  attach cap_pom_blue bone=cap3 at=1.0 kind=sphere w=0.09 h=0.09 d=0.08 material=blue
+  attach cap_pom_red bone=cap3 at=0.94 offset=(0.07,-0.01,0) kind=sphere w=0.075 h=0.075 d=0.07 material=nose_red
+  attach cap_pom_yellow bone=cap3 at=0.88 offset=(0.13,-0.02,0) kind=sphere w=0.07 h=0.07 d=0.065 material=yellow
+
+  mirror
+    loft arm bones=upperarm..hand frame=fwd material=red
+      ring 0.00 w=0.105 d=0.11
+      ring 0.55 w=0.085 d=0.09
+      ring 0.82 w=0.075 d=0.075 material=white
+      ring 1.00 w=0.12 d=0.085 material=white
+      cap start=dome end=dome
+    loft leg bones=thigh..shin frame=fwd material=red
+      ring 0.00 w=0.13 d=0.14
+      ring 0.58 w=0.11 d=0.12
+      ring 1.00 w=0.095 d=0.10 material=yellow
+      cap start=dome end=dome
+    attach shoe bone=foot at=0.72 offset=(0,-0.06,0) kind=sphere w=0.22 h=0.11 d=0.13 material=blue
+  end
+
+  attach hair_crown bone=head at=0.78 offset=(0,0.035,-0.03) kind=sphere w=0.29 h=0.10 d=0.24 material=hair
+  attach belt_red bone=spine at=0.02 kind=sphere w=0.285 h=0.045 d=0.19 material=nose_red
+
+textures
+  texture red base=#b91f25
+    gradient axis=v from=-0.08 to=0.12
+    noise scale=0.035 amount=0.035
+    ao amount=0.10
+  texture red_dark base=#7d1420
+    gradient axis=v from=-0.10 to=0.10
+    noise scale=0.035 amount=0.04
+    ao amount=0.12
+  texture blue base=#155fc2
+    gradient axis=v from=-0.08 to=0.13
+    ao amount=0.08
+  texture skin base=#f0b184
+    gradient axis=v from=-0.035 to=0.08
+    noise scale=0.028 amount=0.025
+    ao amount=0.08
+
+animations
+  anim vertical_bounce loop dur=0.792
+    ch pelvis pitch 0%=0 16.7%=-5 33.3%=0 50%=2 66.7%=0 83.3%=-5 100%=0
+    ch thigh.l pitch 0%=28 16.7%=12 33.3%=-3 50%=-8 66.7%=-3 83.3%=12 100%=28
+    ch shin.l pitch 0%=-38 16.7%=-20 33.3%=-6 50%=0 66.7%=-6 83.3%=-20 100%=-38
+    ch upperarm.l tilt 0%=18 25%=44 50%=64 75%=44 100%=18
+    ch forearm.l tilt 0%=-24 25%=-10 50%=8 75%=-10 100%=-24
+    ch head pitch 0%=5 25%=-3 50%=2 75%=-3 100%=5
+    mirrorphase 0%
+
+  anim transfer_tuck loop dur=0.792
+    ch thigh.l pitch 0%=44 25%=52 50%=44 75%=52 100%=44
+    ch shin.l pitch 0%=-68 25%=-78 50%=-68 75%=-78 100%=-68
+    ch upperarm.l tilt 0%=-30 25%=-38 50%=-30 75%=-38 100%=-30
+    ch forearm.l tilt 0%=-42 25%=-48 50%=-42 75%=-48 100%=-42
+    mirrorphase 0%
+
+  anim celebrate loop dur=0.92
+    ch thigh.l pitch 0%=0 25%=32 50%=0 75%=-12 100%=0
+    ch shin.l pitch 0%=0 25%=-26 50%=0 75%=12 100%=0
+    ch upperarm.l tilt 0%=22 20%=58 45%=78 70%=58 100%=22
+    ch forearm.l tilt 0%=-18 20%=5 45%=18 70%=5 100%=-18
+    ch head pitch 0%=4 20%=-4 45%=2 70%=-4 100%=4
+    mirrorphase 50%
+
+checks
+  assert tris < 9000
+  assert bottom(shoe.l) < 0.08
+  assert bottom(shoe.r) < 0.08
+  assert zmax(nose_ball) > zmax(head_mass)
+  assert influences(leg.l) >= 2
+  assert influences(arm.l) >= 2
+  assert lowest(vertical_bounce) > -0.12
+  assert lowest(celebrate) > -0.12

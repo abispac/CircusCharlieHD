@@ -24,8 +24,10 @@ landings advance a four-part chain:
 4. A final front-facing vertical rebound that strikes the tent roof and costs
    a life if Charlie has remained on the same tambourine.
 
-Holding left or right during the opening beats commits Charlie to the adjacent
-tambourine. Every transfer uses the tucked rotation family and lands at the
+Pressing left or right during the opening eight board frames commits Charlie
+to the adjacent tambourine. The stick must return to neutral before another
+transfer can be selected, so holding one direction cannot auto-clear the
+course. Every transfer uses one full 48-frame cosine-eased arc and lands at the
 exact center of the selected drum; horizontal free drift does not exist. A
 successful transfer resets the stationary chain to its first, low bounce. The
 grass is never a landing surface, and performers are not platforms.
@@ -49,13 +51,24 @@ can kill Charlie. The final target is a separate double-width goal tambourine.
 - Both performers toss their hazards vertically. Projectiles rise and fall in
   the performer's fixed horizontal lane; they do not aim horizontally at the
   player.
+- Hazard clocks run continuously whether or not the performer is visible.
+  Lanes start at deterministic staggered phases. Knife flights occupy 108
+  board frames of a 150-frame cycle; flame droplets rise once for 46 frames,
+  disappear, and leave the remaining 104 frames clear. This preserves the
+  arcade's readable repeating lanes instead of spawning hazards in response
+  to the camera or the player.
 
 ## HD sprite assets
 
 - `assets/stage3-charlie-vertical-front-12-v2.png`: 4x3 front-facing vertical
   bounce atlas.
 - `assets/stage3-charlie-bounce-12-v1.png`: tucked center-to-center rotation
-  atlas.
+  atlas retained as the original visual reference.
+- `wam-proof/stage3-charlie.wam`: compiled WAM rig and the authoritative
+  vertical-bounce, transfer-tuck, and celebration motion contract.
+- `assets/stage3-charlie-wam-tuck-hd-v1.png`: centered HD tuck pose derived
+  from that WAM rig. Runtime rotation is continuous, so the 48-frame transfer
+  has no atlas-frame snapping.
 - `assets/stage3-tambourine-v1.png`: tall leather tambourine.
 - `assets/stage3-goal-tambourine-v1.png`: double-width final tambourine.
 - `assets/stage3-knife-thrower-8-v1.png`: 4x2 knife-thrower atlas.

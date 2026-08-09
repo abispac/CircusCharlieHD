@@ -1,4 +1,5 @@
 build/
+/out/
 cfg/
 snap/
 .DS_Store
