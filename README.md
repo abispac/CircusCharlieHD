@@ -1,5 +1,14 @@
 # Big Top Run Native
 
+## Boot sequence
+
+The native build opens with the supplied 16.1-second arcade boot recording,
+including its original PCM audio, then transitions directly into the HD event
+selection screen. The video is stored as 30 fps PNG frames under
+`assets/boot/` so SDL can play it without shipping an external movie-decoder
+runtime. Gameplay HUD bulbs use a moving five-color chase around all four
+sides of the score panel.
+
 Clean-room native arcade prototype inspired by the timing and challenge style
 of early circus obstacle games. It does not emulate hardware, load ROMs, or
 contain extracted graphics, program code, names, or logos. User-supplied

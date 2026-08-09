@@ -5,6 +5,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -67,6 +68,12 @@ constexpr float kStage4GoalTopY = kStage4CharlieBaselineY + 18.0F;
 // than the arcade sprite. Lift only the painted rider; physics and landing
 // measurements continue to use the ball's true top surface.
 constexpr float kStage4CharlieVisualLift = 6.0F;
+constexpr int kBootFrameCount = 483;
+constexpr float kBootFramesPerSecond = 30.0F;
+constexpr int kBootDurationFrames = static_cast<int>(
+    (static_cast<float>(kBootFrameCount) / kBootFramesPerSecond) *
+        static_cast<float>(kBoardRefresh) +
+    0.5F);
 
 float stage3CameraFor(float playerWorldX) {
   const float followingCamera =
@@ -286,6 +293,7 @@ struct Player {
 };
 
 enum class Scene {
+  Boot,
   Title,
   EventSelect,
   Playing,
@@ -296,7 +304,7 @@ enum class Scene {
 };
 
 struct Game {
-  Scene scene = Scene::Title;
+  Scene scene = Scene::Boot;
   Player player;
   std::vector<Hoop> hoops;
   std::vector<FirePot> firePots;
@@ -314,6 +322,7 @@ struct Game {
   int credits = 0;
   int lives = 3;
   int selectedEvent = 0;
+  int bootFrame = 0;
   int eventSelectFrame = 0;
   int eventSelectDurationFrames =
       static_cast<int>(17.0 * kBoardRefresh);
@@ -389,6 +398,8 @@ struct RenderSurface {
 };
 
 struct Assets {
+  mutable SDL_Texture* bootFrameTexture = nullptr;
+  mutable int bootFrameTextureIndex = -1;
   SDL_Texture* arena = nullptr;
   SDL_Texture* marquee = nullptr;
   SDL_Texture* ferrisWheel = nullptr;
@@ -449,6 +460,7 @@ struct AudioEngine {
   AudioClip stage2Music;
   AudioClip stage3Music;
   AudioClip stage4Music;
+  AudioClip boot;
   AudioClip stage3Bounce;
   AudioClip stage4BallCollision;
   AudioClip jump;
@@ -611,6 +623,19 @@ SDL_Texture* loadAsset(SDL_Renderer* renderer, const char* filename) {
   return texture;
 }
 
+SDL_Texture* loadBootFrame(SDL_Renderer* renderer, int frameIndex) {
+  std::array<char, 64> filename{};
+  std::snprintf(filename.data(), filename.size(),
+                "boot/boot-%04d.png", frameIndex);
+  SDL_Texture* texture = loadAsset(renderer, filename.data());
+  if (texture) {
+    // Preserve the recorded arcade pixels while the logical canvas scales
+    // the 224x256 source to the cabinet render size.
+    SDL_SetTextureScaleMode(texture, SDL_ScaleModeNearest);
+  }
+  return texture;
+}
+
 Assets loadAssets(SDL_Renderer* renderer) {
   Assets assets;
   assets.arena = loadAsset(renderer, "stage1-arena-green.png");
@@ -696,6 +721,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
 }
 
 void destroyAssets(Assets& assets) {
+  if (assets.bootFrameTexture) SDL_DestroyTexture(assets.bootFrameTexture);
   if (assets.arena) SDL_DestroyTexture(assets.arena);
   if (assets.marquee) SDL_DestroyTexture(assets.marquee);
   if (assets.ferrisWheel) SDL_DestroyTexture(assets.ferrisWheel);
@@ -821,6 +847,7 @@ void audioCallback(void* userdata, Uint8* stream, int byteCount) {
 
 bool loadAudio(AudioEngine& audio) {
   const bool loaded =
+      loadAudioAsset("boot.wav", audio.boot) &&
       loadAudioAsset("event1-stage.wav", audio.stageMusic) &&
       loadAudioAsset("event2-stage.wav", audio.stage2Music) &&
       loadAudioAsset("event3-stage.wav", audio.stage3Music) &&
@@ -869,6 +896,7 @@ bool loadAudio(AudioEngine& audio) {
       !matchesReference(audio.stage2Music) ||
       !matchesReference(audio.stage3Music) ||
       !matchesReference(audio.stage4Music) ||
+      !matchesReference(audio.boot) ||
       !matchesReference(audio.stage3Bounce) ||
       !matchesReference(audio.stage4BallCollision) ||
       (audio.extraCharlie.data && !matchesReference(audio.extraCharlie)) ||
@@ -934,6 +962,10 @@ void playStageMusic(AudioEngine& audio, int selectedEvent, bool fast) {
 void playEventSelectMusic(AudioEngine& audio) {
   setAudioVoice(audio, 0, audio.eventSelectMusic,
                 static_cast<int>(SDL_MIX_MAXVOLUME * 0.66F), false);
+}
+
+void playBootAudio(AudioEngine& audio) {
+  setAudioVoice(audio, 0, audio.boot, SDL_MIX_MAXVOLUME, false);
 }
 
 void stopStageMusic(AudioEngine& audio) {
@@ -1026,6 +1058,7 @@ void destroyAudio(AudioEngine& audio) {
   if (audio.stage2Music.data) SDL_FreeWAV(audio.stage2Music.data);
   if (audio.stage3Music.data) SDL_FreeWAV(audio.stage3Music.data);
   if (audio.stage4Music.data) SDL_FreeWAV(audio.stage4Music.data);
+  if (audio.boot.data) SDL_FreeWAV(audio.boot.data);
   if (audio.stage3Bounce.data) SDL_FreeWAV(audio.stage3Bounce.data);
   if (audio.stage4BallCollision.data)
     SDL_FreeWAV(audio.stage4BallCollision.data);
@@ -2380,6 +2413,13 @@ void updateStage2(Game& game, const Uint8* keyboard, bool jumpPressed,
 
 void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
                 float controllerAxis) {
+  if (game.scene == Scene::Boot) {
+    ++game.bootFrame;
+    if (game.bootFrame >= kBootDurationFrames) {
+      enterEventSelect(game);
+    }
+    return;
+  }
   if (game.scene == Scene::EventSelect) {
     ++game.eventSelectFrame;
     if (game.eventSelectFrame >= game.eventSelectDurationFrames) {
@@ -3730,21 +3770,31 @@ void drawHudBulbs(SDL_Renderer* renderer) {
   const std::array<SDL_Color, 5> bulbs{
       color(255, 55, 41), color(255, 225, 45), color(45, 211, 80),
       color(57, 106, 255), color(244, 85, 206)};
+  // Chase the five colors around the entire cabinet border. At roughly nine
+  // updates per second it reads like the original moving circus bulbs rather
+  // than a distracting rapid flash.
+  const int phase = static_cast<int>((SDL_GetTicks64() / 110U) % bulbs.size());
   for (int index = 0; index < 60; ++index) {
     const float x = static_cast<float>(index * 8 + 2);
-    const SDL_Color glow = bulbs[static_cast<size_t>(index % bulbs.size())];
+    const SDL_Color topGlow = bulbs[static_cast<size_t>(
+        (index + phase) % static_cast<int>(bulbs.size()))];
+    const SDL_Color bottomGlow = bulbs[static_cast<size_t>(
+        (index - phase + static_cast<int>(bulbs.size()) * 2) %
+        static_cast<int>(bulbs.size()))];
     filledCircle(renderer, x, kHudTop + 2.0F, 2.4F, color(20, 20, 25));
-    filledCircle(renderer, x, kHudTop + 2.0F, 1.6F, glow);
+    filledCircle(renderer, x, kHudTop + 2.0F, 1.6F, topGlow);
     filledCircle(renderer, x, kHudTop + kHudHeight - 3.0F, 2.4F,
                  color(20, 20, 25));
-    filledCircle(renderer, x, kHudTop + kHudHeight - 3.0F, 1.6F, glow);
+    filledCircle(renderer, x, kHudTop + kHudHeight - 3.0F, 1.6F,
+                 bottomGlow);
   }
   for (int index = 1; index < 11; ++index) {
     const float y = kHudTop + static_cast<float>(index * 8);
-    const SDL_Color leftGlow =
-        bulbs[static_cast<size_t>((index + 1) % bulbs.size())];
-    const SDL_Color rightGlow =
-        bulbs[static_cast<size_t>((index + 3) % bulbs.size())];
+    const SDL_Color leftGlow = bulbs[static_cast<size_t>(
+        (index + 1 - phase + static_cast<int>(bulbs.size()) * 2) %
+        static_cast<int>(bulbs.size()))];
+    const SDL_Color rightGlow = bulbs[static_cast<size_t>(
+        (index + 3 + phase) % static_cast<int>(bulbs.size()))];
     filledCircle(renderer, 2.0F, y, 2.4F, color(20, 20, 25));
     filledCircle(renderer, 2.0F, y, 1.6F, leftGlow);
     filledCircle(renderer, kWorldWidth - 3.0F, y, 2.4F,
@@ -3843,8 +3893,6 @@ void drawCoinWaitingScreen(SDL_Renderer* renderer, const Game& game,
            433.0F, 1.55F, color(67, 201, 255), true);
   drawText(renderer, "AND BONUS EVERY 70000 PTS", kWorldWidth * 0.5F,
            486.0F, 1.55F, color(67, 201, 255), true);
-  drawText(renderer, "BIG TOP RUN HD TRIBUTE", kWorldWidth * 0.5F,
-           596.0F, 1.25F, color(245, 245, 245), true);
 }
 
 void drawEventSelectBulbs(SDL_Renderer* renderer, float x, float y,
@@ -4661,10 +4709,40 @@ void drawDebug(SDL_Renderer* renderer, const Game& game,
            15.0F, kArenaTop + 64.0F, 1.05F, color(255, 255, 255));
 }
 
+void drawBootScreen(SDL_Renderer* renderer, const Game& game,
+                    const Assets& assets) {
+  fillRect(renderer, 0.0F, 0.0F, kWorldWidth, kWorldHeight,
+           color(0, 0, 0));
+  const int frameIndex = std::clamp(
+      static_cast<int>(static_cast<float>(game.bootFrame) *
+                       kBootFramesPerSecond /
+                       static_cast<float>(kBoardRefresh)),
+      0, kBootFrameCount - 1);
+  if (assets.bootFrameTextureIndex != frameIndex) {
+    if (assets.bootFrameTexture) {
+      SDL_DestroyTexture(assets.bootFrameTexture);
+      assets.bootFrameTexture = nullptr;
+    }
+    assets.bootFrameTexture = loadBootFrame(renderer, frameIndex);
+    assets.bootFrameTextureIndex = frameIndex;
+  }
+  if (assets.bootFrameTexture) {
+    const SDL_FRect destination{0.0F, 0.0F,
+                                static_cast<float>(kWorldWidth),
+                                static_cast<float>(kWorldHeight)};
+    SDL_RenderCopyF(renderer, assets.bootFrameTexture, nullptr,
+                    &destination);
+  }
+}
+
 void renderScene(SDL_Renderer* renderer, const Game& game,
                  const RenderSurface& surface, const Assets& assets,
                  double timeSeconds, double interpolation) {
   const bool lowDetail = surface.height <= 320;
+  if (game.scene == Scene::Boot) {
+    drawBootScreen(renderer, game, assets);
+    return;
+  }
   if (game.scene == Scene::Title) {
     drawCoinWaitingScreen(renderer, game, assets, timeSeconds);
     if (game.debug) drawDebug(renderer, game, surface);
@@ -5167,6 +5245,7 @@ int main(int argc, char** argv) {
   bool eventSelectMusicPlaying = false;
   bool stageMusicPlaying = false;
   bool stageMusicFast = false;
+  if (game.scene == Scene::Boot) playBootAudio(audio);
   std::uint32_t observedJumpAudioSerial = game.jumpAudioSerial;
   std::uint32_t observedCrashAudioSerial = game.crashAudioSerial;
   std::uint32_t observedExtraCharlieAudioSerial =
@@ -5236,7 +5315,7 @@ int main(int argc, char** argv) {
       } else if (event.type == SDL_KEYDOWN && !event.key.repeat) {
         switch (event.key.keysym.sym) {
           case SDLK_ESCAPE:
-            if (game.scene == Scene::Title) {
+            if (game.scene == Scene::Boot || game.scene == Scene::Title) {
               running = false;
             } else if (game.scene == Scene::EventSelect) {
               game.scene = Scene::Title;
