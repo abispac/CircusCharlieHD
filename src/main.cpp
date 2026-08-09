@@ -63,6 +63,10 @@ constexpr float kStage4PlayerScreenX = 118.0F;
 constexpr float kStage4GoalScreenX = 396.0F;
 constexpr float kStage4CourseLength = 6320.0F;
 constexpr float kStage4GoalTopY = kStage4CharlieBaselineY + 18.0F;
+// The generated rider atlas has more transparent padding below the shoes
+// than the arcade sprite. Lift only the painted rider; physics and landing
+// measurements continue to use the ball's true top surface.
+constexpr float kStage4CharlieVisualLift = 6.0F;
 
 float stage3CameraFor(float playerWorldX) {
   const float followingCamera =
@@ -1617,6 +1621,11 @@ void restartAfterCrash(Game& game) {
       auto& next = game.stage4Balls[static_cast<std::size_t>(
           game.stage4NextBallToActivate++)];
       next.worldX = std::max(next.worldX, ball.worldX + 286.0F);
+      // A ball may have inherited the stationary ridden-ball velocity in a
+      // collision before the crash. It must resume as an incoming object on
+      // respawn or the lane can appear permanently empty.
+      if (next.velocity > -10.0F) next.velocity = -62.0F;
+      next.collisionCooldown = 0;
       next.active = true;
     }
     game.cameraX = std::max(0.0F, ball.worldX - kStage4PlayerScreenX);
@@ -2059,6 +2068,29 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
         game.player.verticalVelocity * static_cast<float>(kFixedDt);
 
     if (game.player.verticalVelocity > 0.0F) {
+      // The goal is a real landing surface. Earlier builds only finished on
+      // the final rolling ball, so a correctly aimed jump passed through the
+      // visible platform and fell to the grass.
+      const float goalX = kStage4CourseLength;
+      const bool overGoal =
+          game.player.position.x >= goalX - 80.0F &&
+          game.player.position.x <= goalX + 80.0F;
+      const bool atGoalTop =
+          game.player.position.y >= kStage4GoalTopY - 17.0F &&
+          game.player.position.y <= kStage4GoalTopY + 16.0F;
+      if (overGoal && atGoalTop) {
+        game.player.position = {goalX, kStage4GoalTopY};
+        game.player.previous = game.player.position;
+        game.player.verticalVelocity = 0.0F;
+        game.player.grounded = true;
+        game.stage4Airborne = false;
+        game.stage4JumpDirection = 0;
+        game.stage4IdleFrame = 0;
+        game.player.jumpFrame = -1;
+        finishStage(game);
+        return;
+      }
+
       int landing = -1;
       float best = 44.0F;
       for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
@@ -2092,10 +2124,6 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
         game.stage4JumpDirection = 0;
         game.stage4IdleFrame = 0;
         game.player.jumpFrame = -1;
-        if (landing == static_cast<int>(game.stage4Balls.size()) - 1) {
-          finishStage(game);
-          return;
-        }
       }
     }
     if (game.player.position.y > kStage4BallCenterY + 90.0F) {
@@ -2176,6 +2204,7 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
     const auto& current = game.stage4Balls[static_cast<std::size_t>(
         game.stage4CurrentBall)];
     next.worldX = std::max(next.worldX, current.worldX + 286.0F);
+    if (next.velocity > -10.0F) next.velocity = -62.0F;
     next.active = true;
     next.collisionCooldown = 0;
     ++activeCount;
@@ -4478,7 +4507,7 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
   int frame = 0;
   // The generated atlas retains transparent padding below Charlie's shoes.
   // Anchor the painted feet to the physical ball surface, not the cell edge.
-  float baseline = playerY + 43.0F;
+  float baseline = playerY + 43.0F - kStage4CharlieVisualLift;
   float width = 150.0F;
   float height = 150.0F;
   if (game.scene == Scene::Crashed && game.stage4PinnedCrash) {

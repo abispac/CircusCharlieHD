@@ -58,6 +58,10 @@ behavioral reference and is not copied into the project.
 - A missed landing and a ball-to-ball squeeze use separate failure triggers.
 - Walking animation advances only while left or right is held. Idle uses the
   measured steady/stagger state sequence rather than cycling walking frames.
+- Respawn restores one approaching ball with an incoming velocity even when
+  that object inherited the stationary ridden-ball speed before the crash.
+- The final rolling ball is followed by a separate physical landing on the
+  visible goal platform; touching the last ball no longer ends the event.
 - Capture scenes must cover balance, transfer, skip, squeeze, fall, and goal.
 
 ## WAM motion contract
