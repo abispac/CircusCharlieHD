@@ -61,7 +61,7 @@ constexpr float kStage4BallRadius = 40.0F;
 constexpr float kStage4CharlieBaselineY = kStage4BallCenterY - kStage4BallRadius;
 constexpr float kStage4PlayerScreenX = 118.0F;
 constexpr float kStage4GoalScreenX = 396.0F;
-constexpr float kStage4CourseLength = 5200.0F;
+constexpr float kStage4CourseLength = 6320.0F;
 constexpr float kStage4GoalTopY = kStage4CharlieBaselineY + 18.0F;
 
 float stage3CameraFor(float playerWorldX) {
@@ -354,6 +354,7 @@ struct Game {
   bool stage4Airborne = false;
   bool stage4PinnedCrash = false;
   int stage4FallFrame = 0;
+  int stage4RespawnGraceFrames = 0;
   std::uint32_t jumpAudioSerial = 0;
   std::uint32_t crashAudioSerial = 0;
   std::uint32_t extraCharlieAudioSerial = 0;
@@ -655,7 +656,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.stage3FlameProjectile =
       loadAsset(renderer, "stage3-flame-projectile-4-v3.png");
   assets.stage4Charlie = loadAsset(renderer, "stage4-charlie-12-v2.png");
-  assets.stage4Ball = loadAsset(renderer, "stage4-ball-8-v1.png");
+  assets.stage4Ball = loadAsset(renderer, "stage4-ball-centered-v2.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.rider || !assets.riderWalkTest ||
       !assets.burnRider || !assets.hoop ||
@@ -1219,6 +1220,7 @@ void resetCourse(Game& game) {
   game.stage4Airborne = false;
   game.stage4PinnedCrash = false;
   game.stage4FallFrame = 0;
+  game.stage4RespawnGraceFrames = 0;
 
   if (game.selectedEvent == 1) {
     game.player.position = {78.0F, kStage2RopeY};
@@ -1329,14 +1331,23 @@ void resetCourse(Game& game) {
     game.player.previous = game.player.position;
     game.player.grounded = true;
     game.player.runSpeed = 82.0F;
+    game.player.facingRight = true;
+    game.stage4RespawnGraceFrames = 90;
     game.meterMarkers = {
-        {880.0F, 50}, {1760.0F, 40}, {2640.0F, 30},
-        {3520.0F, 20}, {4400.0F, 10},
+        {kStage4PlayerScreenX, -1}, {500.0F, 60},
+        {1150.0F, 50}, {2190.0F, 40},
+        {3230.0F, 30}, {4270.0F, 20}, {5310.0F, 10},
     };
+    // The arcade object stream uses a few repeating separations rather than
+    // the steadily shrinking provisional layout. These values are scaled
+    // from the supplied native 224-pixel Stage 4 capture; the velocities are
+    // likewise converted from the board's per-frame object motion.
     constexpr std::array<float, 24> gaps{
-        210, 188, 226, 176, 202, 162, 218, 170,
-        194, 154, 206, 164, 184, 148, 196, 156,
-        178, 144, 188, 150, 172, 142, 164, 150};
+        258, 226, 286, 214, 254, 224, 278, 218,
+        246, 232, 272, 216, 258, 224, 282, 220,
+        248, 230, 270, 218, 256, 226, 276, 222};
+    constexpr std::array<float, 6> incomingSpeeds{
+        -58.0F, -66.0F, -54.0F, -62.0F, -56.0F, -68.0F};
     float x = kStage4PlayerScreenX;
     game.stage4Balls.push_back({x, 82.0F, 0.0F});
     for (std::size_t index = 0; index < gaps.size(); ++index) {
@@ -1344,8 +1355,7 @@ void resetCourse(Game& game) {
       // Unridden balls enter from the right and roll left toward Charlie in
       // the recorded board sequence. Their staggered speeds create the
       // bunching and separation patterns visible in the arcade footage.
-      const float drift = (index % 3U == 0U) ? -72.0F
-                          : (index % 3U == 1U) ? -88.0F : -62.0F;
+      const float drift = incomingSpeeds[index % incomingSpeeds.size()];
       game.stage4Balls.push_back({x, drift, static_cast<float>(index * 29U)});
     }
     // Keep the final approach fixed like the arcade board: the last rolling
@@ -1540,6 +1550,22 @@ void restartAfterCrash(Game& game) {
     game.stage4Airborne = false;
     game.stage4PinnedCrash = false;
     game.stage4FallFrame = 0;
+    game.stage4RespawnGraceFrames = 90;
+    game.player.facingRight = true;
+    // A squeeze failure can leave another rolling ball occupying the active
+    // ball's spawn circle. The board grants a short restart window; move only
+    // immediate overlaps out of that circle while preserving the live stream.
+    int relocated = 0;
+    for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
+      if (static_cast<int>(index) == game.stage4CurrentBall) continue;
+      auto& other = game.stage4Balls[index];
+      if (std::abs(other.worldX - ball.worldX) <
+          kStage4BallRadius * 2.35F) {
+        ++relocated;
+        other.worldX = ball.worldX + 190.0F +
+                       static_cast<float>(relocated - 1) * 118.0F;
+      }
+    }
     game.cameraX = std::max(0.0F, ball.worldX - kStage4PlayerScreenX);
     game.previousCameraX = game.cameraX;
   }
@@ -1901,6 +1927,12 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
   const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
                          keyboard[SDL_SCANCODE_D] || controllerAxis > 0.35F;
 
+  if (game.stage4RespawnGraceFrames > 0)
+    --game.stage4RespawnGraceFrames;
+  // Like the original event, Charlie backs up while still facing the course.
+  // Left changes ball direction; it never mirrors the rider artwork.
+  game.player.facingRight = true;
+
   for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
     auto& ball = game.stage4Balls[index];
     if (static_cast<int>(index) != game.stage4CurrentBall ||
@@ -1921,9 +1953,10 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
     ball.worldX += ball.velocity * static_cast<float>(kFixedDt);
     game.player.position = {ball.worldX, kStage4CharlieBaselineY};
     game.player.runSpeed = ball.velocity;
-    game.player.facingRight = ball.velocity >= 0.0F;
 
-    for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
+    for (std::size_t index = 0;
+         game.stage4RespawnGraceFrames == 0 &&
+         index < game.stage4Balls.size(); ++index) {
       if (static_cast<int>(index) == game.stage4CurrentBall) continue;
       if (std::abs(game.stage4Balls[index].worldX - ball.worldX) <
           kStage4BallRadius * 1.82F) {
@@ -1940,7 +1973,7 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
       game.player.verticalVelocity = -330.0F;
       game.player.runSpeed = std::clamp(ball.velocity, -120.0F, 175.0F);
       if (std::abs(game.player.runSpeed) < 62.0F)
-        game.player.runSpeed = game.player.facingRight ? 104.0F : -104.0F;
+        game.player.runSpeed = moveLeft && !moveRight ? -104.0F : 104.0F;
       game.player.jumpFrame = 0;
       ++game.jumpAudioSerial;
     }
@@ -2167,6 +2200,16 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         std::min(game.crashFrame + 1, kCrashBurnFrames);
     if (game.selectedEvent == 3)
       game.stage4FallFrame = std::min(game.stage4FallFrame + 1, 23);
+    if (game.selectedEvent == 3) {
+      // The original object engine keeps advancing the rolling-ball slots
+      // during Charlie's fall. Freezing them here caused an immediate repeat
+      // collision on restart and made the failure look unlike the cabinet.
+      for (auto& ball : game.stage4Balls) {
+        ball.worldX += ball.velocity * static_cast<float>(kFixedDt);
+        ball.rotation += ball.velocity * static_cast<float>(kFixedDt) /
+                         kStage4BallRadius;
+      }
+    }
     return;
   }
 
@@ -4228,12 +4271,11 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
   for (const auto& marker : game.meterMarkers) {
     const float x = marker.worldX - camera;
     if (x < -50.0F || x > kWorldWidth + 50.0F) continue;
-    fillRect(renderer, x - 27.0F, 612.0F, 54.0F, 21.0F,
-             color(29, 179, 239));
-    fillRect(renderer, x - 23.0F, 615.0F, 46.0F, 15.0F,
-             color(239, 238, 196));
-    drawText(renderer, std::to_string(marker.meters) + "M", x, 618.0F,
-             0.9F, color(245, 83, 24), true);
+    drawFloorPlaque(renderer, x,
+                    marker.meters < 0
+                        ? std::string("START")
+                        : std::to_string(marker.meters) + "M",
+                    marker.meters < 0);
   }
 
   for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
@@ -4242,7 +4284,7 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
     if (x < -80.0F || x > kWorldWidth + 80.0F) continue;
     // Rotate the painted ball continuously. Swapping among eight nearly
     // identical atlas cells made the first version appear static.
-    drawSheetFrame(renderer, assets.stage4Ball, 4, 2, 0, x,
+    drawSheetFrame(renderer, assets.stage4Ball, 1, 1, 0, x,
                    kStage4BallCenterY + kStage4BallRadius,
                    kStage4BallRadius * 2.0F, kStage4BallRadius * 2.0F,
                    SDL_FLIP_NONE,
@@ -4283,10 +4325,9 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
   }
   drawSheetFrame(renderer, assets.stage4Charlie, 4, 3, frame,
                  playerWorldX - camera, baseline, width, height,
-                 // The atlas master faces left; mirror it while traveling
-                 // right so Charlie looks toward the course like the ROM.
-                 game.player.facingRight ? SDL_FLIP_HORIZONTAL
-                                         : SDL_FLIP_NONE);
+                 // Charlie keeps looking toward the course even when the
+                 // player rolls backward, matching the cabinet animation.
+                 SDL_FLIP_NONE);
 
   drawHud(renderer, game, assets.charlieLife);
   if (game.scene == Scene::Crashed && game.stage4PinnedCrash) {
