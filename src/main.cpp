@@ -267,6 +267,7 @@ struct Stage4Ball {
   float velocity = 0.0F;
   float rotation = 0.0F;
   bool active = true;
+  int collisionCooldown = 0;
 };
 
 struct Player {
@@ -358,6 +359,7 @@ struct Game {
   int stage4RespawnGraceFrames = 0;
   int stage4NextBallToActivate = 0;
   int stage4JumpDirection = 0;
+  std::uint32_t stage4BallCollisionAudioSerial = 0;
   std::uint32_t jumpAudioSerial = 0;
   std::uint32_t crashAudioSerial = 0;
   std::uint32_t extraCharlieAudioSerial = 0;
@@ -441,7 +443,9 @@ struct AudioEngine {
   AudioClip stageMusic;
   AudioClip stage2Music;
   AudioClip stage3Music;
+  AudioClip stage4Music;
   AudioClip stage3Bounce;
+  AudioClip stage4BallCollision;
   AudioClip jump;
   AudioClip miss;
   AudioClip missTwo;
@@ -815,7 +819,10 @@ bool loadAudio(AudioEngine& audio) {
       loadAudioAsset("event1-stage.wav", audio.stageMusic) &&
       loadAudioAsset("event2-stage.wav", audio.stage2Music) &&
       loadAudioAsset("event3-stage.wav", audio.stage3Music) &&
+      loadAudioAsset("event4-stage.wav", audio.stage4Music) &&
       loadAudioAsset("stage3-bounce.wav", audio.stage3Bounce) &&
+      loadAudioAsset("stage4-ball-collision.wav",
+                     audio.stage4BallCollision) &&
       loadAudioAsset("jump.wav", audio.jump) &&
       loadAudioAsset("miss.wav", audio.miss) &&
       loadAudioAsset("miss-2.wav", audio.missTwo) &&
@@ -856,7 +863,9 @@ bool loadAudio(AudioEngine& audio) {
       !matchesReference(audio.eventSelectConfirm) ||
       !matchesReference(audio.stage2Music) ||
       !matchesReference(audio.stage3Music) ||
+      !matchesReference(audio.stage4Music) ||
       !matchesReference(audio.stage3Bounce) ||
+      !matchesReference(audio.stage4BallCollision) ||
       (audio.extraCharlie.data && !matchesReference(audio.extraCharlie)) ||
       (audio.prizeBag.data && !matchesReference(audio.prizeBag)) ||
       (audio.hiddenCoin.data && !matchesReference(audio.hiddenCoin)) ||
@@ -899,7 +908,8 @@ void setStageMusicFast(AudioEngine& audio, bool fast) {
   if (musicVoice.active &&
       (musicVoice.clip == &audio.stageMusic ||
        musicVoice.clip == &audio.stage2Music ||
-       musicVoice.clip == &audio.stage3Music)) {
+       musicVoice.clip == &audio.stage3Music ||
+       musicVoice.clip == &audio.stage4Music)) {
     musicVoice.playbackStep = fast ? 2U : 1U;
   }
   SDL_UnlockAudioDevice(audio.device);
@@ -908,8 +918,9 @@ void setStageMusicFast(AudioEngine& audio, bool fast) {
 void playStageMusic(AudioEngine& audio, int selectedEvent, bool fast) {
   const AudioClip& music =
       selectedEvent == 1 ? audio.stage2Music
-                         : (selectedEvent == 2 ? audio.stage3Music
-                                               : audio.stageMusic);
+      : selectedEvent == 2 ? audio.stage3Music
+      : selectedEvent == 3 ? audio.stage4Music
+                           : audio.stageMusic;
   setAudioVoice(audio, 0, music,
                 static_cast<int>(SDL_MIX_MAXVOLUME * 0.58F), true);
   setStageMusicFast(audio, fast);
@@ -986,6 +997,11 @@ void playStage3OverjumpSound(AudioEngine& audio) {
                 static_cast<int>(SDL_MIX_MAXVOLUME * 0.92F), false);
 }
 
+void playStage4BallCollisionSound(AudioEngine& audio) {
+  setAudioVoice(audio, 11, audio.stage4BallCollision,
+                SDL_MIX_MAXVOLUME, false);
+}
+
 int audioDurationInBoardFrames(const AudioClip& clip) {
   const int bytesPerSample = SDL_AUDIO_BITSIZE(clip.spec.format) / 8;
   const int bytesPerFrame = bytesPerSample * clip.spec.channels;
@@ -1004,7 +1020,10 @@ void destroyAudio(AudioEngine& audio) {
   if (audio.stageMusic.data) SDL_FreeWAV(audio.stageMusic.data);
   if (audio.stage2Music.data) SDL_FreeWAV(audio.stage2Music.data);
   if (audio.stage3Music.data) SDL_FreeWAV(audio.stage3Music.data);
+  if (audio.stage4Music.data) SDL_FreeWAV(audio.stage4Music.data);
   if (audio.stage3Bounce.data) SDL_FreeWAV(audio.stage3Bounce.data);
+  if (audio.stage4BallCollision.data)
+    SDL_FreeWAV(audio.stage4BallCollision.data);
   if (audio.jump.data) SDL_FreeWAV(audio.jump.data);
   if (audio.miss.data) SDL_FreeWAV(audio.miss.data);
   if (audio.missTwo.data) SDL_FreeWAV(audio.missTwo.data);
@@ -1368,8 +1387,8 @@ void resetCourse(Game& game) {
     // the camera carry the finish platform across the whole screen.
     game.stage4Balls.back().worldX = kStage4CourseLength - 165.0F;
     // The board reuses a tiny number of object slots. Keep Charlie's ball
-    // and one approaching ball live; later balls enter only after the old
-    // ball has rolled behind the camera.
+    // and one approaching ball live. At measured intervals a second close
+    // incoming ball is admitted to reproduce the double-ball jump pattern.
     for (auto& ball : game.stage4Balls) ball.active = false;
     game.stage4Balls[0].active = true;
     if (game.stage4Balls.size() > 1) game.stage4Balls[1].active = true;
@@ -1962,6 +1981,7 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
   for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
     auto& ball = game.stage4Balls[index];
     if (!ball.active) continue;
+    if (ball.collisionCooldown > 0) --ball.collisionCooldown;
     if (static_cast<int>(index) != game.stage4CurrentBall ||
         game.stage4Airborne) {
       ball.worldX += ball.velocity * static_cast<float>(kFixedDt);
@@ -1981,27 +2001,15 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
     game.player.position = {ball.worldX, kStage4CharlieBaselineY};
     game.player.runSpeed = ball.velocity;
 
-    for (std::size_t index = 0;
-         game.stage4RespawnGraceFrames == 0 &&
-         index < game.stage4Balls.size(); ++index) {
-      if (static_cast<int>(index) == game.stage4CurrentBall) continue;
-      if (!game.stage4Balls[index].active) continue;
-      if (std::abs(game.stage4Balls[index].worldX - ball.worldX) <
-          kStage4BallRadius * 1.82F) {
-        game.stage4PinnedCrash = true;
-        game.stage4FallFrame = 0;
-        crashPlayer(game);
-        return;
-      }
-    }
-
     if (jumpPressed) {
       const float sourceVelocity = ball.velocity;
       game.stage4JumpDirection =
           moveRight != moveLeft ? (moveRight ? 1 : -1) : 0;
       game.stage4Airborne = true;
       game.player.grounded = false;
-      game.player.verticalVelocity = -330.0F;
+      // Preserve the measured apex while shortening the whole arc by about
+      // one tenth, which removes the heavy pause the earlier prototype had.
+      game.player.verticalVelocity = -365.0F;
       if (game.stage4JumpDirection == 0) {
         // No direction is a true vertical bounce relative to the rolling
         // ball: Charlie and the ball retain the same horizontal velocity.
@@ -2020,7 +2028,7 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
     }
   } else {
     ++game.player.jumpFrame;
-    game.player.verticalVelocity += 735.0F * static_cast<float>(kFixedDt);
+    game.player.verticalVelocity += 900.0F * static_cast<float>(kFixedDt);
     game.player.position.x += game.player.runSpeed * static_cast<float>(kFixedDt);
     game.player.position.y +=
         game.player.verticalVelocity * static_cast<float>(kFixedDt);
@@ -2071,6 +2079,52 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
     }
   }
 
+  // Resolve ball-to-ball contact independently of Charlie. The circles use
+  // a slightly inset physical radius so painted antialiasing never causes a
+  // premature hit. A collision hurts Charlie only while he is grounded on
+  // one of the two balls involved; he is safe while jumping over them.
+  constexpr float collisionDiameter = kStage4BallRadius * 1.86F;
+  for (std::size_t left = 0; left < game.stage4Balls.size(); ++left) {
+    auto& a = game.stage4Balls[left];
+    if (!a.active) continue;
+    for (std::size_t right = left + 1; right < game.stage4Balls.size();
+         ++right) {
+      auto& b = game.stage4Balls[right];
+      if (!b.active) continue;
+      const float delta = b.worldX - a.worldX;
+      const float distance = std::abs(delta);
+      if (distance >= collisionDiameter) continue;
+      const bool approaching =
+          delta >= 0.0F ? a.velocity > b.velocity : b.velocity > a.velocity;
+      if (!approaching && a.collisionCooldown > 0 &&
+          b.collisionCooldown > 0)
+        continue;
+
+      const float direction = delta >= 0.0F ? 1.0F : -1.0F;
+      const float overlap = collisionDiameter - distance;
+      a.worldX -= direction * overlap * 0.5F;
+      b.worldX += direction * overlap * 0.5F;
+      std::swap(a.velocity, b.velocity);
+      a.collisionCooldown = 12;
+      b.collisionCooldown = 12;
+      ++game.stage4BallCollisionAudioSerial;
+
+      const bool charlieOnCollidingBall =
+          !game.stage4Airborne && game.stage4RespawnGraceFrames == 0 &&
+          (static_cast<int>(left) == game.stage4CurrentBall ||
+           static_cast<int>(right) == game.stage4CurrentBall);
+      if (charlieOnCollidingBall) {
+        const auto& ridden = game.stage4Balls[static_cast<std::size_t>(
+            game.stage4CurrentBall)];
+        game.player.position.x = ridden.worldX;
+        game.stage4PinnedCrash = true;
+        game.stage4FallFrame = 0;
+        crashPlayer(game);
+        return;
+      }
+    }
+  }
+
   const float following = std::max(0.0F,
       game.player.position.x - kStage4PlayerScreenX);
   const float finalCamera = std::max(0.0F,
@@ -2097,6 +2151,24 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
         game.stage4CurrentBall)];
     next.worldX = std::max(next.worldX, current.worldX + 286.0F);
     next.active = true;
+    next.collisionCooldown = 0;
+    ++activeCount;
+  }
+  // Every fifth object group contains the arcade's close second ball. This
+  // makes it possible to clear two balls in one faster arc and earn the
+  // existing skipped-ball bonus without flooding the screen with objects.
+  if (activeCount == 2 && game.stage4NextBallToActivate <
+                              static_cast<int>(game.stage4Balls.size()) &&
+      game.stage4NextBallToActivate % 5 == 2) {
+    float rightmost = -100000.0F;
+    for (const auto& ball : game.stage4Balls)
+      if (ball.active) rightmost = std::max(rightmost, ball.worldX);
+    auto& second = game.stage4Balls[static_cast<std::size_t>(
+        game.stage4NextBallToActivate++)];
+    second.worldX = rightmost + 126.0F;
+    second.velocity = -66.0F;
+    second.collisionCooldown = 0;
+    second.active = true;
   }
   if (game.bonus > 0) --game.bonus;
   if (game.bonus <= 0) crashPlayer(game);
@@ -5035,6 +5107,8 @@ int main(int argc, char** argv) {
       game.stage3BounceAudioSerial;
   std::uint32_t observedStage3OverjumpAudioSerial =
       game.stage3OverjumpAudioSerial;
+  std::uint32_t observedStage4BallCollisionAudioSerial =
+      game.stage4BallCollisionAudioSerial;
   Scene observedScene = game.scene;
   int observedGoalFrame = game.goalFrame;
   double accumulator = 0.0;
@@ -5230,6 +5304,12 @@ int main(int argc, char** argv) {
     if (observedCrashAudioSerial != game.crashAudioSerial) {
       playMissSounds(audio);
       observedCrashAudioSerial = game.crashAudioSerial;
+    }
+    if (observedStage4BallCollisionAudioSerial !=
+        game.stage4BallCollisionAudioSerial) {
+      playStage4BallCollisionSound(audio);
+      observedStage4BallCollisionAudioSerial =
+          game.stage4BallCollisionAudioSerial;
     }
     if (observedExtraCharlieAudioSerial !=
         game.extraCharlieAudioSerial) {
