@@ -94,6 +94,31 @@ local function scripted_inputs()
       set_button(right, active(1140, 1148) or active(1750, 2800))
     end
     set_button(jump, active(1560, 1564))
+  elseif string.sub(mode, 1, 7) == "stage4_" then
+    -- Event 4 is three right-edge selections from Event 1. Separate taps are
+    -- required because the cabinet menu advances on new direction edges.
+    set_button(right,
+      active(1140, 1148) or active(1200, 1208) or active(1260, 1268))
+    set_button(jump, active(1560, 1564))
+
+    if mode == "stage4_neutral_jump" then
+      set_button(jump,
+        active(1560, 1564) or active(1820, 1824) or
+        active(2100, 2104))
+    elseif mode == "stage4_transfer" then
+      set_button(right,
+        active(1140, 1148) or active(1200, 1208) or
+        active(1260, 1268) or active(1700, 2500))
+      set_button(jump,
+        active(1560, 1564) or active(1820, 1824) or
+        active(2140, 2144))
+    elseif mode == "stage4_reverse" then
+      set_button(right,
+        active(1140, 1148) or active(1200, 1208) or
+        active(1260, 1268) or active(1700, 1880))
+      set_button(left, active(1880, 2200))
+      set_button(jump, active(1560, 1564) or active(1980, 1984))
+    end
   end
 end
 

@@ -1348,11 +1348,11 @@ void resetCourse(Game& game) {
     // from the supplied native 224-pixel Stage 4 capture; the velocities are
     // likewise converted from the board's per-frame object motion.
     constexpr std::array<float, 24> gaps{
-        258, 226, 286, 214, 254, 224, 278, 218,
+        286, 226, 286, 214, 254, 224, 278, 218,
         246, 232, 272, 216, 258, 224, 282, 220,
         248, 230, 270, 218, 256, 226, 276, 222};
     constexpr std::array<float, 6> incomingSpeeds{
-        -182.0F, -176.0F, -188.0F, -180.0F, -172.0F, -190.0F};
+        -62.0F, -66.0F, -58.0F, -64.0F, -60.0F, -68.0F};
     float x = kStage4PlayerScreenX;
     game.stage4Balls.push_back({x, 82.0F, 0.0F});
     for (std::size_t index = 0; index < gaps.size(); ++index) {
@@ -1589,7 +1589,7 @@ void restartAfterCrash(Game& game) {
         static_cast<int>(game.stage4Balls.size())) {
       auto& next = game.stage4Balls[static_cast<std::size_t>(
           game.stage4NextBallToActivate++)];
-      next.worldX = std::max(next.worldX, ball.worldX + 250.0F);
+      next.worldX = std::max(next.worldX, ball.worldX + 286.0F);
       next.active = true;
     }
     game.cameraX = std::max(0.0F, ball.worldX - kStage4PlayerScreenX);
@@ -2007,14 +2007,13 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
         // ball: Charlie and the ball retain the same horizontal velocity.
         game.player.runSpeed = sourceVelocity;
       } else {
-        // Transfer speed is independent of the ball's ground velocity. With
-        // the measured incoming speed, 104 units/s meets each approaching
-        // ball near the descending half of the ROM-height jump arc.
-        game.player.runSpeed =
-            static_cast<float>(game.stage4JumpDirection) * 104.0F;
+        // The debugger trace keeps Charlie at the same screen anchor during
+        // a transfer. The approaching ball crosses beneath him; Charlie does
+        // not receive an extra horizontal launch impulse.
+        game.player.runSpeed = sourceVelocity;
         // As soon as Charlie leaves for another ball, the abandoned ball
         // rolls toward the rear exactly as in the Stage 4 frame sequence.
-        ball.velocity = -182.0F;
+        ball.velocity = -62.0F;
       }
       game.player.jumpFrame = 0;
       ++game.jumpAudioSerial;
@@ -2044,10 +2043,13 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
         }
       }
       if (landing >= 0) {
+        const float transferVelocity = game.player.runSpeed;
         const int skipped = std::abs(landing - game.stage4CurrentBall) - 1;
         if (skipped > 0) game.score += skipped * 500;
         game.stage4CurrentBall = landing;
         auto& ball = game.stage4Balls[static_cast<std::size_t>(landing)];
+        if (game.stage4JumpDirection != 0)
+          ball.velocity = transferVelocity;
         game.player.position = {ball.worldX, kStage4CharlieBaselineY};
         game.player.previous = game.player.position;
         game.player.runSpeed = ball.velocity;
@@ -2093,7 +2095,7 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
         game.stage4NextBallToActivate++)];
     const auto& current = game.stage4Balls[static_cast<std::size_t>(
         game.stage4CurrentBall)];
-    next.worldX = std::max(next.worldX, current.worldX + 250.0F);
+    next.worldX = std::max(next.worldX, current.worldX + 286.0F);
     next.active = true;
   }
   if (game.bonus > 0) --game.bonus;
