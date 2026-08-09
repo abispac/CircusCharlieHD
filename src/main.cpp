@@ -43,10 +43,12 @@ constexpr float kStage3PlayerScreenX = 150.0F;
 constexpr float kStage3FirstTambourineX = kStage3PlayerScreenX;
 constexpr float kStage3CourseLength =
     kStage3FirstTambourineX + 24.0F * kStage3TambourineSpacing;
-constexpr int kStage3BounceFrames = 48;
+// A slightly quicker rebound keeps Charlie buoyant without changing any of
+// the ROM-calibrated apex heights or collision windows.
+constexpr int kStage3BounceFrames = 44;
 // Transfers are ten percent quicker than a stationary rebound, while still
 // using one continuous center-to-center arc.
-constexpr int kStage3TransferFrames = 44;
+constexpr int kStage3TransferFrames = 40;
 constexpr int kStage3DirectionWindowFrames = 8;
 // Trigger height for the fourth rebound. The ROM then removes the arena
 // sprite and presents the separate roof-burst tile in the fixed marquee.
@@ -1236,8 +1238,8 @@ void resetCourse(Game& game) {
     game.bonusRings.clear();
     game.stage2Monkeys.clear();
     game.meterMarkers = {
-        {690.0F, 50}, {1410.0F, 40}, {2130.0F, 30},
-        {2850.0F, 20}, {3570.0F, 10},
+        {780.0F, 50}, {1500.0F, 40}, {2220.0F, 30},
+        {2940.0F, 20}, {3660.0F, 10},
     };
     // Event 3's drums are tall leather cylinders, not flattened versions of
     // the Event 1 goal pad. Their measured spacing leaves a clear performer
@@ -2916,27 +2918,36 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
                           SDL_Texture* birdTexture,
                           SDL_Texture* rewardBagTexture,
                           SDL_Texture* propsTexture) {
-  const SDL_Color cheerColor =
-      ((game.goalFrame / 12) & 1) == 0 ? color(255, 93, 36)
-                                       : color(87, 219, 255);
-  if (game.goalFrame > 30) {
+  const auto drawCheerCallouts = [&]() {
+    if (game.goalFrame <= 30) return;
+    const SDL_Color cheerColor =
+        ((game.goalFrame / 12) & 1) == 0 ? color(255, 93, 36)
+                                         : color(87, 219, 255);
     const float bounce =
         ((game.goalFrame / 8) & 1) == 0 ? 0.0F : -5.0F;
     const auto outlinedCheer = [&](std::string_view text, float x, float y,
-                                   SDL_Color value) {
+                                   float scale, SDL_Color value) {
       for (const auto& offset : std::array<Vec2, 4>{
                Vec2{-2.0F, 0.0F}, Vec2{2.0F, 0.0F},
                Vec2{0.0F, -2.0F}, Vec2{0.0F, 2.0F}}) {
-        drawText(renderer, text, x + offset.x, y + offset.y, 2.5F,
+        drawText(renderer, text, x + offset.x, y + offset.y, scale,
                  color(45, 10, 24), true);
       }
-      drawText(renderer, text, x, y, 2.5F, value, true);
+      drawText(renderer, text, x, y, scale, value, true);
     };
-    outlinedCheer("GREAT", 110.0F, 282.0F + bounce, cheerColor);
+    // The arcade alternates emphasis between its two audience callouts
+    // instead of leaving both words perfectly static.
+    const bool emphasizeGreat = ((game.goalFrame / 12) & 1) == 0;
+    outlinedCheer("GREAT", 110.0F, 282.0F + bounce,
+                  emphasizeGreat ? 2.75F : 2.35F, cheerColor);
     outlinedCheer("FAROUT", 370.0F, 282.0F - bounce,
+                  emphasizeGreat ? 2.35F : 2.75F,
                   color(255, 130, 42));
+  };
+  if (!game.perfectClear) {
+    drawCheerCallouts();
+    return;
   }
-  if (!game.perfectClear) return;
 
   const int birdStart = kGoalArrivalFrames;
   const int bagDropStart = birdStart + kBirdArrivalFrames;
@@ -3026,6 +3037,9 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
                7.0F, color(118, 68, 21));
     }
   }
+  // Keep the finish words in front of the optional reward bird and shower;
+  // the callouts are part of the scoreboard presentation, not background art.
+  drawCheerCallouts();
 }
 
 void drawRiderWalkTest(SDL_Renderer* renderer, float screenX, float groundY,
@@ -3742,7 +3756,7 @@ void drawSheetFrame(SDL_Renderer* renderer, SDL_Texture* texture,
 void drawStage3Tambourine(SDL_Renderer* renderer, SDL_Texture* texture,
                           float x, int compressionFrame, bool goal) {
   if (!texture) return;
-  const float normalHeight = kStage3GroundY - kStage3TambourineTopY + 9.0F;
+  const float normalHeight = kStage3GroundY - kStage3TambourineTopY;
   const float compression =
       static_cast<float>(std::clamp(compressionFrame, 0, 10)) / 10.0F;
   const float height = normalHeight * (1.0F - compression * 0.18F);
@@ -3750,7 +3764,7 @@ void drawStage3Tambourine(SDL_Renderer* renderer, SDL_Texture* texture,
   // Hold the cylinder's bottom fixed while the padded top compresses and
   // recovers after every landing, matching the ROM's rebound sprite family.
   const SDL_FRect destination{x - width * 0.5F,
-                              kStage3GroundY + 9.0F - height,
+                              kStage3GroundY - height,
                               width, height};
   SDL_RenderCopyF(renderer, texture, nullptr, &destination);
 }
@@ -3762,15 +3776,6 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
                        (game.cameraX - game.previousCameraX) *
                            static_cast<float>(interpolation);
   drawBackdrop(renderer, camera, false, assets, game, timeSeconds);
-
-  for (const auto& marker : game.meterMarkers) {
-    const float x = marker.worldX - camera;
-    if (x < -50.0F || x > kWorldWidth + 50.0F) continue;
-    fillRect(renderer, x - 26.0F, kStage3GroundY - 21.0F, 52.0F, 20.0F,
-             color(21, 104, 197));
-    drawText(renderer, std::to_string(marker.meters) + "M", x,
-             kStage3GroundY - 16.0F, 0.95F, color(255, 225, 64), true);
-  }
 
   for (std::size_t index = 0; index < game.stage3Tambourines.size(); ++index) {
     const auto& drum = game.stage3Tambourines[index];
@@ -3790,6 +3795,20 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
                         &bagDestination);
       }
     }
+  }
+
+  // In the original board the distance plaques sit in the performer lanes,
+  // not underneath the tambourines. Draw them above the drums but below the
+  // performers so an act's feet naturally overlap the ground sign.
+  for (const auto& marker : game.meterMarkers) {
+    const float x = marker.worldX - camera;
+    if (x < -50.0F || x > kWorldWidth + 50.0F) continue;
+    fillRect(renderer, x - 27.0F, kStage3GroundY - 20.0F, 54.0F, 21.0F,
+             color(29, 179, 239));
+    fillRect(renderer, x - 23.0F, kStage3GroundY - 17.0F, 46.0F, 15.0F,
+             color(239, 238, 196));
+    drawText(renderer, std::to_string(marker.meters) + "M", x,
+             kStage3GroundY - 14.0F, 0.9F, color(245, 83, 24), true);
   }
 
   for (std::size_t index = 0; index < game.stage3Performers.size(); ++index) {

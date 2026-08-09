@@ -27,8 +27,8 @@ landings advance a four-part chain:
 Pressing left or right during the opening eight board frames commits Charlie
 to the adjacent tambourine. Holding a direction carries that choice into the
 next landing, allowing continuous travel; releasing it leaves Charlie bouncing
-vertically. Every transfer uses one 44-frame cosine-eased arc (ten percent
-faster than the 48-frame stationary bounce) and lands at the exact center of
+vertically. Every transfer uses one 40-frame cosine-eased arc (about ten
+percent faster than the 44-frame stationary bounce) and lands at the exact center of
 the selected drum; horizontal free drift does not exist. A successful transfer
 resets the stationary chain to its first, low bounce. The grass is never a
 landing surface, and performers are not platforms.
@@ -47,8 +47,12 @@ recorded stage; Event 1 retains its original right-to-left entrance.
 Measured regular drum centers are approximately 84–88 pixels apart in the
 224-pixel ROM frame. The HD course uses a 180-unit center spacing on its
 480-unit logical canvas, with performers centered in the intended gaps.
+The 50M through 10M plaques share those performer-lane centers and render
+between the drum and performer layers, matching the original ground signs.
 
-Every landing compresses the tambourine artwork before it recovers. Only a
+Every landing compresses the tambourine artwork before it recovers. The
+cylinder bottom stays exactly on the grass contact plane, preventing the
+lower transparent fringe from appearing as a moving shadow. Only a
 knife/flame collision, the fourth stationary roof impact, or an expired timer
 can kill Charlie. The final target is a separate double-width goal tambourine.
 
@@ -79,7 +83,7 @@ can kill Charlie. The final target is a separate double-width goal tambourine.
 - `wam-proof/stage3-charlie.wam`: compiled WAM rig and the authoritative
   vertical-bounce, transfer-tuck, and celebration motion contract.
 - `assets/stage3-charlie-wam-tuck-hd-v1.png`: centered HD tuck pose derived
-  from that WAM rig. Runtime rotation is continuous, so the 48-frame transfer
+  from that WAM rig. Runtime rotation is continuous, so the 40-frame transfer
   has no atlas-frame snapping.
 - `assets/stage3-tambourine-v1.png`: tall leather tambourine.
 - `assets/stage3-goal-tambourine-v1.png`: double-width final tambourine.
