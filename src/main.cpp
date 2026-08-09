@@ -56,6 +56,13 @@ constexpr int kStage3DirectionWindowFrames = 8;
 // Trigger height for the fourth rebound. The ROM then removes the arena
 // sprite and presents the separate roof-burst tile in the fixed marquee.
 constexpr float kStage3RoofImpactY = 251.0F;
+constexpr float kStage4BallCenterY = 526.0F;
+constexpr float kStage4BallRadius = 32.0F;
+constexpr float kStage4CharlieBaselineY = kStage4BallCenterY - kStage4BallRadius;
+constexpr float kStage4PlayerScreenX = 118.0F;
+constexpr float kStage4GoalScreenX = 396.0F;
+constexpr float kStage4CourseLength = 5200.0F;
+constexpr float kStage4GoalTopY = kStage4CharlieBaselineY + 18.0F;
 
 float stage3CameraFor(float playerWorldX) {
   const float followingCamera =
@@ -255,6 +262,12 @@ struct Stage3Projectile {
   bool active = false;
 };
 
+struct Stage4Ball {
+  float worldX = 0.0F;
+  float velocity = 0.0F;
+  float rotation = 0.0F;
+};
+
 struct Player {
   Vec2 position{78.0F, kGroundY};
   Vec2 previous = position;
@@ -287,6 +300,7 @@ struct Game {
   std::vector<Stage3Tambourine> stage3Tambourines;
   std::vector<Stage3Performer> stage3Performers;
   std::vector<Stage3Projectile> stage3Projectiles;
+  std::vector<Stage4Ball> stage4Balls;
   float cameraX = 0.0F;
   float previousCameraX = 0.0F;
   int score = 0;
@@ -336,6 +350,10 @@ struct Game {
   int stage3TravelStartFrame = 0;
   float stage3TravelStartX = 78.0F;
   bool stage3RoofCrash = false;
+  int stage4CurrentBall = 0;
+  bool stage4Airborne = false;
+  bool stage4PinnedCrash = false;
+  int stage4FallFrame = 0;
   std::uint32_t jumpAudioSerial = 0;
   std::uint32_t crashAudioSerial = 0;
   std::uint32_t extraCharlieAudioSerial = 0;
@@ -394,6 +412,8 @@ struct Assets {
   SDL_Texture* stage3FlameThrower = nullptr;
   SDL_Texture* stage3Projectiles = nullptr;
   SDL_Texture* stage3FlameProjectile = nullptr;
+  SDL_Texture* stage4Charlie = nullptr;
+  SDL_Texture* stage4Ball = nullptr;
 };
 
 struct AudioClip {
@@ -487,7 +507,7 @@ void printUsage() {
       << "  --debug\n"
       << "  --lion-test\n"
       << "  --capture FILE.png\n"
-      << "  --capture-scene start|select|layout|large|prize|gameplay|stage2|stage2-goal|stage3|stage3-transfer|stage3-approach|stage3-goal|stage3-roof|ring|extra|crash|goal|tally\n";
+      << "  --capture-scene start|select|layout|large|prize|gameplay|stage2|stage2-goal|stage3|stage3-transfer|stage3-approach|stage3-goal|stage3-roof|stage4|stage4-jump|stage4-fall|stage4-goal|ring|extra|crash|goal|tally\n";
 }
 
 std::optional<Options> parseOptions(int argc, char** argv) {
@@ -517,6 +537,10 @@ std::optional<Options> parseOptions(int argc, char** argv) {
           options.captureScene != "stage3-approach" &&
           options.captureScene != "stage3-goal" &&
           options.captureScene != "stage3-roof" &&
+          options.captureScene != "stage4" &&
+          options.captureScene != "stage4-jump" &&
+          options.captureScene != "stage4-fall" &&
+          options.captureScene != "stage4-goal" &&
           options.captureScene != "ring" &&
           options.captureScene != "extra" &&
           options.captureScene != "crash" &&
@@ -630,6 +654,8 @@ Assets loadAssets(SDL_Renderer* renderer) {
       loadAsset(renderer, "stage3-projectiles-8-v1.png");
   assets.stage3FlameProjectile =
       loadAsset(renderer, "stage3-flame-projectile-4-v3.png");
+  assets.stage4Charlie = loadAsset(renderer, "stage4-charlie-12-v1.png");
+  assets.stage4Ball = loadAsset(renderer, "stage4-ball-8-v1.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.rider || !assets.riderWalkTest ||
       !assets.burnRider || !assets.hoop ||
@@ -647,7 +673,8 @@ Assets loadAssets(SDL_Renderer* renderer) {
       !assets.stage3Tambourine || !assets.stage3GoalTambourine ||
       !assets.stage3KnifeThrower ||
       !assets.stage3FlameThrower || !assets.stage3Projectiles ||
-      !assets.stage3FlameProjectile) {
+      !assets.stage3FlameProjectile || !assets.stage4Charlie ||
+      !assets.stage4Ball) {
     std::cerr << "Some HD assets could not be loaded; vector fallbacks remain "
                  "available. SDL_image: "
               << IMG_GetError() << '\n';
@@ -695,6 +722,8 @@ void destroyAssets(Assets& assets) {
   if (assets.stage3Projectiles) SDL_DestroyTexture(assets.stage3Projectiles);
   if (assets.stage3FlameProjectile)
     SDL_DestroyTexture(assets.stage3FlameProjectile);
+  if (assets.stage4Charlie) SDL_DestroyTexture(assets.stage4Charlie);
+  if (assets.stage4Ball) SDL_DestroyTexture(assets.stage4Ball);
   assets = {};
 }
 
@@ -1185,6 +1214,11 @@ void resetCourse(Game& game) {
   game.stage3Tambourines.clear();
   game.stage3Performers.clear();
   game.stage3Projectiles.clear();
+  game.stage4Balls.clear();
+  game.stage4CurrentBall = 0;
+  game.stage4Airborne = false;
+  game.stage4PinnedCrash = false;
+  game.stage4FallFrame = 0;
 
   if (game.selectedEvent == 1) {
     game.player.position = {78.0F, kStage2RopeY};
@@ -1286,6 +1320,39 @@ void resetCourse(Game& game) {
     return;
   }
 
+  if (game.selectedEvent == 3) {
+    game.hoops.clear();
+    game.firePots.clear();
+    game.bonusRings.clear();
+    game.stage2Monkeys.clear();
+    game.player.position = {kStage4PlayerScreenX, kStage4CharlieBaselineY};
+    game.player.previous = game.player.position;
+    game.player.grounded = true;
+    game.player.runSpeed = 82.0F;
+    game.meterMarkers = {
+        {880.0F, 50}, {1760.0F, 40}, {2640.0F, 30},
+        {3520.0F, 20}, {4400.0F, 10},
+    };
+    constexpr std::array<float, 24> gaps{
+        210, 188, 226, 176, 202, 162, 218, 170,
+        194, 154, 206, 164, 184, 148, 196, 156,
+        178, 144, 188, 150, 172, 142, 164, 150};
+    float x = kStage4PlayerScreenX;
+    game.stage4Balls.push_back({x, 82.0F, 0.0F});
+    for (std::size_t index = 0; index < gaps.size(); ++index) {
+      x += gaps[index];
+      const float drift = (index % 3U == 0U) ? -16.0F
+                          : (index % 3U == 1U) ? 10.0F : -4.0F;
+      game.stage4Balls.push_back({x, drift, static_cast<float>(index * 29U)});
+    }
+    // Keep the final approach fixed like the arcade board: the last rolling
+    // ball leads into a stationary goal at the right edge instead of letting
+    // the camera carry the finish platform across the whole screen.
+    game.stage4Balls.back().worldX = kStage4CourseLength - 165.0F;
+    game.prizeBagsAvailable = 0;
+    return;
+  }
+
   game.stage2Monkeys.clear();
 
   // Event 1 is laid out in the same difficulty progression visible in the
@@ -1373,14 +1440,14 @@ void enterEventSelect(Game& game) {
 }
 
 void confirmEventSelection(Game& game) {
-  // Events 1, 2, and 3 are playable. Later selections remain routed to Event 1
+  // Events 1 through 4 are playable. Later selections remain routed to Event 1
   // until their own ROM-measured implementations are ready. Do not substitute
   // another effect for the still-unidentified arcade confirmation sound.
   if (game.credits <= 0) {
     game.scene = Scene::Title;
     return;
   }
-  if (game.selectedEvent > 2) game.selectedEvent = 0;
+  if (game.selectedEvent > 3) game.selectedEvent = 0;
   ++game.eventSelectConfirmAudioSerial;
   --game.credits;
   startGame(game);
@@ -1426,7 +1493,9 @@ void restartAfterCrash(Game& game) {
                                ? kStage2RopeY
                                : (game.selectedEvent == 2
                                       ? kStage3TambourineTopY
-                                      : kGroundY);
+                                      : (game.selectedEvent == 3
+                                             ? kStage4CharlieBaselineY
+                                             : kGroundY));
   game.player.previous = game.player.position;
   game.player.verticalVelocity = 0.0F;
   game.player.runSpeed = 0.0F;
@@ -1455,6 +1524,20 @@ void restartAfterCrash(Game& game) {
     game.stage3TravelStartX = game.player.position.x;
     game.stage3RoofCrash = false;
     game.cameraX = stage3CameraFor(game.player.position.x);
+    game.previousCameraX = game.cameraX;
+  }
+  if (game.selectedEvent == 3 && !game.stage4Balls.empty()) {
+    game.stage4CurrentBall = std::clamp(
+        game.stage4CurrentBall, 0,
+        static_cast<int>(game.stage4Balls.size()) - 1);
+    auto& ball = game.stage4Balls[static_cast<std::size_t>(game.stage4CurrentBall)];
+    game.player.position = {ball.worldX, kStage4CharlieBaselineY};
+    game.player.previous = game.player.position;
+    game.player.grounded = true;
+    game.stage4Airborne = false;
+    game.stage4PinnedCrash = false;
+    game.stage4FallFrame = 0;
+    game.cameraX = std::max(0.0F, ball.worldX - kStage4PlayerScreenX);
     game.previousCameraX = game.cameraX;
   }
 }
@@ -1547,25 +1630,30 @@ void showStage1Score(Game& game, int points, float worldX, float y) {
 void finishStage(Game& game) {
   const bool stage2 = game.selectedEvent == 1;
   const bool stage3 = game.selectedEvent == 2;
+  const bool stage4 = game.selectedEvent == 3;
   const float finishX = stage2 ? kStage2GoalX
                                : (stage3 ? kStage3CourseLength
-                                         : kCourseLength);
+                                         : (stage4 ? kStage4CourseLength
+                                                   : kCourseLength));
   const float finishY = stage2 ? kStage2GoalTopY
                                : (stage3 ? kStage3TambourineTopY
-                                         : kGoalLandingY);
+                                         : (stage4 ? kStage4GoalTopY
+                                                   : kGoalLandingY));
   game.player.position = {finishX, finishY};
   game.player.previous = game.player.position;
   game.player.runSpeed = 0.0F;
   game.player.verticalVelocity = 0.0F;
   game.player.jumpFrame = -1;
   game.player.grounded = true;
-  game.cameraX = finishX - (stage2 ? 340.0F : (stage3 ? kStage3GoalScreenX
-                                                       : kGoalScreenX));
+  game.cameraX = finishX -
+      (stage2 ? 340.0F : (stage3 ? kStage3GoalScreenX
+                                 : (stage4 ? kStage4GoalScreenX
+                                           : kGoalScreenX)));
   game.previousCameraX = game.cameraX;
   game.perfectClear =
       !stage2 && !game.deathOccurred && game.prizeBagsAvailable > 0 &&
       game.prizeBagsCollected == game.prizeBagsAvailable;
-  game.score += stage2 ? 5000 : (stage3 ? 3000 : 500);
+  game.score += stage2 ? 5000 : (stage3 ? 3000 : (stage4 ? 4000 : 500));
   game.goalFrame = 0;
   if (stage3 && !game.stage3Tambourines.empty()) {
     // updateStage3 compresses a drum on the landing tick. Goal scenes no
@@ -1799,6 +1887,116 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
   awardScoreLives(game);
 }
 
+void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
+                  float controllerAxis) {
+  game.player.previous = game.player.position;
+  game.previousCameraX = game.cameraX;
+  if (game.stage4Balls.empty()) return;
+
+  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
+                        keyboard[SDL_SCANCODE_A] || controllerAxis < -0.35F;
+  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
+                         keyboard[SDL_SCANCODE_D] || controllerAxis > 0.35F;
+
+  for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
+    auto& ball = game.stage4Balls[index];
+    if (static_cast<int>(index) != game.stage4CurrentBall ||
+        game.stage4Airborne) {
+      ball.worldX += ball.velocity * static_cast<float>(kFixedDt);
+    }
+    ball.rotation += ball.velocity * static_cast<float>(kFixedDt) /
+                     kStage4BallRadius;
+  }
+
+  if (!game.stage4Airborne) {
+    auto& ball = game.stage4Balls[static_cast<std::size_t>(game.stage4CurrentBall)];
+    float target = 0.0F;
+    if (moveLeft != moveRight) target = moveRight ? 142.0F : -112.0F;
+    ball.velocity += (target - ball.velocity) *
+                     static_cast<float>(kFixedDt) * 5.5F;
+    if (!moveLeft && !moveRight) ball.velocity *= 0.975F;
+    ball.worldX += ball.velocity * static_cast<float>(kFixedDt);
+    game.player.position = {ball.worldX, kStage4CharlieBaselineY};
+    game.player.runSpeed = ball.velocity;
+    game.player.facingRight = ball.velocity >= 0.0F;
+
+    for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
+      if (static_cast<int>(index) == game.stage4CurrentBall) continue;
+      if (std::abs(game.stage4Balls[index].worldX - ball.worldX) <
+          kStage4BallRadius * 1.82F) {
+        game.stage4PinnedCrash = true;
+        game.stage4FallFrame = 0;
+        crashPlayer(game);
+        return;
+      }
+    }
+
+    if (jumpPressed) {
+      game.stage4Airborne = true;
+      game.player.grounded = false;
+      game.player.verticalVelocity = -330.0F;
+      game.player.runSpeed = std::clamp(ball.velocity, -120.0F, 175.0F);
+      if (std::abs(game.player.runSpeed) < 62.0F)
+        game.player.runSpeed = game.player.facingRight ? 104.0F : -104.0F;
+      game.player.jumpFrame = 0;
+      ++game.jumpAudioSerial;
+    }
+  } else {
+    ++game.player.jumpFrame;
+    game.player.verticalVelocity += 735.0F * static_cast<float>(kFixedDt);
+    game.player.position.x += game.player.runSpeed * static_cast<float>(kFixedDt);
+    game.player.position.y +=
+        game.player.verticalVelocity * static_cast<float>(kFixedDt);
+
+    if (game.player.verticalVelocity > 0.0F) {
+      int landing = -1;
+      float best = 44.0F;
+      for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
+        if (static_cast<int>(index) == game.stage4CurrentBall) continue;
+        const float distance = std::abs(
+            game.player.position.x - game.stage4Balls[index].worldX);
+        if (distance < best &&
+            game.player.position.y >= kStage4CharlieBaselineY - 17.0F &&
+            game.player.position.y <= kStage4CharlieBaselineY + 16.0F) {
+          best = distance;
+          landing = static_cast<int>(index);
+        }
+      }
+      if (landing >= 0) {
+        const int skipped = std::abs(landing - game.stage4CurrentBall) - 1;
+        if (skipped > 0) game.score += skipped * 500;
+        game.stage4CurrentBall = landing;
+        auto& ball = game.stage4Balls[static_cast<std::size_t>(landing)];
+        game.player.position = {ball.worldX, kStage4CharlieBaselineY};
+        game.player.previous = game.player.position;
+        game.player.runSpeed = ball.velocity;
+        game.player.verticalVelocity = 0.0F;
+        game.player.grounded = true;
+        game.stage4Airborne = false;
+        game.player.jumpFrame = -1;
+        if (landing == static_cast<int>(game.stage4Balls.size()) - 1) {
+          finishStage(game);
+          return;
+        }
+      }
+    }
+    if (game.player.position.y > kStage4BallCenterY + 90.0F) {
+      game.stage4PinnedCrash = false;
+      crashPlayer(game);
+      return;
+    }
+  }
+
+  const float following = std::max(0.0F,
+      game.player.position.x - kStage4PlayerScreenX);
+  const float finalCamera = std::max(0.0F,
+      kStage4CourseLength - kStage4GoalScreenX);
+  game.cameraX = std::min(following, finalCamera);
+  if (game.bonus > 0) --game.bonus;
+  if (game.bonus <= 0) crashPlayer(game);
+  awardScoreLives(game);
+}
+
 void updateStage2(Game& game, const Uint8* keyboard, bool jumpPressed,
                   float controllerAxis) {
   game.player.previous = game.player.position;
@@ -1964,6 +2162,8 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     game.player.verticalVelocity = 0.0F;
     game.crashFrame =
         std::min(game.crashFrame + 1, kCrashBurnFrames);
+    if (game.selectedEvent == 3)
+      game.stage4FallFrame = std::min(game.stage4FallFrame + 1, 23);
     return;
   }
 
@@ -1973,16 +2173,19 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     game.player.runSpeed = 0.0F;
     const bool stage2 = game.selectedEvent == 1;
     const bool stage3 = game.selectedEvent == 2;
+    const bool stage4 = game.selectedEvent == 3;
     game.player.position.y = stage2 ? kStage2GoalTopY
                                     : (stage3 ? kStage3TambourineTopY
-                                              : kGoalLandingY);
+                                              : (stage4 ? kStage4GoalTopY
+                                                        : kGoalLandingY));
     game.player.previous.y = game.player.position.y;
     game.player.grounded = true;
     game.player.jumpFrame = -1;
     game.cameraX =
         game.player.position.x -
         (stage2 ? 340.0F
-                : (stage3 ? kStage3GoalScreenX : kGoalScreenX));
+                : (stage3 ? kStage3GoalScreenX
+                          : (stage4 ? kStage4GoalScreenX : kGoalScreenX)));
     game.previousCameraX = game.cameraX;
     ++game.goalFrame;
 
@@ -2002,7 +2205,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         ? 210
         : game.perfectClear
             ? showerStart + kCoinShowerFrames
-            : (stage3 ? 210 : kGoalArrivalFrames + 120);
+            : ((stage3 || stage4) ? 210 : kGoalArrivalFrames + 120);
     if (game.goalFrame >= presentationFrames) {
       game.scene = Scene::Tally;
       game.tallyFrame = 0;
@@ -2029,6 +2232,10 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   }
   if (game.selectedEvent == 2) {
     updateStage3(game, keyboard, jumpPressed, controllerAxis);
+    return;
+  }
+  if (game.selectedEvent == 3) {
+    updateStage4(game, keyboard, jumpPressed, controllerAxis);
     return;
   }
 
@@ -2487,7 +2694,7 @@ void drawReddishMarqueeSky(SDL_Renderer* renderer) {
 
 void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
                   const Assets& assets, const Game& game,
-                  double timeSeconds) {
+                  double timeSeconds, bool showCeilingTrack = true) {
   fillRect(renderer, 0.0F, 0.0F, kWorldWidth, kWorldHeight,
            color(5, 18, 51));
 
@@ -2599,7 +2806,7 @@ void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
 
   // This gameplay rail belongs to the scrolling arena, while every fire ring
   // also has its own measured independent motion along it.
-  drawCeilingTrack(renderer, cameraX);
+  if (showCeilingTrack) drawCeilingTrack(renderer, cameraX);
 }
 
 void drawHoop(SDL_Renderer* renderer, const Hoop& hoop, float cameraX,
@@ -4007,6 +4214,96 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
   }
 }
 
+int stage4BallFrame(float rotation) {
+  const float turns = rotation / (2.0F * kPi);
+  const float wrapped = turns - std::floor(turns);
+  return static_cast<int>(wrapped * 8.0F) & 7;
+}
+
+void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
+                     const Assets& assets, double timeSeconds,
+                     double interpolation) {
+  const float camera = game.previousCameraX +
+                       (game.cameraX - game.previousCameraX) *
+                           static_cast<float>(interpolation);
+  drawBackdrop(renderer, camera, false, assets, game, timeSeconds, false);
+
+  for (const auto& marker : game.meterMarkers) {
+    const float x = marker.worldX - camera;
+    if (x < -50.0F || x > kWorldWidth + 50.0F) continue;
+    fillRect(renderer, x - 27.0F, 612.0F, 54.0F, 21.0F,
+             color(29, 179, 239));
+    fillRect(renderer, x - 23.0F, 615.0F, 46.0F, 15.0F,
+             color(239, 238, 196));
+    drawText(renderer, std::to_string(marker.meters) + "M", x, 618.0F,
+             0.9F, color(245, 83, 24), true);
+  }
+
+  for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
+    const auto& ball = game.stage4Balls[index];
+    const float x = ball.worldX - camera;
+    if (x < -80.0F || x > kWorldWidth + 80.0F) continue;
+    drawSheetFrame(renderer, assets.stage4Ball, 4, 2,
+                   stage4BallFrame(ball.rotation), x,
+                   kStage4BallCenterY + kStage4BallRadius,
+                   kStage4BallRadius * 2.0F, kStage4BallRadius * 2.0F);
+  }
+
+  const float goalX = kStage4CourseLength - camera;
+  if (goalX > -130.0F && goalX < kWorldWidth + 130.0F &&
+      assets.goalPlatform) {
+    const SDL_FRect destination{goalX - 86.0F, kStage4GoalTopY,
+                                172.0F, 48.0F};
+    SDL_RenderCopyF(renderer, assets.goalPlatform, nullptr, &destination);
+  }
+
+  const float playerWorldX = game.player.previous.x +
+      (game.player.position.x - game.player.previous.x) *
+          static_cast<float>(interpolation);
+  const float playerY = game.player.previous.y +
+      (game.player.position.y - game.player.previous.y) *
+          static_cast<float>(interpolation);
+  int frame = 0;
+  // The generated atlas retains transparent padding below Charlie's shoes.
+  // Anchor the painted feet to the physical ball surface, not the cell edge.
+  float baseline = playerY + 34.0F;
+  float width = 120.0F;
+  float height = 120.0F;
+  if (game.scene == Scene::Crashed && game.stage4PinnedCrash) {
+    frame = 8 + std::min(3, game.stage4FallFrame / 6);
+    baseline = kStage4BallCenterY + 70.0F;
+  } else if (game.stage4Airborne) {
+    frame = 4 + std::min(3, (game.player.jumpFrame / 5) & 3);
+  } else if (game.scene == Scene::Goal) {
+    constexpr std::array<int, 8> celebration{0, 1, 2, 3, 2, 1, 0, 1};
+    frame = celebration[static_cast<std::size_t>((game.goalFrame / 7) % 8)];
+    baseline = kStage4GoalTopY + 39.0F;
+  } else {
+    frame = (static_cast<int>(timeSeconds * 60.606F) / 7) & 3;
+  }
+  drawSheetFrame(renderer, assets.stage4Charlie, 4, 3, frame,
+                 playerWorldX - camera, baseline, width, height,
+                 game.player.facingRight ? SDL_FLIP_NONE
+                                         : SDL_FLIP_HORIZONTAL);
+
+  drawHud(renderer, game, assets.charlieLife);
+  if (game.scene == Scene::Crashed && game.stage4PinnedCrash) {
+    drawText(renderer, "OH NO!!", 150.0F, 260.0F, 1.8F,
+             color(255, 82, 28), true);
+    drawText(renderer, "OH NO!!", 354.0F, 306.0F, 1.8F,
+             color(255, 82, 28), true);
+  }
+  if (game.scene == Scene::Crashed &&
+      game.crashFrame >= kCrashBurnFrames) {
+    fillRect(renderer, 55.0F, 220.0F, 370.0F, 134.0F,
+             color(33, 5, 8, 232));
+    drawText(renderer, "OH NO!!", kWorldWidth * 0.5F, 246.0F, 3.0F,
+             color(255, 96, 64), true);
+    drawText(renderer, "SPACE OR Z TO RETRY", kWorldWidth * 0.5F,
+             300.0F, 1.8F, color(255, 255, 255), true);
+  }
+}
+
 void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
                      bool complete, const Assets& assets,
                      double timeSeconds) {
@@ -4085,11 +4382,13 @@ void drawDebug(SDL_Renderer* renderer, const Game& game,
                                    std::lround(game.player.runSpeed))),
            15.0F, kArenaTop + 30.0F, 1.4F, color(255, 255, 255));
   drawText(renderer, "JUMP " + std::to_string(static_cast<int>(
-                                  std::lround((game.selectedEvent == 1
+                                   std::lround((game.selectedEvent == 1
                                                    ? kStage2RopeY
                                                    : (game.selectedEvent == 2
                                                           ? kStage3TambourineTopY
-                                                          : kGroundY)) -
+                                                          : (game.selectedEvent == 3
+                                                                 ? kStage4CharlieBaselineY
+                                                                 : kGroundY))) -
                                               game.player.position.y))),
            15.0F, kArenaTop + 47.0F, 1.4F, color(255, 255, 255));
   drawText(renderer,
@@ -4127,6 +4426,11 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
   }
   if (game.selectedEvent == 2) {
     drawStage3Scene(renderer, game, assets, timeSeconds, interpolation);
+    if (game.debug) drawDebug(renderer, game, surface);
+    return;
+  }
+  if (game.selectedEvent == 3) {
+    drawStage4Scene(renderer, game, assets, timeSeconds, interpolation);
     if (game.debug) drawDebug(renderer, game, surface);
     return;
   }
@@ -4309,10 +4613,56 @@ int main(int argc, char** argv) {
                  options.captureScene == "stage3-goal" ||
                  options.captureScene == "stage3-roof") {
         game.selectedEvent = 2;
+      } else if (options.captureScene == "stage4" ||
+                 options.captureScene == "stage4-jump" ||
+                 options.captureScene == "stage4-fall" ||
+                 options.captureScene == "stage4-goal") {
+        game.selectedEvent = 3;
       }
       startGame(game);
     }
-    if (options.captureScene == "stage3-goal") {
+    if (options.captureScene == "stage4-goal") {
+      game.stage4CurrentBall =
+          static_cast<int>(game.stage4Balls.size()) - 1;
+      finishStage(game);
+      game.goalFrame = 96;
+    } else if (options.captureScene == "stage4-fall") {
+      game.stage4CurrentBall = 5;
+      const auto& ball = game.stage4Balls[5];
+      game.player.position = {ball.worldX, kStage4BallCenterY + 30.0F};
+      game.player.previous = game.player.position;
+      game.player.alive = false;
+      game.player.grounded = false;
+      game.stage4Airborne = false;
+      game.stage4PinnedCrash = true;
+      game.stage4FallFrame = 18;
+      game.scene = Scene::Crashed;
+      game.crashFrame = 18;
+      game.cameraX = std::max(0.0F, ball.worldX - kStage4PlayerScreenX);
+      game.previousCameraX = game.cameraX;
+    } else if (options.captureScene == "stage4-jump") {
+      game.stage4CurrentBall = 4;
+      const auto& from = game.stage4Balls[4];
+      const auto& to = game.stage4Balls[5];
+      game.stage4Airborne = true;
+      game.player.grounded = false;
+      game.player.jumpFrame = 11;
+      game.player.verticalVelocity = 18.0F;
+      game.player.position = {(from.worldX + to.worldX) * 0.5F,
+                              kStage4CharlieBaselineY - 92.0F};
+      game.player.previous = game.player.position;
+      game.cameraX = std::max(
+          0.0F, game.player.position.x - kStage4PlayerScreenX);
+      game.previousCameraX = game.cameraX;
+    } else if (options.captureScene == "stage4") {
+      game.stage4CurrentBall = 4;
+      const auto& ball = game.stage4Balls[4];
+      game.player.position = {ball.worldX, kStage4CharlieBaselineY};
+      game.player.previous = game.player.position;
+      game.player.runSpeed = ball.velocity;
+      game.cameraX = std::max(0.0F, ball.worldX - kStage4PlayerScreenX);
+      game.previousCameraX = game.cameraX;
+    } else if (options.captureScene == "stage3-goal") {
       game.stage3CurrentTambourine =
           static_cast<int>(game.stage3Tambourines.size()) - 1;
       game.stage3TargetTambourine = game.stage3CurrentTambourine;
