@@ -97,9 +97,10 @@ can kill Charlie. The final target is a separate double-width goal tambourine.
   contract (anticipate, release, track/catch, recover).
 - `wam-proof/stage3-fire-breather.wam`: planted 12-pose vertical-breath motion
   contract (raise, inhale, extend, sustain, recover).
-- `assets/stage3-knife-thrower-12-v2.png`: 4x3 HD knife-thrower atlas whose
+- `assets/stage3-knife-thrower-12-v3.png`: cleaned 4x3 HD knife-thrower atlas whose
   chronological poses follow the compiled WAM motion strip. Airborne knives
-  remain separate runtime projectiles.
+  remain separate runtime projectiles. Disconnected floor/shadow fragments
+  are removed from every atlas cell before runtime packing.
 - `assets/stage3-fire-breather-vertical-12-v3.png`: 4x3 HD vertical
   fire-breather atlas whose chronological poses follow the compiled WAM
   motion strip. The upward flame remains a separate runtime projectile.

@@ -623,7 +623,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.stage3GoalTambourine =
       loadAsset(renderer, "stage3-goal-tambourine-v1.png");
   assets.stage3KnifeThrower =
-      loadAsset(renderer, "stage3-knife-thrower-12-v2.png");
+      loadAsset(renderer, "stage3-knife-thrower-12-v3.png");
   assets.stage3FlameThrower =
       loadAsset(renderer, "stage3-fire-breather-vertical-12-v3.png");
   assets.stage3Projectiles =
