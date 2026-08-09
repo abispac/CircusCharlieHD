@@ -15,6 +15,9 @@ behavioral reference and is not copied into the project.
   the following ball awards the skip bonus.
 - Ball spacing and relative velocity remain live during the jump.
 - Two balls touching triggers the balance failure.
+- With no direction held, Charlie stays in his steady arms-out pose, makes
+  progressively faster opposing balance corrections, and falls. Two MAME
+  debugger runs repeated the same 203-frame idle-to-fall sequence exactly.
 - The failure is not a tumbling fall: Charlie is compressed beneath the ball,
   the ball remains above him, and the crowd's `OH NO!!` response begins while
   he is pinned.
@@ -53,6 +56,8 @@ behavioral reference and is not copied into the project.
   its measured top-center anchor.
 - Collision uses ball circles and a smaller Charlie foot/contact region.
 - A missed landing and a ball-to-ball squeeze use separate failure triggers.
+- Walking animation advances only while left or right is held. Idle uses the
+  measured steady/stagger state sequence rather than cycling walking frames.
 - Capture scenes must cover balance, transfer, skip, squeeze, fall, and goal.
 
 ## WAM motion contract

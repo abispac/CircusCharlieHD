@@ -359,6 +359,7 @@ struct Game {
   int stage4RespawnGraceFrames = 0;
   int stage4NextBallToActivate = 0;
   int stage4JumpDirection = 0;
+  int stage4IdleFrame = 0;
   std::uint32_t stage4BallCollisionAudioSerial = 0;
   std::uint32_t jumpAudioSerial = 0;
   std::uint32_t crashAudioSerial = 0;
@@ -1245,6 +1246,7 @@ void resetCourse(Game& game) {
   game.stage4RespawnGraceFrames = 0;
   game.stage4NextBallToActivate = 0;
   game.stage4JumpDirection = 0;
+  game.stage4IdleFrame = 0;
 
   if (game.selectedEvent == 1) {
     game.player.position = {78.0F, kStage2RopeY};
@@ -1357,6 +1359,7 @@ void resetCourse(Game& game) {
     game.player.runSpeed = 82.0F;
     game.player.facingRight = true;
     game.stage4RespawnGraceFrames = 90;
+    game.stage4IdleFrame = 0;
     game.meterMarkers = {
         {kStage4PlayerScreenX, -1}, {500.0F, 60},
         {1150.0F, 50}, {2190.0F, 40},
@@ -1373,7 +1376,10 @@ void resetCourse(Game& game) {
     constexpr std::array<float, 6> incomingSpeeds{
         -62.0F, -66.0F, -58.0F, -64.0F, -60.0F, -68.0F};
     float x = kStage4PlayerScreenX;
-    game.stage4Balls.push_back({x, 82.0F, 0.0F});
+    // The opening ball is stationary until the player walks. Leaving the
+    // old provisional velocity here made Charlie drift and animate before
+    // any input, masking the cabinet's idle-balance sequence.
+    game.stage4Balls.push_back({x, 0.0F, 0.0F});
     for (std::size_t index = 0; index < gaps.size(); ++index) {
       x += gaps[index];
       // Unridden balls enter from the right and roll left toward Charlie in
@@ -1576,6 +1582,7 @@ void restartAfterCrash(Game& game) {
         game.stage4CurrentBall, 0,
         static_cast<int>(game.stage4Balls.size()) - 1);
     auto& ball = game.stage4Balls[static_cast<std::size_t>(game.stage4CurrentBall)];
+    ball.velocity = 0.0F;
     game.player.position = {ball.worldX, kStage4CharlieBaselineY};
     game.player.previous = game.player.position;
     game.player.grounded = true;
@@ -1584,6 +1591,7 @@ void restartAfterCrash(Game& game) {
     game.stage4FallFrame = 0;
     game.stage4RespawnGraceFrames = 90;
     game.stage4JumpDirection = 0;
+    game.stage4IdleFrame = 0;
     game.player.facingRight = true;
     // A squeeze failure can leave another rolling ball occupying the active
     // ball's spawn circle. The board grants a short restart window; move only
@@ -2001,11 +2009,28 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
     game.player.position = {ball.worldX, kStage4CharlieBaselineY};
     game.player.runSpeed = ball.velocity;
 
+    if (moveLeft != moveRight) {
+      game.stage4IdleFrame = 0;
+    } else {
+      // MAME's Stage 4 object trace repeats this exact no-input sequence:
+      // 78 steady frames, a long two-sided stagger, shorter recovery pulses,
+      // then the balance failure on frame 203. It restarts from zero as soon
+      // as the player walks or jumps instead of looping the walk animation.
+      ++game.stage4IdleFrame;
+      if (game.stage4IdleFrame >= 203) {
+        game.stage4PinnedCrash = true;
+        game.stage4FallFrame = 0;
+        crashPlayer(game);
+        return;
+      }
+    }
+
     if (jumpPressed) {
       const float sourceVelocity = ball.velocity;
       game.stage4JumpDirection =
           moveRight != moveLeft ? (moveRight ? 1 : -1) : 0;
       game.stage4Airborne = true;
+      game.stage4IdleFrame = 0;
       game.player.grounded = false;
       // Preserve the measured apex while shortening the whole arc by about
       // one tenth, which removes the heavy pause the earlier prototype had.
@@ -2065,6 +2090,7 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
         game.player.grounded = true;
         game.stage4Airborne = false;
         game.stage4JumpDirection = 0;
+        game.stage4IdleFrame = 0;
         game.player.jumpFrame = -1;
         if (landing == static_cast<int>(game.stage4Balls.size()) - 1) {
           finishStage(game);
@@ -4464,8 +4490,22 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
     constexpr std::array<int, 8> celebration{0, 1, 2, 3, 2, 1, 0, 1};
     frame = celebration[static_cast<std::size_t>((game.goalFrame / 7) % 8)];
     baseline = kStage4GoalTopY + 49.0F;
-  } else {
+  } else if (game.stage4IdleFrame == 0) {
+    // Only directional ball-walking cycles the balance animation.
     frame = (static_cast<int>(timeSeconds * 60.606F) / 7) & 3;
+  } else {
+    // Sprite commands measured from two identical MAME idle/fall cycles.
+    // Frame zero is the steady arms-out pose; one and three are the opposing
+    // balance corrections. The pulses accelerate just before Charlie falls.
+    const int idle = game.stage4IdleFrame;
+    const bool staggerA =
+        (idle >= 78 && idle < 95) || (idle >= 133 && idle < 139) ||
+        (idle >= 156 && idle < 161) || (idle >= 178 && idle < 184) ||
+        (idle >= 191 && idle < 203);
+    const bool staggerB =
+        (idle >= 95 && idle < 112) || (idle >= 139 && idle < 144) ||
+        (idle >= 161 && idle < 167) || (idle >= 184 && idle < 190);
+    frame = staggerA ? 1 : (staggerB ? 3 : 0);
   }
   drawSheetFrame(renderer, assets.stage4Charlie, 4, 3, frame,
                  playerWorldX - camera, baseline, width, height,
