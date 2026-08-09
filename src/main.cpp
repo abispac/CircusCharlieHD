@@ -1249,6 +1249,7 @@ void resetCourse(Game& game) {
           {kStage3FirstTambourineX +
                static_cast<float>(index) * kStage3TambourineSpacing,
            bag});
+      if (bag) ++game.prizeBagsAvailable;
     }
     // The ROM frames place each act exactly halfway between its surrounding
     // drums. The opening gap remains clear; acts then alternate every other
@@ -1686,6 +1687,7 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
         drum.bagAvailable = false;
         game.score += 500;
         showStage1Score(game, 500, drum.worldX, bagY);
+        ++game.prizeBagsCollected;
         ++game.prizeBagAudioSerial;
       }
     }
@@ -1984,10 +1986,11 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
       }
     }
 
-    const int presentationFrames =
-        (stage2 || stage3) ? 210 : game.perfectClear
+    const int presentationFrames = stage2
+        ? 210
+        : game.perfectClear
             ? showerStart + kCoinShowerFrames
-            : kGoalArrivalFrames + 120;
+            : (stage3 ? 210 : kGoalArrivalFrames + 120);
     if (game.goalFrame >= presentationFrames) {
       game.scene = Scene::Tally;
       game.tallyFrame = 0;
@@ -2938,6 +2941,7 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
   const int birdStart = kGoalArrivalFrames;
   const int bagDropStart = birdStart + kBirdArrivalFrames;
   const int showerStart = bagDropStart + kBagDropFrames;
+  const bool stage3 = game.selectedEvent == 2;
   if (birdTexture && game.goalFrame >= birdStart) {
     int textureWidth = 0;
     int textureHeight = 0;
@@ -2951,7 +2955,8 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
           static_cast<float>(game.goalFrame - birdStart) /
               static_cast<float>(kBirdArrivalFrames),
           0.0F, 1.0F);
-      birdX = 510.0F + (kGoalScreenX - 510.0F) * progress;
+      const float entranceX = stage3 ? -30.0F : 510.0F;
+      birdX = entranceX + (kGoalScreenX - entranceX) * progress;
       cell = (game.goalFrame / 8) & 1;
     } else {
       // The reference bird remains beside the bag throughout the complete
@@ -2962,7 +2967,12 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
     const SDL_Rect source{cell * cellWidth, 0, cellWidth, textureHeight};
     // Keep the reward bird in the arena below the persistent LED/HUD panel.
     const SDL_FRect destination{birdX - 45.0F, 205.0F, 90.0F, 120.0F};
-    SDL_RenderCopyF(renderer, birdTexture, &source, &destination);
+    // Stage 1 enters right-to-left; Event 3's reference enters left-to-right.
+    // The sprite is symmetrical enough to mirror without introducing a
+    // second lower-quality atlas.
+    SDL_RenderCopyExF(renderer, birdTexture, &source, &destination, 0.0,
+                      nullptr,
+                      stage3 ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
   }
 
   constexpr float kRewardBagX = kGoalScreenX;
@@ -3829,8 +3839,8 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
   // than the WAM tuck. Match their painted widths while preserving the
   // established vertical bounce height; this prevents a size pop at takeoff
   // without making the extended apex pose unnaturally tall.
-  float charlieWidth = 100.0F;
-  float charlieHeight = 105.0F;
+  float charlieWidth = 110.0F;
+  float charlieHeight = 116.0F;
   SDL_Texture* charlieTexture = assets.stage3CharlieVertical;
   if (game.scene == Scene::Goal) {
     // A compact crouch-rise-cheer loop keeps Charlie celebrating on the goal
@@ -3889,6 +3899,15 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
                    game.player.facingRight ? SDL_FLIP_NONE
                                            : SDL_FLIP_HORIZONTAL,
                    charlieAngle);
+  }
+
+  if (game.scene == Scene::Goal) {
+    // Event 3 shares the board's perfect-clear reward: the bird appears only
+    // when every suspended bag was collected without losing a life. A missed
+    // bag or any crash leaves perfectClear false, so no partial reward leaks
+    // into the goal presentation.
+    drawGoalPresentation(renderer, game, assets.bird, assets.rewardBag,
+                         assets.props);
   }
 
   drawStage1ScorePopup(renderer, game, camera);
@@ -4233,8 +4252,10 @@ int main(int argc, char** argv) {
       game.stage3CurrentTambourine =
           static_cast<int>(game.stage3Tambourines.size()) - 1;
       game.stage3TargetTambourine = game.stage3CurrentTambourine;
+      game.prizeBagsCollected = game.prizeBagsAvailable;
+      game.deathOccurred = false;
       finishStage(game);
-      game.goalFrame = 42;
+      game.goalFrame = 180;
     } else if (options.captureScene == "stage3-roof") {
       game.stage3CurrentTambourine = 3;
       game.stage3TargetTambourine = 3;

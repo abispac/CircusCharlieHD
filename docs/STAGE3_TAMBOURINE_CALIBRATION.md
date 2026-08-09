@@ -37,6 +37,13 @@ Money bags are suspended 236 logical units above the drum contact plane. Their
 painted bottom stays clear of the second-bounce silhouette, while the third
 bounce reaches both the artwork and its collection target.
 
+The stage records the original number of suspended bags separately from the
+remaining drum artwork. At the goal, the money bird and coin shower run only
+when every bag was collected and `deathOccurred` is still false. Missing one
+bag or losing one life permanently disqualifies that run from the bird reward.
+For Event 3 the bird enters from the left and flies rightward, matching the
+recorded stage; Event 1 retains its original right-to-left entrance.
+
 Measured regular drum centers are approximately 84–88 pixels apart in the
 224-pixel ROM frame. The HD course uses a 180-unit center spacing on its
 480-unit logical canvas, with performers centered in the intended gaps.
