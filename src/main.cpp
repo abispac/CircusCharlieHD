@@ -3866,7 +3866,8 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
     SDL_Texture* texture = knife ? assets.stage3KnifeThrower
                                  : assets.stage3FlameThrower;
     drawSheetFrame(renderer, texture, 4, 3, frame, x, kStage3GroundY,
-                   knife ? 88.0F : 94.0F, knife ? 112.0F : 116.0F);
+                   knife ? 105.6F : 112.8F,
+                   knife ? 134.4F : 139.2F);
 
     const auto& projectile = game.stage3Projectiles[index];
     if (!projectile.active) continue;
