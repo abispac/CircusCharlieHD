@@ -1,0 +1,124 @@
+model stage4_charlie
+  height 1.36
+  style fine
+
+palette
+  skin #f0b184
+  hair #f4b735
+  red #b91f25
+  red_dark #7d1420
+  blue #155fc2
+  blue_dark #123a88
+  yellow #f4ce32
+  white #f7f3e8
+  nose_red #d9292f
+  black #211713
+
+skeleton
+  root pelvis at (0,0.48,0)
+  bone spine parent=pelvis dir=up len=0.20
+  bone chest parent=spine dir=up len=0.20
+  bone neck parent=chest dir=up len=0.08
+  bone head parent=neck dir=up len=0.22
+  bone nose parent=head at=0.58 fwd=0.07 dir=fwd len=0.10
+  bone cap1 parent=head at=0.88 up=0.03 dir=up pitch=-18 len=0.18
+  bone cap2 parent=cap1 dir=up pitch=-38 len=0.16
+  bone cap3 parent=cap2 dir=side tilt=-42 len=0.13
+  mirror
+    bone upperarm parent=chest at=0.78 side=0.11 dir=side tilt=4 len=0.20
+    bone forearm parent=upperarm dir=side tilt=-5 len=0.18
+    bone hand parent=forearm dir=side len=0.10
+    bone thigh parent=pelvis side=0.075 dir=down pitch=3 len=0.24
+    bone shin parent=thigh dir=down pitch=-4 len=0.22
+    bone foot parent=shin dir=fwd pitch=-72 len=0.18
+  end
+
+parts
+  loft torso bones=pelvis..chest frame=fwd material=red_dark
+    ring 0.00 w=0.27 d=0.18
+    ring 0.50 w=0.30 d=0.20
+    ring 1.00 w=0.25 d=0.18
+    cap start=dome end=dome
+  loft head_mass bones=neck..head frame=fwd material=skin
+    ring 0.00 w=0.20 d=0.19
+    ring 0.45 w=0.32 d=0.29
+    ring 1.00 w=0.27 d=0.25
+    cap start=dome end=dome
+  attach nose_ball bone=nose at=1.0 kind=sphere w=0.13 h=0.12 d=0.12 material=nose_red
+  mirror
+    attach eye_white bone=head at=0.62 offset=(0.095,0.03,0.12) kind=eye size=0.047 material=white
+    attach pupil_part bone=head at=0.63 offset=(0.112,0.03,0.14) kind=eye size=0.019 material=black
+    attach cheek bone=head at=0.40 offset=(0.12,-0.015,0.125) kind=sphere w=0.055 h=0.035 d=0.018 material=blue
+  end
+  loft cap bones=head..cap3 frame=fwd material=blue
+    ring 0.00 w=0.25 d=0.22
+    ring 0.35 w=0.18 d=0.16 material=blue_dark
+    ring 0.70 w=0.11 d=0.10 material=blue
+    ring 1.00 w=0.035 d=0.035 tip
+    cap start=dome end=point
+  attach cap_pom_blue bone=cap3 at=1.0 kind=sphere w=0.09 h=0.09 d=0.08 material=blue
+  attach cap_pom_red bone=cap3 at=0.94 offset=(0.07,-0.01,0) kind=sphere w=0.075 h=0.075 d=0.07 material=nose_red
+  attach cap_pom_yellow bone=cap3 at=0.88 offset=(0.13,-0.02,0) kind=sphere w=0.07 h=0.07 d=0.065 material=yellow
+  mirror
+    loft arm bones=upperarm..hand frame=fwd material=red
+      ring 0.00 w=0.105 d=0.11
+      ring 0.55 w=0.085 d=0.09
+      ring 0.82 w=0.075 d=0.075 material=white
+      ring 1.00 w=0.12 d=0.085 material=white
+      cap start=dome end=dome
+    loft leg bones=thigh..shin frame=fwd material=red
+      ring 0.00 w=0.13 d=0.14
+      ring 0.58 w=0.11 d=0.12
+      ring 1.00 w=0.095 d=0.10 material=yellow
+      cap start=dome end=dome
+    attach shoe bone=foot at=0.72 offset=(0,-0.06,0) kind=sphere w=0.22 h=0.11 d=0.13 material=blue
+  end
+  attach hair_crown bone=head at=0.78 offset=(0,0.035,-0.03) kind=sphere w=0.29 h=0.10 d=0.24 material=hair
+  attach belt_red bone=spine at=0.02 kind=sphere w=0.285 h=0.045 d=0.19 material=nose_red
+
+animations
+  anim ball_balance loop dur=0.66
+    ch pelvis tilt 0%=-4 16.7%=0 33.3%=4 50%=0 66.7%=-4 83.3%=0 100%=-4
+    ch chest tilt 0%=5 16.7%=0 33.3%=-5 50%=0 66.7%=5 83.3%=0 100%=5
+    ch upperarm.l tilt 0%=86 25%=78 50%=86 75%=94 100%=86
+    ch upperarm.r tilt 0%=-86 25%=-94 50%=-86 75%=-78 100%=-86
+    ch forearm.l tilt 0%=4 25%=-6 50%=4 75%=12 100%=4
+    ch forearm.r tilt 0%=-4 25%=-12 50%=-4 75%=6 100%=-4
+    ch thigh.l pitch 0%=18 25%=-12 50%=-18 75%=12 100%=18
+    ch thigh.r pitch 0%=-18 25%=12 50%=18 75%=-12 100%=-18
+    ch shin.l pitch 0%=-25 25%=-8 50%=-2 75%=-16 100%=-25
+    ch shin.r pitch 0%=-2 25%=-16 50%=-25 75%=-8 100%=-2
+    ch head tilt 0%=2 25%=0 50%=-2 75%=0 100%=2
+
+  anim ball_jump loop dur=0.72
+    ch pelvis pitch 0%=8 16.7%=-3 33.3%=-8 50%=-4 66.7%=0 83.3%=4 100%=8
+    ch upperarm.l tilt 0%=82 20%=100 50%=112 80%=94 100%=82
+    ch upperarm.r tilt 0%=-82 20%=-100 50%=-112 80%=-94 100%=-82
+    ch thigh.l pitch 0%=24 20%=12 50%=-12 80%=8 100%=24
+    ch thigh.r pitch 0%=-8 20%=4 50%=20 80%=0 100%=-8
+    ch shin.l pitch 0%=-34 20%=-20 50%=-6 80%=-18 100%=-34
+    ch shin.r pitch 0%=-8 20%=-18 50%=-34 80%=-20 100%=-8
+
+  anim ball_fall loop dur=0.86
+    ch pelvis pitch 0%=0 20%=8 40%=16 60%=24 80%=30 100%=34
+    ch chest pitch 0%=0 20%=-8 40%=-18 60%=-28 80%=-34 100%=-38
+    ch upperarm.l tilt 0%=86 20%=68 40%=48 60%=30 80%=18 100%=12
+    ch upperarm.r tilt 0%=-86 20%=-68 40%=-48 60%=-30 80%=-18 100%=-12
+    ch forearm.l tilt 0%=4 20%=-12 40%=-28 60%=-42 80%=-52 100%=-58
+    ch forearm.r tilt 0%=-4 20%=12 40%=28 60%=42 80%=52 100%=58
+    ch thigh.l pitch 0%=10 20%=28 40%=48 60%=64 80%=76 100%=84
+    ch thigh.r pitch 0%=-10 20%=-28 40%=-48 60%=-64 80%=-76 100%=-84
+    ch shin.l pitch 0%=-8 20%=-18 40%=-30 60%=-40 80%=-47 100%=-52
+    ch shin.r pitch 0%=-8 20%=-18 40%=-30 60%=-40 80%=-47 100%=-52
+    ch head pitch 0%=0 20%=8 40%=15 60%=20 80%=24 100%=26
+
+checks
+  assert tris < 9000
+  assert bottom(shoe.l) < 0.08
+  assert bottom(shoe.r) < 0.08
+  assert zmax(nose_ball) > zmax(head_mass)
+  assert influences(leg.l) >= 2
+  assert influences(arm.l) >= 2
+  assert lowest(ball_balance) > -0.12
+  assert lowest(ball_jump) > -0.12
+  assert lowest(ball_fall) > -0.12
