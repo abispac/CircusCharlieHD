@@ -44,6 +44,12 @@ bag or losing one life permanently disqualifies that run from the bird reward.
 For Event 3 the bird enters from the left and flies rightward, matching the
 recorded stage; Event 1 retains its original right-to-left entrance.
 
+The camera follows Charlie at screen x=150 through most of the course, then
+clamps before the last two gaps. The double-width goal remains at screen
+x=390 on the right edge while Charlie crosses into it. Event 3's reward bird,
+bag, and coin shower use that same right-side goal anchor; other events retain
+their own camera and reward positions.
+
 Measured regular drum centers are approximately 84–88 pixels apart in the
 224-pixel ROM frame. The HD course uses a 180-unit center spacing on its
 480-unit logical canvas, with performers centered in the intended gaps.

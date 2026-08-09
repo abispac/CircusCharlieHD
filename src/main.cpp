@@ -40,6 +40,9 @@ constexpr float kStage3TambourineSpacing = 180.0F;
 // The arcade opening frames keep Charlie on the left drum of one centered
 // pair.  Holding that drum at x=150 leaves its partner at x=330.
 constexpr float kStage3PlayerScreenX = 150.0F;
+// The arcade stops scrolling on the final approach. The last tambourine
+// remains against the right edge while Charlie crosses the final two gaps.
+constexpr float kStage3GoalScreenX = 390.0F;
 constexpr float kStage3FirstTambourineX = kStage3PlayerScreenX;
 constexpr float kStage3CourseLength =
     kStage3FirstTambourineX + 24.0F * kStage3TambourineSpacing;
@@ -53,6 +56,14 @@ constexpr int kStage3DirectionWindowFrames = 8;
 // Trigger height for the fourth rebound. The ROM then removes the arena
 // sprite and presents the separate roof-burst tile in the fixed marquee.
 constexpr float kStage3RoofImpactY = 251.0F;
+
+float stage3CameraFor(float playerWorldX) {
+  const float followingCamera =
+      std::max(0.0F, playerWorldX - kStage3PlayerScreenX);
+  const float finalCamera =
+      std::max(0.0F, kStage3CourseLength - kStage3GoalScreenX);
+  return std::min(followingCamera, finalCamera);
+}
 // The original board places the ring tube directly below the crowd fascia
 // (about source y=140), not at the top of the crowd.
 constexpr float kTrackY = 350.0F;
@@ -476,7 +487,7 @@ void printUsage() {
       << "  --debug\n"
       << "  --lion-test\n"
       << "  --capture FILE.png\n"
-      << "  --capture-scene start|select|layout|large|prize|gameplay|stage2|stage2-goal|stage3|stage3-transfer|stage3-goal|stage3-roof|ring|extra|crash|goal|tally\n";
+      << "  --capture-scene start|select|layout|large|prize|gameplay|stage2|stage2-goal|stage3|stage3-transfer|stage3-approach|stage3-goal|stage3-roof|ring|extra|crash|goal|tally\n";
 }
 
 std::optional<Options> parseOptions(int argc, char** argv) {
@@ -503,6 +514,7 @@ std::optional<Options> parseOptions(int argc, char** argv) {
           options.captureScene != "stage2-goal" &&
           options.captureScene != "stage3" &&
           options.captureScene != "stage3-transfer" &&
+          options.captureScene != "stage3-approach" &&
           options.captureScene != "stage3-goal" &&
           options.captureScene != "stage3-roof" &&
           options.captureScene != "ring" &&
@@ -511,7 +523,7 @@ std::optional<Options> parseOptions(int argc, char** argv) {
           options.captureScene != "goal" &&
           options.captureScene != "tally") {
         std::cerr
-            << "Capture scene must be start, select, layout, large, prize, gameplay, stage2, stage2-goal, stage3, stage3-transfer, stage3-goal, stage3-roof, ring, extra, crash, goal, or tally.\n";
+            << "Capture scene must be start, select, layout, large, prize, gameplay, stage2, stage2-goal, stage3, stage3-transfer, stage3-approach, stage3-goal, stage3-roof, ring, extra, crash, goal, or tally.\n";
         return std::nullopt;
       }
     } else if (argument == "--mode" && index + 1 < argc) {
@@ -1442,8 +1454,7 @@ void restartAfterCrash(Game& game) {
     game.stage3TravelStartFrame = 0;
     game.stage3TravelStartX = game.player.position.x;
     game.stage3RoofCrash = false;
-    game.cameraX = std::max(
-        0.0F, game.player.position.x - kStage3PlayerScreenX);
+    game.cameraX = stage3CameraFor(game.player.position.x);
     game.previousCameraX = game.cameraX;
   }
 }
@@ -1548,7 +1559,7 @@ void finishStage(Game& game) {
   game.player.verticalVelocity = 0.0F;
   game.player.jumpFrame = -1;
   game.player.grounded = true;
-  game.cameraX = finishX - (stage2 ? 340.0F : (stage3 ? kStage3PlayerScreenX
+  game.cameraX = finishX - (stage2 ? 340.0F : (stage3 ? kStage3GoalScreenX
                                                        : kGoalScreenX));
   game.previousCameraX = game.cameraX;
   game.perfectClear =
@@ -1656,8 +1667,7 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
     game.stage3TravelStartX = game.player.position.x;
   }
   game.player.runSpeed = 0.0F;
-  game.cameraX = std::max(
-      0.0F, game.player.position.x - kStage3PlayerScreenX);
+  game.cameraX = stage3CameraFor(game.player.position.x);
 
   const float height = game.stage3Traveling
                            ? 118.0F
@@ -1972,7 +1982,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     game.cameraX =
         game.player.position.x -
         (stage2 ? 340.0F
-                : (stage3 ? kStage3PlayerScreenX : kGoalScreenX));
+                : (stage3 ? kStage3GoalScreenX : kGoalScreenX));
     game.previousCameraX = game.cameraX;
     ++game.goalFrame;
 
@@ -2953,6 +2963,7 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
   const int bagDropStart = birdStart + kBirdArrivalFrames;
   const int showerStart = bagDropStart + kBagDropFrames;
   const bool stage3 = game.selectedEvent == 2;
+  const float goalScreenX = stage3 ? kStage3GoalScreenX : kGoalScreenX;
   if (birdTexture && game.goalFrame >= birdStart) {
     int textureWidth = 0;
     int textureHeight = 0;
@@ -2967,12 +2978,12 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
               static_cast<float>(kBirdArrivalFrames),
           0.0F, 1.0F);
       const float entranceX = stage3 ? -30.0F : 510.0F;
-      birdX = entranceX + (kGoalScreenX - entranceX) * progress;
+      birdX = entranceX + (goalScreenX - entranceX) * progress;
       cell = (game.goalFrame / 8) & 1;
     } else {
       // The reference bird remains beside the bag throughout the complete
       // coin shower. It does not fly away while coins fall from empty air.
-      birdX = kGoalScreenX;
+      birdX = goalScreenX;
       cell = 2 + ((game.goalFrame / 10) & 1);
     }
     const SDL_Rect source{cell * cellWidth, 0, cellWidth, textureHeight};
@@ -2986,7 +2997,7 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
                       stage3 ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
   }
 
-  constexpr float kRewardBagX = kGoalScreenX;
+  const float rewardBagX = goalScreenX;
   constexpr float kRewardBagRestY = 305.0F;
   float rewardBagY = kRewardBagRestY;
   const bool showRewardBag = game.goalFrame >= bagDropStart;
@@ -3007,7 +3018,7 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
           static_cast<float>((index * 37) % 91) - 45.0F;
       const float spread = std::clamp(
           static_cast<float>(localFrame) / 32.0F, 0.0F, 1.0F);
-      const float x = kRewardBagX + lane * 0.55F * spread;
+      const float x = rewardBagX + lane * 0.55F * spread;
       const float y = kRewardBagRestY + 30.0F +
                       static_cast<float>(localFrame) * 2.05F;
       drawCoin(renderer, x, y,
@@ -3017,7 +3028,7 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
 
   if (showRewardBag) {
     if (rewardBagTexture) {
-      const SDL_FRect bagDestination{kRewardBagX - 24.0F,
+      const SDL_FRect bagDestination{rewardBagX - 24.0F,
                                      rewardBagY - 30.0F, 48.0F, 59.0F};
       SDL_RenderCopyF(renderer, rewardBagTexture, nullptr, &bagDestination);
     } else if (propsTexture) {
@@ -3027,13 +3038,13 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
                        &textureHeight);
       const int cellWidth = textureWidth / 3;
       const SDL_Rect bagSource{cellWidth, 0, cellWidth, textureHeight};
-      const SDL_FRect bagDestination{kRewardBagX - 25.0F,
+      const SDL_FRect bagDestination{rewardBagX - 25.0F,
                                      rewardBagY - 35.0F, 50.0F, 100.0F};
       SDL_RenderCopyF(renderer, propsTexture, &bagSource, &bagDestination);
     } else {
-      ellipse(renderer, kRewardBagX, rewardBagY + 10.0F, 18.0F, 24.0F,
+      ellipse(renderer, rewardBagX, rewardBagY + 10.0F, 18.0F, 24.0F,
               color(223, 158, 39), 4);
-      fillRect(renderer, kRewardBagX - 12.0F, rewardBagY - 16.0F, 24.0F,
+      fillRect(renderer, rewardBagX - 12.0F, rewardBagY - 16.0F, 24.0F,
                7.0F, color(118, 68, 21));
     }
   }
@@ -4261,6 +4272,7 @@ int main(int argc, char** argv) {
         game.selectedEvent = 1;
       } else if (options.captureScene == "stage3" ||
                  options.captureScene == "stage3-transfer" ||
+                 options.captureScene == "stage3-approach" ||
                  options.captureScene == "stage3-goal" ||
                  options.captureScene == "stage3-roof") {
         game.selectedEvent = 2;
@@ -4275,6 +4287,29 @@ int main(int argc, char** argv) {
       game.deathOccurred = false;
       finishStage(game);
       game.goalFrame = 180;
+    } else if (options.captureScene == "stage3-approach") {
+      const int finalIndex =
+          static_cast<int>(game.stage3Tambourines.size()) - 1;
+      game.stage3CurrentTambourine = finalIndex - 1;
+      game.stage3TargetTambourine = finalIndex;
+      game.stage3BounceLevel = 1;
+      game.stage3BounceFrame = kStage3TransferFrames / 2;
+      game.stage3BounceBaseY = kStage3TambourineTopY;
+      game.stage3Traveling = true;
+      game.stage3TravelStartFrame = 0;
+      game.stage3TravelStartX =
+          game.stage3Tambourines[static_cast<std::size_t>(finalIndex - 1)]
+              .worldX;
+      game.player.position = {
+          (game.stage3Tambourines[static_cast<std::size_t>(finalIndex - 1)]
+                   .worldX +
+           game.stage3Tambourines[static_cast<std::size_t>(finalIndex)]
+               .worldX) *
+              0.5F,
+          kStage3TambourineTopY - 118.0F};
+      game.player.previous = game.player.position;
+      game.cameraX = stage3CameraFor(game.player.position.x);
+      game.previousCameraX = game.cameraX;
     } else if (options.captureScene == "stage3-roof") {
       game.stage3CurrentTambourine = 3;
       game.stage3TargetTambourine = 3;
