@@ -29,12 +29,14 @@ add_custom_command(TARGET big_top_run POST_BUILD
           $<TARGET_FILE_DIR:big_top_run>/assets
   COMMAND ${CMAKE_COMMAND} -E make_directory
           "${CMAKE_BINARY_DIR}/Big Top Run.app/Contents/MacOS"
+  COMMAND ${CMAKE_COMMAND} -E make_directory
+          "${CMAKE_BINARY_DIR}/Big Top Run.app/Contents/Resources"
   COMMAND ${CMAKE_COMMAND} -E copy
           $<TARGET_FILE:big_top_run>
           "${CMAKE_BINARY_DIR}/Big Top Run.app/Contents/MacOS/big_top_run"
   COMMAND ${CMAKE_COMMAND} -E copy_directory
           ${CMAKE_SOURCE_DIR}/assets
-          "${CMAKE_BINARY_DIR}/Big Top Run.app/Contents/MacOS/assets"
+          "${CMAKE_BINARY_DIR}/Big Top Run.app/Contents/Resources/assets"
   COMMAND ${CMAKE_COMMAND} -E copy
           ${CMAKE_SOURCE_DIR}/macos/Info.plist
           "${CMAKE_BINARY_DIR}/Big Top Run.app/Contents/Info.plist"
