@@ -4510,7 +4510,10 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
   float baseline = playerY + 43.0F - kStage4CharlieVisualLift;
   float width = 150.0F;
   float height = 150.0F;
-  if (game.scene == Scene::Crashed && game.stage4PinnedCrash) {
+  if (game.scene == Scene::Crashed) {
+    // Both a ball squeeze and a missed landing use the dedicated Stage 4
+    // stumble/face-plant row. The old branch only selected it for squeeze
+    // failures, leaving a missed jump frozen in its airborne pose.
     frame = 8 + std::min(3, game.stage4FallFrame / 6);
     baseline = kStage4BallCenterY + 70.0F;
   } else if (game.stage4Airborne) {
@@ -4518,7 +4521,10 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
   } else if (game.scene == Scene::Goal) {
     constexpr std::array<int, 8> celebration{0, 1, 2, 3, 2, 1, 0, 1};
     frame = celebration[static_cast<std::size_t>((game.goalFrame / 7) % 8)];
-    baseline = kStage4GoalTopY + 49.0F;
+    // The platform is drawn downward from kStage4GoalTopY. Account for the
+    // atlas's transparent shoe padding so Charlie stands on the green top
+    // instead of appearing embedded in the striped side wall.
+    baseline = kStage4GoalTopY + 15.0F;
   } else if (game.stage4IdleFrame == 0) {
     // Only directional ball-walking cycles the balance animation.
     frame = (static_cast<int>(timeSeconds * 60.606F) / 7) & 3;
@@ -4543,7 +4549,7 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
                  SDL_FLIP_NONE);
 
   drawHud(renderer, game, assets.charlieLife);
-  if (game.scene == Scene::Crashed && game.stage4PinnedCrash) {
+  if (game.scene == Scene::Crashed) {
     drawText(renderer, "OH NO!!", 150.0F, 260.0F, 1.8F,
              color(255, 82, 28), true);
     drawText(renderer, "OH NO!!", 354.0F, 306.0F, 1.8F,
