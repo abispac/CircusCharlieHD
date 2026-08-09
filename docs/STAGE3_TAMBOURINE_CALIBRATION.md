@@ -25,12 +25,17 @@ landings advance a four-part chain:
    a life if Charlie has remained on the same tambourine.
 
 Pressing left or right during the opening eight board frames commits Charlie
-to the adjacent tambourine. The stick must return to neutral before another
-transfer can be selected, so holding one direction cannot auto-clear the
-course. Every transfer uses one full 48-frame cosine-eased arc and lands at the
-exact center of the selected drum; horizontal free drift does not exist. A
-successful transfer resets the stationary chain to its first, low bounce. The
-grass is never a landing surface, and performers are not platforms.
+to the adjacent tambourine. Holding a direction carries that choice into the
+next landing, allowing continuous travel; releasing it leaves Charlie bouncing
+vertically. Every transfer uses one 44-frame cosine-eased arc (ten percent
+faster than the 48-frame stationary bounce) and lands at the exact center of
+the selected drum; horizontal free drift does not exist. A successful transfer
+resets the stationary chain to its first, low bounce. The grass is never a
+landing surface, and performers are not platforms.
+
+Money bags are suspended 236 logical units above the drum contact plane. Their
+painted bottom stays clear of the second-bounce silhouette, while the third
+bounce reaches both the artwork and its collection target.
 
 Measured regular drum centers are approximately 84–88 pixels apart in the
 224-pixel ROM frame. The HD course uses a 180-unit center spacing on its

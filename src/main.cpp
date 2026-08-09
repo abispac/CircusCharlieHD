@@ -33,6 +33,9 @@ constexpr float kStage2GoalTopY = kStage2RopeY - 76.0F;
 constexpr float kStage2GoalX = 5700.0F;
 constexpr float kStage3GroundY = 592.0F;
 constexpr float kStage3TambourineTopY = 482.0F;
+// The bag's painted bottom clears bounce two but overlaps Charlie's hands and
+// head on bounce three, matching the collection rule visually.
+constexpr float kStage3PrizeBagY = kStage3TambourineTopY - 236.0F;
 constexpr float kStage3TambourineSpacing = 180.0F;
 // The arcade opening frames keep Charlie on the left drum of one centered
 // pair.  Holding that drum at x=150 leaves its partner at x=330.
@@ -41,6 +44,9 @@ constexpr float kStage3FirstTambourineX = kStage3PlayerScreenX;
 constexpr float kStage3CourseLength =
     kStage3FirstTambourineX + 24.0F * kStage3TambourineSpacing;
 constexpr int kStage3BounceFrames = 48;
+// Transfers are ten percent quicker than a stationary rebound, while still
+// using one continuous center-to-center arc.
+constexpr int kStage3TransferFrames = 44;
 constexpr int kStage3DirectionWindowFrames = 8;
 // Trigger height for the fourth rebound. The ROM then removes the arena
 // sprite and presents the separate roof-burst tile in the fixed marquee.
@@ -1611,13 +1617,15 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
     }
   }
 
+  const int bounceDuration =
+      game.stage3Traveling ? kStage3TransferFrames : kStage3BounceFrames;
   const int previousBounceFrame = game.stage3BounceFrame;
   game.stage3BounceFrame =
-      std::min(game.stage3BounceFrame + 1, kStage3BounceFrames);
+      std::min(game.stage3BounceFrame + 1, bounceDuration);
   const float progress = static_cast<float>(game.stage3BounceFrame) /
-                         static_cast<float>(kStage3BounceFrames);
+                         static_cast<float>(bounceDuration);
   const float oldProgress = static_cast<float>(previousBounceFrame) /
-                            static_cast<float>(kStage3BounceFrames);
+                            static_cast<float>(bounceDuration);
   const auto& currentDrum = game.stage3Tambourines[static_cast<std::size_t>(
       game.stage3CurrentTambourine)];
   const auto& targetDrum = game.stage3Tambourines[static_cast<std::size_t>(
@@ -1628,7 +1636,7 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
     // travel at the apex produced the visible "rocket launch" followed by a
     // straight drop that the arcade never performs.
     const int remainingFrames =
-        std::max(1, kStage3BounceFrames - game.stage3TravelStartFrame);
+        std::max(1, kStage3TransferFrames - game.stage3TravelStartFrame);
     const float travelProgress = std::clamp(
         static_cast<float>(game.stage3BounceFrame -
                            game.stage3TravelStartFrame) /
@@ -1672,9 +1680,9 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
   if (!game.stage3Traveling && game.stage3BounceLevel == 3) {
     for (auto& drum : game.stage3Tambourines) {
       if (!drum.bagAvailable) continue;
-      const float bagY = kStage3TambourineTopY - 154.0F;
+      const float bagY = kStage3PrizeBagY;
       if (std::abs(game.player.position.x - drum.worldX) < 34.0F &&
-          std::abs((game.player.position.y - 42.0F) - bagY) < 46.0F) {
+          std::abs((game.player.position.y - 60.0F) - bagY) < 40.0F) {
         drum.bagAvailable = false;
         game.score += 500;
         showStage1Score(game, 500, drum.worldX, bagY);
@@ -1683,10 +1691,14 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
     }
   }
 
-  if (game.stage3BounceFrame >= kStage3BounceFrames) {
+  if (game.stage3BounceFrame >= bounceDuration) {
     if (game.stage3Traveling) {
       game.stage3CurrentTambourine = game.stage3TargetTambourine;
       game.stage3Traveling = false;
+      // A held direction is the arcade's continuous-travel control: landing
+      // re-arms the next adjacent transfer. Releasing the stick still leaves
+      // Charlie bouncing vertically on the current drum.
+      game.stage3DirectionArmed = true;
       game.stage3BounceLevel = 1;
     } else {
       game.stage3BounceLevel =
@@ -1955,7 +1967,8 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     game.player.jumpFrame = -1;
     game.cameraX =
         game.player.position.x -
-        (stage2 ? 340.0F : (stage3 ? 78.0F : kGoalScreenX));
+        (stage2 ? 340.0F
+                : (stage3 ? kStage3PlayerScreenX : kGoalScreenX));
     game.previousCameraX = game.cameraX;
     ++game.goalFrame;
 
@@ -3759,7 +3772,7 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
                               : assets.stage3Tambourine,
                          x, drum.compressionFrame, goal);
     if (drum.bagAvailable) {
-      const float bagY = kStage3TambourineTopY - 154.0F;
+      const float bagY = kStage3PrizeBagY;
       if (assets.rewardBag) {
         const SDL_FRect bagDestination{x - 24.0F, bagY - 31.0F,
                                        48.0F, 52.0F};
@@ -3812,8 +3825,12 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
   int charlieRows = 3;
   int charlieColumns = 4;
   double charlieAngle = 0.0;
-  float charlieWidth = 76.0F;
-  float charlieHeight = 104.0F;
+  // The original front-facing atlas has much wider transparent cell margins
+  // than the WAM tuck. Match their painted widths while preserving the
+  // established vertical bounce height; this prevents a size pop at takeoff
+  // without making the extended apex pose unnaturally tall.
+  float charlieWidth = 100.0F;
+  float charlieHeight = 105.0F;
   SDL_Texture* charlieTexture = assets.stage3CharlieVertical;
   if (game.scene == Scene::Goal) {
     // A compact crouch-rise-cheer loop keeps Charlie celebrating on the goal
@@ -3823,7 +3840,7 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
         (game.goalFrame / 7) % static_cast<int>(celebrationFrames.size()))];
   } else if (game.stage3Traveling) {
     const int remainingFrames =
-        std::max(1, kStage3BounceFrames - game.stage3TravelStartFrame);
+        std::max(1, kStage3TransferFrames - game.stage3TravelStartFrame);
     const float progress = std::clamp(
         static_cast<float>(game.stage3BounceFrame -
                            game.stage3TravelStartFrame) /
@@ -4258,7 +4275,7 @@ int main(int argc, char** argv) {
       game.stage3TargetTambourine = 3;
       game.player.position = {
           game.stage3Tambourines[3].worldX,
-          kStage3TambourineTopY - 118.0F};
+          kStage3TambourineTopY - stage3BounceHeight(3)};
       game.player.previous = game.player.position;
       game.player.runSpeed = 0.0F;
       game.player.grounded = false;
