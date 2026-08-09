@@ -30,6 +30,15 @@ behavioral reference and is not copied into the project.
   the course scrolls.
 - Ball clusters tighten toward the goal; the final platform remains fixed on
   the right during the approach.
+- In frames `010976–011016`, the next ball crosses about 58 native pixels in
+  40 board frames: roughly `1.45` native pixels per frame, or `188` logical
+  units per second after scaling to the 480-wide playfield.
+- The active object set normally contains Charlie's ball and one approaching
+  ball. The board recycles an old slot after the abandoned ball exits behind
+  the camera instead of keeping the whole course alive.
+- A jump without left/right preserves Charlie's horizontal speed relative to
+  his current ball. A directional jump is the transfer command; immediately
+  after takeoff, the abandoned ball rolls toward the rear.
 
 ## Runtime invariants
 

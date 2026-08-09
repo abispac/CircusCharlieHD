@@ -266,6 +266,7 @@ struct Stage4Ball {
   float worldX = 0.0F;
   float velocity = 0.0F;
   float rotation = 0.0F;
+  bool active = true;
 };
 
 struct Player {
@@ -355,6 +356,8 @@ struct Game {
   bool stage4PinnedCrash = false;
   int stage4FallFrame = 0;
   int stage4RespawnGraceFrames = 0;
+  int stage4NextBallToActivate = 0;
+  int stage4JumpDirection = 0;
   std::uint32_t jumpAudioSerial = 0;
   std::uint32_t crashAudioSerial = 0;
   std::uint32_t extraCharlieAudioSerial = 0;
@@ -1221,6 +1224,8 @@ void resetCourse(Game& game) {
   game.stage4PinnedCrash = false;
   game.stage4FallFrame = 0;
   game.stage4RespawnGraceFrames = 0;
+  game.stage4NextBallToActivate = 0;
+  game.stage4JumpDirection = 0;
 
   if (game.selectedEvent == 1) {
     game.player.position = {78.0F, kStage2RopeY};
@@ -1347,7 +1352,7 @@ void resetCourse(Game& game) {
         246, 232, 272, 216, 258, 224, 282, 220,
         248, 230, 270, 218, 256, 226, 276, 222};
     constexpr std::array<float, 6> incomingSpeeds{
-        -58.0F, -66.0F, -54.0F, -62.0F, -56.0F, -68.0F};
+        -182.0F, -176.0F, -188.0F, -180.0F, -172.0F, -190.0F};
     float x = kStage4PlayerScreenX;
     game.stage4Balls.push_back({x, 82.0F, 0.0F});
     for (std::size_t index = 0; index < gaps.size(); ++index) {
@@ -1362,6 +1367,14 @@ void resetCourse(Game& game) {
     // ball leads into a stationary goal at the right edge instead of letting
     // the camera carry the finish platform across the whole screen.
     game.stage4Balls.back().worldX = kStage4CourseLength - 165.0F;
+    // The board reuses a tiny number of object slots. Keep Charlie's ball
+    // and one approaching ball live; later balls enter only after the old
+    // ball has rolled behind the camera.
+    for (auto& ball : game.stage4Balls) ball.active = false;
+    game.stage4Balls[0].active = true;
+    if (game.stage4Balls.size() > 1) game.stage4Balls[1].active = true;
+    game.stage4NextBallToActivate =
+        std::min(2, static_cast<int>(game.stage4Balls.size()));
     game.prizeBagsAvailable = 0;
     return;
   }
@@ -1551,10 +1564,16 @@ void restartAfterCrash(Game& game) {
     game.stage4PinnedCrash = false;
     game.stage4FallFrame = 0;
     game.stage4RespawnGraceFrames = 90;
+    game.stage4JumpDirection = 0;
     game.player.facingRight = true;
     // A squeeze failure can leave another rolling ball occupying the active
     // ball's spawn circle. The board grants a short restart window; move only
     // immediate overlaps out of that circle while preserving the live stream.
+    for (auto& candidate : game.stage4Balls) candidate.active = false;
+    ball.active = true;
+    game.stage4NextBallToActivate = std::min(
+        game.stage4CurrentBall + 1,
+        static_cast<int>(game.stage4Balls.size()));
     int relocated = 0;
     for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
       if (static_cast<int>(index) == game.stage4CurrentBall) continue;
@@ -1565,6 +1584,13 @@ void restartAfterCrash(Game& game) {
         other.worldX = ball.worldX + 190.0F +
                        static_cast<float>(relocated - 1) * 118.0F;
       }
+    }
+    if (game.stage4NextBallToActivate <
+        static_cast<int>(game.stage4Balls.size())) {
+      auto& next = game.stage4Balls[static_cast<std::size_t>(
+          game.stage4NextBallToActivate++)];
+      next.worldX = std::max(next.worldX, ball.worldX + 250.0F);
+      next.active = true;
     }
     game.cameraX = std::max(0.0F, ball.worldX - kStage4PlayerScreenX);
     game.previousCameraX = game.cameraX;
@@ -1935,6 +1961,7 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
 
   for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
     auto& ball = game.stage4Balls[index];
+    if (!ball.active) continue;
     if (static_cast<int>(index) != game.stage4CurrentBall ||
         game.stage4Airborne) {
       ball.worldX += ball.velocity * static_cast<float>(kFixedDt);
@@ -1958,6 +1985,7 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
          game.stage4RespawnGraceFrames == 0 &&
          index < game.stage4Balls.size(); ++index) {
       if (static_cast<int>(index) == game.stage4CurrentBall) continue;
+      if (!game.stage4Balls[index].active) continue;
       if (std::abs(game.stage4Balls[index].worldX - ball.worldX) <
           kStage4BallRadius * 1.82F) {
         game.stage4PinnedCrash = true;
@@ -1968,12 +1996,26 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
     }
 
     if (jumpPressed) {
+      const float sourceVelocity = ball.velocity;
+      game.stage4JumpDirection =
+          moveRight != moveLeft ? (moveRight ? 1 : -1) : 0;
       game.stage4Airborne = true;
       game.player.grounded = false;
       game.player.verticalVelocity = -330.0F;
-      game.player.runSpeed = std::clamp(ball.velocity, -120.0F, 175.0F);
-      if (std::abs(game.player.runSpeed) < 62.0F)
-        game.player.runSpeed = moveLeft && !moveRight ? -104.0F : 104.0F;
+      if (game.stage4JumpDirection == 0) {
+        // No direction is a true vertical bounce relative to the rolling
+        // ball: Charlie and the ball retain the same horizontal velocity.
+        game.player.runSpeed = sourceVelocity;
+      } else {
+        // Transfer speed is independent of the ball's ground velocity. With
+        // the measured incoming speed, 104 units/s meets each approaching
+        // ball near the descending half of the ROM-height jump arc.
+        game.player.runSpeed =
+            static_cast<float>(game.stage4JumpDirection) * 104.0F;
+        // As soon as Charlie leaves for another ball, the abandoned ball
+        // rolls toward the rear exactly as in the Stage 4 frame sequence.
+        ball.velocity = -182.0F;
+      }
       game.player.jumpFrame = 0;
       ++game.jumpAudioSerial;
     }
@@ -1988,7 +2030,10 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
       int landing = -1;
       float best = 44.0F;
       for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
-        if (static_cast<int>(index) == game.stage4CurrentBall) continue;
+        if (!game.stage4Balls[index].active) continue;
+        if (static_cast<int>(index) == game.stage4CurrentBall &&
+            game.stage4JumpDirection != 0)
+          continue;
         const float distance = std::abs(
             game.player.position.x - game.stage4Balls[index].worldX);
         if (distance < best &&
@@ -2009,6 +2054,7 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
         game.player.verticalVelocity = 0.0F;
         game.player.grounded = true;
         game.stage4Airborne = false;
+        game.stage4JumpDirection = 0;
         game.player.jumpFrame = -1;
         if (landing == static_cast<int>(game.stage4Balls.size()) - 1) {
           finishStage(game);
@@ -2028,6 +2074,28 @@ void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
   const float finalCamera = std::max(0.0F,
       kStage4CourseLength - kStage4GoalScreenX);
   game.cameraX = std::min(following, finalCamera);
+
+  // Retire the one abandoned ball only after it has visibly rolled behind
+  // Charlie. Then reuse the freed object slot for one new approaching ball.
+  for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
+    auto& ball = game.stage4Balls[index];
+    if (!ball.active || static_cast<int>(index) == game.stage4CurrentBall)
+      continue;
+    if (ball.worldX < game.cameraX - kStage4BallRadius * 2.2F)
+      ball.active = false;
+  }
+  int activeCount = 0;
+  for (const auto& ball : game.stage4Balls)
+    if (ball.active) ++activeCount;
+  if (activeCount < 2 && game.stage4NextBallToActivate <
+                           static_cast<int>(game.stage4Balls.size())) {
+    auto& next = game.stage4Balls[static_cast<std::size_t>(
+        game.stage4NextBallToActivate++)];
+    const auto& current = game.stage4Balls[static_cast<std::size_t>(
+        game.stage4CurrentBall)];
+    next.worldX = std::max(next.worldX, current.worldX + 250.0F);
+    next.active = true;
+  }
   if (game.bonus > 0) --game.bonus;
   if (game.bonus <= 0) crashPlayer(game);
   awardScoreLives(game);
@@ -2205,6 +2273,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
       // during Charlie's fall. Freezing them here caused an immediate repeat
       // collision on restart and made the failure look unlike the cabinet.
       for (auto& ball : game.stage4Balls) {
+        if (!ball.active) continue;
         ball.worldX += ball.velocity * static_cast<float>(kFixedDt);
         ball.rotation += ball.velocity * static_cast<float>(kFixedDt) /
                          kStage4BallRadius;
@@ -4280,6 +4349,7 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
 
   for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
     const auto& ball = game.stage4Balls[index];
+    if (!ball.active) continue;
     const float x = ball.worldX - camera;
     if (x < -80.0F || x > kWorldWidth + 80.0F) continue;
     // Rotate the painted ball continuously. Swapping among eight nearly
@@ -4671,6 +4741,8 @@ int main(int argc, char** argv) {
       game.goalFrame = 96;
     } else if (options.captureScene == "stage4-fall") {
       game.stage4CurrentBall = 5;
+      for (auto& candidate : game.stage4Balls) candidate.active = false;
+      game.stage4Balls[5].active = true;
       const auto& ball = game.stage4Balls[5];
       game.player.position = {ball.worldX, kStage4BallCenterY + 30.0F};
       game.player.previous = game.player.position;
@@ -4685,6 +4757,9 @@ int main(int argc, char** argv) {
       game.previousCameraX = game.cameraX;
     } else if (options.captureScene == "stage4-jump") {
       game.stage4CurrentBall = 4;
+      for (auto& candidate : game.stage4Balls) candidate.active = false;
+      game.stage4Balls[4].active = true;
+      game.stage4Balls[5].active = true;
       const auto& from = game.stage4Balls[4];
       const auto& to = game.stage4Balls[5];
       game.stage4Airborne = true;
@@ -4699,6 +4774,9 @@ int main(int argc, char** argv) {
       game.previousCameraX = game.cameraX;
     } else if (options.captureScene == "stage4") {
       game.stage4CurrentBall = 4;
+      for (auto& candidate : game.stage4Balls) candidate.active = false;
+      game.stage4Balls[4].active = true;
+      game.stage4Balls[5].active = true;
       const auto& ball = game.stage4Balls[4];
       game.player.position = {ball.worldX, kStage4CharlieBaselineY};
       game.player.previous = game.player.position;
