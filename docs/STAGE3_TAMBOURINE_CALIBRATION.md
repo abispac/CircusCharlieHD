@@ -93,12 +93,25 @@ can kill Charlie. The final target is a separate double-width goal tambourine.
   has no atlas-frame snapping.
 - `assets/stage3-tambourine-v1.png`: tall leather tambourine.
 - `assets/stage3-goal-tambourine-v1.png`: double-width final tambourine.
-- `assets/stage3-knife-thrower-8-v1.png`: 4x2 knife-thrower atlas.
-- `assets/stage3-fire-breather-vertical-8-v2.png`: 4x2 vertical fire-thrower
-  atlas selected by the project owner.
+- `wam-proof/stage3-knife-thrower.wam`: planted 12-pose knife-toss motion
+  contract (anticipate, release, track/catch, recover).
+- `wam-proof/stage3-fire-breather.wam`: planted 12-pose vertical-breath motion
+  contract (raise, inhale, extend, sustain, recover).
+- `assets/stage3-knife-thrower-12-v2.png`: 4x3 HD knife-thrower atlas whose
+  chronological poses follow the compiled WAM motion strip. Airborne knives
+  remain separate runtime projectiles.
+- `assets/stage3-fire-breather-vertical-12-v3.png`: 4x3 HD vertical
+  fire-breather atlas whose chronological poses follow the compiled WAM
+  motion strip. The upward flame remains a separate runtime projectile.
 - `assets/stage3-projectiles-8-v1.png`: four rotating knife frames.
 - `assets/stage3-flame-projectile-4-v2.png`: four upright HD teardrop flame
   frames; the projectile never rotates or develops a sideways tail.
 
 Original chroma-key generations remain under `assets/source-art/`; runtime
 assets have transparent alpha and despilled edges.
+
+The performer animation phase is the same deterministic 150-frame clock used
+by its hazard. The phase resets on projectile release, plays follow-through
+and tracking first, recovers to neutral, then plays the WAM anticipation poses
+immediately before the next release. This prevents the old five-pose snapping
+and keeps the character action synchronized with the visible hazard.

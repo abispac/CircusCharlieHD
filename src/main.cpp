@@ -623,9 +623,9 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.stage3GoalTambourine =
       loadAsset(renderer, "stage3-goal-tambourine-v1.png");
   assets.stage3KnifeThrower =
-      loadAsset(renderer, "stage3-knife-thrower-8-v1.png");
+      loadAsset(renderer, "stage3-knife-thrower-12-v2.png");
   assets.stage3FlameThrower =
-      loadAsset(renderer, "stage3-fire-breather-vertical-8-v2.png");
+      loadAsset(renderer, "stage3-fire-breather-vertical-12-v3.png");
   assets.stage3Projectiles =
       loadAsset(renderer, "stage3-projectiles-8-v1.png");
   assets.stage3FlameProjectile =
@@ -3828,12 +3828,44 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
     if (x < -80.0F || x > kWorldWidth + 80.0F) continue;
     const bool knife =
         performer.kind == Stage3PerformerKind::KnifeThrower;
-    const int cycle = performer.actionFrame % 72;
-    int frame = cycle < 22 ? 0 : (cycle < 36 ? 1 :
-                (cycle < 48 ? 2 : (cycle < 59 ? 3 : 4)));
+    // These 12-frame actions were authored and checked as continuous WAM
+    // motion studies. Frame zero is not blindly tied to the projectile:
+    // actionFrame resets at release, so the first portion is follow-through
+    // and tracking, the middle is recovery, and the final portion anticipates
+    // the next release. This keeps the hands, head, and projectile in one
+    // readable rhythm instead of jumping among five unrelated poses.
+    const int cycle = performer.actionFrame % 150;
+    int frame = 0;
+    if (knife) {
+      frame = cycle < 6 ? 3 :
+              cycle < 20 ? 4 :
+              cycle < 34 ? 5 :
+              cycle < 48 ? 6 :
+              cycle < 62 ? 7 :
+              cycle < 76 ? 8 :
+              cycle < 90 ? 9 :
+              cycle < 104 ? 10 :
+              cycle < 118 ? 11 :
+              cycle < 130 ? 0 :
+              cycle < 138 ? 1 :
+              cycle < 145 ? 2 : 3;
+    } else {
+      frame = cycle < 8 ? 5 :
+              cycle < 20 ? 6 :
+              cycle < 32 ? 7 :
+              cycle < 44 ? 8 :
+              cycle < 58 ? 9 :
+              cycle < 72 ? 10 :
+              cycle < 88 ? 11 :
+              cycle < 110 ? 0 :
+              cycle < 124 ? 1 :
+              cycle < 136 ? 2 :
+              cycle < 144 ? 3 :
+              cycle < 148 ? 4 : 5;
+    }
     SDL_Texture* texture = knife ? assets.stage3KnifeThrower
                                  : assets.stage3FlameThrower;
-    drawSheetFrame(renderer, texture, 4, 2, frame, x, kStage3GroundY,
+    drawSheetFrame(renderer, texture, 4, 3, frame, x, kStage3GroundY,
                    knife ? 88.0F : 94.0F, knife ? 112.0F : 116.0F);
 
     const auto& projectile = game.stage3Projectiles[index];

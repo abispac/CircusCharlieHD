@@ -1,0 +1,86 @@
+model stage3_fire_breather_motion
+  height 1.72
+  style smooth
+  girth 1.24
+
+palette
+  skin #e2a072
+  vest #7c2ea1
+  pants #2e8b45
+  gold #d6a426 metal=1.0 rough=0.35
+  black #251713
+  torch #a8231f
+  flame #ff9a18
+
+skeleton
+  root pelvis at (0,0.49,0)
+  bone spine parent=pelvis dir=up len=0.18
+  bone chest parent=spine dir=up len=0.18
+  bone neck parent=chest dir=up len=0.06
+  bone head parent=neck dir=up len=0.19
+  bone torch parent=chest at=0.65 side=-0.31 up=-0.02 dir=up len=0.25
+  bone flame parent=torch dir=up len=0.12
+  mirror
+    bone upperarm parent=chest at=0.76 side=0.11 dir=side tilt=-20 len=0.18
+    bone forearm parent=upperarm dir=down len=0.17
+    bone hand parent=forearm dir=down len=0.08
+    bone thigh parent=pelvis side=0.075 dir=down tilt=4 len=0.24
+    bone shin parent=thigh dir=down len=0.22
+    bone foot parent=shin dir=fwd pitch=-72 len=0.17
+  end
+
+parts
+  loft torso bones=pelvis..chest frame=fwd material=vest
+    ring 0.00 w=0.39 d=0.29
+    ring 0.48 w=0.46 d=0.34 fwd=0.02
+    ring 1.00 w=0.37 d=0.27
+    cap start=dome end=dome
+  loft head_mass bones=neck..head frame=fwd material=skin
+    ring 0.00 w=0.18 d=0.17
+    ring 0.55 w=0.26 d=0.24
+    ring 1.00 w=0.21 d=0.20
+    cap start=dome end=dome
+  attach moustache bone=head at=0.34 offset=(0,0.01,0.13) kind=sphere w=0.25 h=0.052 d=0.042 material=black on=head_mass press=off
+  mirror
+    loft arm bones=upperarm..hand frame=fwd material=skin
+      ring 0.00 w=0.14 d=0.14
+      ring 0.55 w=0.12 d=0.12
+      ring 1.00 w=0.11 d=0.105
+      cap start=dome end=dome
+    loft leg bones=thigh..shin frame=fwd material=pants
+      ring 0.00 w=0.16 d=0.17
+      ring 0.55 w=0.14 d=0.15
+      ring 1.00 w=0.12 d=0.13
+      cap start=dome end=dome
+    attach shoe bone=foot at=0.72 offset=(0,-0.05,0) kind=sphere w=0.23 h=0.11 d=0.15 material=vest
+  end
+  loft torch_body bones=torch..torch frame=fwd material=torch
+    ring 0.00 w=0.055 d=0.055
+    ring 1.00 w=0.040 d=0.040
+    cap start=flat end=flat
+  loft torch_flame bones=flame..flame frame=fwd material=flame
+    ring 0.00 w=0.09 d=0.07
+    ring 0.55 w=0.12 d=0.08
+    ring 1.00 w=0.005 d=0.005 tip
+    cap start=dome end=point
+
+animations
+  anim vertical_breathe dur=1.52
+    ch spine pitch 0%=0 16%=-4 32%=-10 48%=-15 64%=-8 82%=2 100%=0
+    ch chest pitch 0%=0 16%=-5 32%=-12 48%=-18 64%=-10 82%=3 100%=0
+    ch neck pitch 0%=0 16%=-8 32%=-18 48%=-30 64%=-18 82%=-3 100%=0
+    ch head pitch 0%=0 16%=-8 32%=-20 48%=-36 64%=-24 82%=-5 100%=0
+    ch upperarm.l tilt 0%=-10 16%=4 32%=24 48%=44 64%=28 82%=4 100%=-10
+    ch forearm.l tilt 0%=-22 16%=-10 32%=8 48%=30 64%=12 82%=-8 100%=-22
+    ch upperarm.r tilt 0%=6 16%=20 32%=38 48%=54 64%=40 82%=18 100%=6
+    ch forearm.r tilt 0%=-18 16%=-4 32%=16 48%=36 64%=20 82%=-2 100%=-18
+    ch torch pitch 0%=0 16%=-12 32%=-30 48%=-58 64%=-35 82%=-10 100%=0
+    ch flame pitch 0%=0 16%=-4 32%=-8 48%=-12 64%=-8 82%=-3 100%=0
+
+checks
+  assert tris < 7000
+  assert bottom(shoe.l) < 0.08
+  assert bottom(shoe.r) < 0.08
+  assert lowest(vertical_breathe) > -0.10
+  assert swing(upperarm.l, vertical_breathe) > 45
+  assert swing(head, vertical_breathe) > 28

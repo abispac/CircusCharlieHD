@@ -1,0 +1,71 @@
+model stage3_knife_thrower_motion
+  height 1.78
+  style smooth
+  girth 1.12
+
+palette
+  skin #d99568
+  shirt #ead9b6
+  vest #25476f
+  pants #a52f27
+  black #241813
+  steel #c8d0d8 metal=1.0 rough=0.25
+
+skeleton
+  root pelvis at (0,0.50,0)
+  bone spine parent=pelvis dir=up len=0.18
+  bone chest parent=spine dir=up len=0.18
+  bone neck parent=chest dir=up len=0.06
+  bone head parent=neck dir=up len=0.19
+  mirror
+    bone upperarm parent=chest at=0.78 side=0.10 dir=side tilt=-18 len=0.19
+    bone forearm parent=upperarm dir=down pitch=-5 len=0.18
+    bone hand parent=forearm dir=down len=0.08
+    bone thigh parent=pelvis side=0.07 dir=down tilt=4 len=0.25
+    bone shin parent=thigh dir=down pitch=-2 len=0.23
+    bone foot parent=shin dir=fwd pitch=-72 len=0.17
+  end
+
+parts
+  loft torso bones=pelvis..chest frame=fwd material=vest
+    ring 0.00 w=0.34 d=0.24
+    ring 0.52 w=0.38 d=0.27
+    ring 1.00 w=0.34 d=0.24
+    cap start=dome end=dome
+  loft head_mass bones=neck..head frame=fwd material=skin
+    ring 0.00 w=0.17 d=0.16
+    ring 0.55 w=0.25 d=0.23
+    ring 1.00 w=0.20 d=0.19
+    cap start=dome end=dome
+  attach moustache bone=head at=0.34 offset=(0,0.01,0.13) kind=sphere w=0.26 h=0.055 d=0.045 material=black on=head_mass press=off
+  mirror
+    loft arm bones=upperarm..hand frame=fwd material=shirt
+      ring 0.00 w=0.12 d=0.12
+      ring 0.55 w=0.10 d=0.10
+      ring 1.00 w=0.105 d=0.10 material=skin
+      cap start=dome end=dome
+    loft leg bones=thigh..shin frame=fwd material=pants
+      ring 0.00 w=0.15 d=0.16
+      ring 0.55 w=0.13 d=0.14
+      ring 1.00 w=0.11 d=0.12
+      cap start=dome end=dome
+    attach shoe bone=foot at=0.72 offset=(0,-0.05,0) kind=sphere w=0.22 h=0.10 d=0.14 material=black
+  end
+animations
+  anim knife_toss dur=1.44
+    ch spine pitch 0%=0 18%=-5 34%=-10 50%=-4 70%=5 84%=2 100%=0
+    ch chest pitch 0%=0 18%=-4 34%=-8 50%=0 70%=8 84%=3 100%=0
+    ch neck pitch 0%=0 18%=-3 34%=-10 50%=-18 70%=-4 84%=2 100%=0
+    ch head pitch 0%=0 18%=-5 34%=-14 50%=-22 70%=-6 84%=3 100%=0
+    ch upperarm.l tilt 0%=-10 18%=4 34%=26 50%=48 70%=28 84%=2 100%=-10
+    ch forearm.l tilt 0%=-18 18%=-8 34%=6 50%=22 70%=8 84%=-6 100%=-18
+    ch upperarm.r tilt 0%=6 18%=18 34%=36 50%=54 70%=38 84%=18 100%=6
+    ch forearm.r tilt 0%=-16 18%=-4 34%=10 50%=24 70%=12 84%=-2 100%=-16
+
+checks
+  assert tris < 7000
+  assert bottom(shoe.l) < 0.08
+  assert bottom(shoe.r) < 0.08
+  assert lowest(knife_toss) > -0.10
+  assert swing(upperarm.l, knife_toss) > 45
+  assert swing(head, knife_toss) > 18
