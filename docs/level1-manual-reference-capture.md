@@ -35,7 +35,7 @@ The script reads these keys without forwarding or synthesizing game input:
 | Key | Marker |
 | --- | --- |
 | `E` | hanging extra Charlie |
-| `C` | hidden coin |
+| `Up Arrow` | hidden coin |
 | `G` | goal platform or finish presentation |
 | `B` | score or bonus graphic |
 | `M` | other useful Level 1 object/state |
@@ -66,8 +66,8 @@ slots, not a manual pixel repair.
 3. Trigger the legitimate hanging extra-Charlie presentation. Press `E` while
    the complete hanging Charlie is visible. Press it again at a second clear
    animation pose if practical.
-4. Trigger the legitimate hidden coin from a fire pot. Press `C` once while it
-   is rising and again near its apex or return to the pot.
+4. Trigger the legitimate hidden coin from a fire pot. Press `Up Arrow` once
+   while it is rising and again near its apex or return to the pot.
 5. Continue to the Level 1 goal. Press `G` when the goal platform is fully
    visible, when Charlie lands, and during each distinct finish presentation.
 6. Press `B` whenever an unmapped score/bonus graphic is clearly visible,
@@ -82,10 +82,10 @@ all legitimate inputs manually.
 
 ## Completion rule
 
-The session is complete only when the capture contains at least one `E`, `C`,
-`G`, and `B` marker, the finish/bonus presentation has completed, and pressing
-`X` has created `capture-complete.txt`. The checker reports whether those
-required files, marker labels, and screenshots are present.
+The session is complete only when the capture contains at least one `E`,
+`Up Arrow`, `G`, and `B` marker, the finish/bonus presentation has completed,
+and pressing `X` has created `capture-complete.txt`. The checker reports
+whether those required files, marker labels, and screenshots are present.
 
 After a successful capture, the existing ROM/PROM decoder and composite
 pipeline can identify actual slots/cells and export only hardware-backed

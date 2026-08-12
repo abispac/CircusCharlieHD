@@ -3,7 +3,7 @@
 -- This script never writes emulated memory and never supplies gameplay input.
 -- It records both sprite-RAM banks, the Level 1 object pool, relevant state,
 -- and exact MAME screenshots.  Letter hotkeys add labelled capture bursts:
---   E extra Charlie, C hidden coin, G goal/finish, B score/bonus, M generic.
+--   E extra Charlie, Up hidden coin, G goal/finish, B score/bonus, M generic.
 -- Press X after the final requested presentation to finalize the files.
 
 local machine = manager.machine
@@ -36,7 +36,7 @@ local key_was_down = {}
 
 local hotkeys = {
   extra_charlie = machine.input:seq_from_tokens("KEYCODE_E"),
-  hidden_coin = machine.input:seq_from_tokens("KEYCODE_C"),
+  hidden_coin = machine.input:seq_from_tokens("KEYCODE_UP"),
   goal_finish = machine.input:seq_from_tokens("KEYCODE_G"),
   score_bonus = machine.input:seq_from_tokens("KEYCODE_B"),
   generic = machine.input:seq_from_tokens("KEYCODE_M"),
@@ -257,4 +257,4 @@ emu.register_frame_done(function()
 end, "manual_level1_reference_capture")
 
 machine:popmessage(
-  "LEVEL 1 CAPTURE ACTIVE | E extra | C coin | G goal | B bonus | M generic | X finish")
+  "LEVEL 1 CAPTURE ACTIVE | E extra | UP coin | G goal | B bonus | M generic | X finish")
