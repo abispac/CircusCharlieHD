@@ -43,7 +43,15 @@ Y 550 to 557.5. That transition coincides with the approaching hoop/object
 state and must be resolved by tracing all rider composite slots, hoop rail
 position, collision state, and scroll state—not by tuning the jump table.
 
-Native Level 1 still uses authored world coordinates and a following camera,
-whereas the original keeps the rider at screen X `$45` and advances the
-fixed-point scroll accumulator. The next pass will isolate that hoop/camera
-transition before any hoop or obstacle constants are changed.
+The six-slot/frame-1390 investigation is documented in
+`docs/LEVEL1_FRAME_1390_ANALYSIS.md`. It proves that `$7130-$7192` enters the
+failure routine at `$7c47` with active object pointer `U=$26d0`; this freezes
+the prior buffered rider pose and changes its sprite codes. Native now
+preserves that buffered vertical pose on hoop failure.
+
+The expanded object-state comparison now exposes the earlier cause at native
+frame 53 / MAME frame 1375: MAME's active hoop is `85.714286` native logical
+units ahead of the rider axis, while native's nearest authored hoop is
+`496.167358` units ahead. By frame 68 / MAME frame 1390, MAME has entered hoop
+failure while native is still `Playing`. Resolving that requires the later,
+separately scoped hoop object activation/position pass.

@@ -2658,6 +2658,14 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
        ++hoopIndex) {
     auto& hoop = game.hoops[hoopIndex];
     if (overlapsHoop(game.player, hoop)) {
+      // circusc4 tests the staged rider composite at $25f0-$2640 before the
+      // next composite is copied to buffered sprite RAM.  At the Event 1
+      // failure branch ($7130-$7192 -> $7c47), the visible rider therefore
+      // remains at the preceding board sample while its six sprite codes
+      // change to the failure pose. Preserve that one-frame buffered pose;
+      // do not compensate by modifying the jump table or hoop geometry.
+      game.player.position.y = game.player.previous.y;
+      if (game.player.jumpFrame > 0) --game.player.jumpFrame;
       crashPlayer(game);
       return;
     }
@@ -5260,7 +5268,10 @@ int main(int argc, char** argv) {
     } else {
       movementTrace
           << "frame,input_left,input_right,input_jump,player_x,player_y,"
-             "delta_x,run_speed,camera_x,grounded,jump_frame\n";
+             "delta_x,run_speed,camera_x,grounded,jump_frame,scene,alive,"
+             "crash_frame,nearest_hoop,hoop_world_x,hoop_screen_x,"
+             "hoop_previous_screen_x,hoop_opening_top,hoop_opening_bottom,"
+             "hoop_cleared,hoop_overlap\n";
     }
   }
 
@@ -5430,6 +5441,19 @@ int main(int argc, char** argv) {
       jumpQueued = false;
       accumulator -= kFixedDt;
       if (movementTrace) {
+        std::size_t nearestHoop = 0;
+        float nearestDistance = std::numeric_limits<float>::max();
+        for (std::size_t index = 0; index < game.hoops.size(); ++index) {
+          const float distance = std::abs(
+              game.hoops[index].worldX - game.cameraX -
+              (game.player.position.x - game.cameraX +
+               kLionCollisionCenterOffset));
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestHoop = index;
+          }
+        }
+        const Hoop& hoop = game.hoops[nearestHoop];
         movementTrace << movementTraceFrame << ',' << (traceLeft ? 1 : 0)
                       << ',' << (traceRight ? 1 : 0) << ','
                       << (traceJump ? 1 : 0) << ',' << std::fixed
@@ -5438,7 +5462,15 @@ int main(int argc, char** argv) {
                       << (game.player.position.x - previousPlayerX) << ','
                       << game.player.runSpeed << ',' << game.cameraX << ','
                       << (game.player.grounded ? 1 : 0) << ','
-                      << game.player.jumpFrame << '\n';
+                      << game.player.jumpFrame << ','
+                      << static_cast<int>(game.scene) << ','
+                      << (game.player.alive ? 1 : 0) << ','
+                      << game.crashFrame << ',' << nearestHoop << ','
+                      << hoop.worldX << ',' << hoop.worldX - game.cameraX
+                      << ',' << hoop.previousWorldX - game.previousCameraX
+                      << ',' << hoop.openingTop << ',' << hoop.openingBottom
+                      << ',' << (hoop.cleared ? 1 : 0) << ','
+                      << (overlapsHoop(game.player, hoop) ? 1 : 0) << '\n';
         ++movementTraceFrame;
         if (movementTraceFrame >= 120) running = false;
       }
