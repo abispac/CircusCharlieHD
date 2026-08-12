@@ -331,6 +331,7 @@ struct Game {
   int goalFrame = 0;
   int tallyFrame = 0;
   int crashFrame = 0;
+  int crashDurationFrames = kCrashBurnFrames;
   int clearBonus = 0;
   int rewardCoinsAwarded = 0;
   int prizeBagsAvailable = 0;
@@ -464,6 +465,7 @@ struct AudioEngine {
   AudioClip stage3Bounce;
   AudioClip stage4BallCollision;
   AudioClip jump;
+  AudioClip fail;
   AudioClip miss;
   AudioClip missTwo;
   AudioClip crowdCheer;
@@ -856,6 +858,7 @@ bool loadAudio(AudioEngine& audio) {
       loadAudioAsset("stage4-ball-collision.wav",
                      audio.stage4BallCollision) &&
       loadAudioAsset("jump.wav", audio.jump) &&
+      loadAudioAsset("fail.wav", audio.fail) &&
       loadAudioAsset("miss.wav", audio.miss) &&
       loadAudioAsset("miss-2.wav", audio.missTwo) &&
       loadAudioAsset("crowd-cheer.wav", audio.crowdCheer) &&
@@ -885,7 +888,8 @@ bool loadAudio(AudioEngine& audio) {
   loadAudioAsset("hidden-coin.wav", audio.hiddenCoin);
   loadAudioAsset("coin.wav", audio.creditInsert);
 
-  if (!matchesReference(audio.jump) || !matchesReference(audio.miss) ||
+  if (!matchesReference(audio.jump) || !matchesReference(audio.fail) ||
+      !matchesReference(audio.miss) ||
       !matchesReference(audio.missTwo) ||
       !matchesReference(audio.crowdCheer) ||
       !matchesReference(audio.birdCoinDrop) ||
@@ -979,11 +983,10 @@ void playJumpSound(AudioEngine& audio) {
   setAudioVoice(audio, 1, audio.jump, SDL_MIX_MAXVOLUME, false);
 }
 
-void playMissSounds(AudioEngine& audio) {
-  setAudioVoice(audio, 2, audio.miss,
-                static_cast<int>(SDL_MIX_MAXVOLUME * 0.90F), false);
-  setAudioVoice(audio, 3, audio.missTwo,
-                static_cast<int>(SDL_MIX_MAXVOLUME * 0.90F), false);
+void playFailMusic(AudioEngine& audio) {
+  // Failure owns the music voice: stage music has already stopped, and this
+  // complete arcade cue determines exactly when Charlie may respawn.
+  setAudioVoice(audio, 0, audio.fail, SDL_MIX_MAXVOLUME, false);
 }
 
 void playCrowdCheer(AudioEngine& audio) {
@@ -1063,6 +1066,7 @@ void destroyAudio(AudioEngine& audio) {
   if (audio.stage4BallCollision.data)
     SDL_FreeWAV(audio.stage4BallCollision.data);
   if (audio.jump.data) SDL_FreeWAV(audio.jump.data);
+  if (audio.fail.data) SDL_FreeWAV(audio.fail.data);
   if (audio.miss.data) SDL_FreeWAV(audio.miss.data);
   if (audio.missTwo.data) SDL_FreeWAV(audio.missTwo.data);
   if (audio.crowdCheer.data) SDL_FreeWAV(audio.crowdCheer.data);
@@ -1732,7 +1736,7 @@ void crashStage3Roof(Game& game) {
   game.scene = Scene::Crashed;
   game.crashFrame = 0;
   game.deathOccurred = true;
-  ++game.stage3OverjumpAudioSerial;
+  ++game.crashAudioSerial;
   --game.lives;
 }
 
@@ -2433,8 +2437,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     game.previousCameraX = game.cameraX;
     game.player.runSpeed = 0.0F;
     game.player.verticalVelocity = 0.0F;
-    game.crashFrame =
-        std::min(game.crashFrame + 1, kCrashBurnFrames);
+    ++game.crashFrame;
     if (game.selectedEvent == 3)
       game.stage4FallFrame = std::min(game.stage4FallFrame + 1, 23);
     if (game.selectedEvent == 3) {
@@ -2447,6 +2450,11 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         ball.rotation += ball.velocity * static_cast<float>(kFixedDt) /
                          kStage4BallRadius;
       }
+    }
+    // The cabinet owns the failure sequence. Player input cannot dismiss it;
+    // Charlie returns only after the complete failure cue has played once.
+    if (game.crashFrame >= game.crashDurationFrames) {
+      restartAfterCrash(game);
     }
     return;
   }
@@ -3862,6 +3870,20 @@ void drawHud(SDL_Renderer* renderer, const Game& game,
 
 }
 
+void drawCrowdOhNo(SDL_Renderer* renderer) {
+  const auto drawCall = [&](float x, float y) {
+    constexpr float scale = 1.55F;
+    const SDL_Color outline = color(255, 239, 26);
+    drawText(renderer, "OH NO!!", x - 2.0F, y, scale, outline, true);
+    drawText(renderer, "OH NO!!", x + 2.0F, y, scale, outline, true);
+    drawText(renderer, "OH NO!!", x, y - 2.0F, scale, outline, true);
+    drawText(renderer, "OH NO!!", x, y + 2.0F, scale, outline, true);
+    drawText(renderer, "OH NO!!", x, y, scale, color(255, 82, 28), true);
+  };
+  drawCall(154.0F, 242.0F);
+  drawCall(354.0F, 300.0F);
+}
+
 void drawCoinWaitingScreen(SDL_Renderer* renderer, const Game& game,
                            const Assets& assets, double timeSeconds) {
   fillRect(renderer, 0.0F, 0.0F, kWorldWidth, kWorldHeight,
@@ -4231,15 +4253,7 @@ void drawStage2Scene(SDL_Renderer* renderer, const Game& game,
     drawGoalPresentation(renderer, game, nullptr, nullptr, nullptr);
   }
   drawHud(renderer, game, assets.charlieLife);
-  if (game.scene == Scene::Crashed &&
-      game.crashFrame >= kCrashBurnFrames) {
-    fillRect(renderer, 55.0F, 220.0F, 370.0F, 134.0F,
-             color(33, 5, 8, 232));
-    drawText(renderer, "OH NO!!", kWorldWidth * 0.5F, 246.0F, 3.0F,
-             color(255, 96, 64), true);
-    drawText(renderer, "SPACE OR Z TO RETRY", kWorldWidth * 0.5F,
-             300.0F, 1.8F, color(255, 255, 255), true);
-  }
+  if (game.scene == Scene::Crashed) drawCrowdOhNo(renderer);
 }
 
 void drawSheetFrame(SDL_Renderer* renderer, SDL_Texture* texture,
@@ -4480,30 +4494,8 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
                    roofFrame, kStage3PlayerScreenX, 132.0F,
                    78.0F, 70.0F);
 
-    const auto drawOhNo = [&](float x, float y) {
-      constexpr float scale = 1.55F;
-      const SDL_Color outline = color(255, 239, 26);
-      drawText(renderer, "OH NO!!", x - 2.0F, y, scale, outline, true);
-      drawText(renderer, "OH NO!!", x + 2.0F, y, scale, outline, true);
-      drawText(renderer, "OH NO!!", x, y - 2.0F, scale, outline, true);
-      drawText(renderer, "OH NO!!", x, y + 2.0F, scale, outline, true);
-      drawText(renderer, "OH NO!!", x, y, scale,
-               color(255, 82, 28), true);
-    };
-    drawOhNo(154.0F, 242.0F);
-    drawOhNo(354.0F, 300.0F);
   }
-  if (game.scene == Scene::Crashed &&
-      game.crashFrame >= kCrashBurnFrames && !game.stage3RoofCrash) {
-    const float overlayY = 220.0F;
-    fillRect(renderer, 55.0F, overlayY, 370.0F, 134.0F,
-             color(33, 5, 8, 232));
-    drawText(renderer, "OH NO!!", kWorldWidth * 0.5F,
-             overlayY + 26.0F, 3.0F,
-             color(255, 96, 64), true);
-    drawText(renderer, "SPACE OR Z TO RETRY", kWorldWidth * 0.5F,
-             overlayY + 80.0F, 1.8F, color(255, 255, 255), true);
-  }
+  if (game.scene == Scene::Crashed) drawCrowdOhNo(renderer);
 }
 
 void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
@@ -4597,21 +4589,7 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
                  SDL_FLIP_NONE);
 
   drawHud(renderer, game, assets.charlieLife);
-  if (game.scene == Scene::Crashed) {
-    drawText(renderer, "OH NO!!", 150.0F, 260.0F, 1.8F,
-             color(255, 82, 28), true);
-    drawText(renderer, "OH NO!!", 354.0F, 306.0F, 1.8F,
-             color(255, 82, 28), true);
-  }
-  if (game.scene == Scene::Crashed &&
-      game.crashFrame >= kCrashBurnFrames) {
-    fillRect(renderer, 55.0F, 220.0F, 370.0F, 134.0F,
-             color(33, 5, 8, 232));
-    drawText(renderer, "OH NO!!", kWorldWidth * 0.5F, 246.0F, 3.0F,
-             color(255, 96, 64), true);
-    drawText(renderer, "SPACE OR Z TO RETRY", kWorldWidth * 0.5F,
-             300.0F, 1.8F, color(255, 255, 255), true);
-  }
+  if (game.scene == Scene::Crashed) drawCrowdOhNo(renderer);
 }
 
 void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
@@ -4833,14 +4811,7 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
   drawStage1ScorePopup(renderer, game, camera);
   drawHud(renderer, game, assets.charlieLife);
 
-  if (game.scene == Scene::Crashed &&
-             game.crashFrame >= kCrashBurnFrames) {
-    fillRect(renderer, 55.0F, 220.0F, 370.0F, 134.0F, color(33, 5, 8, 232));
-    drawText(renderer, "MISSED THE HOOP", kWorldWidth * 0.5F, 246.0F, 2.4F,
-             color(255, 96, 64), true);
-    drawText(renderer, "SPACE OR Z TO RETRY", kWorldWidth * 0.5F, 300.0F,
-             1.8F, color(255, 255, 255), true);
-  }
+  if (game.scene == Scene::Crashed) drawCrowdOhNo(renderer);
 
   if (game.debug) drawDebug(renderer, game, surface);
 }
@@ -4929,6 +4900,7 @@ int main(int argc, char** argv) {
   game.highScore = loadHighScore(highScorePath);
   game.eventSelectDurationFrames =
       audioDurationInBoardFrames(audio.eventSelectMusic);
+  game.crashDurationFrames = audioDurationInBoardFrames(audio.fail);
   game.randomState ^=
       static_cast<std::uint32_t>(SDL_GetPerformanceCounter());
   game.debug = options.debug;
@@ -5378,12 +5350,6 @@ int main(int argc, char** argv) {
       }
     }
 
-    if (jumpQueued && game.scene == Scene::Crashed &&
-        game.crashFrame >= kCrashBurnFrames) {
-      restartAfterCrash(game);
-      jumpQueued = false;
-    }
-
     const Uint64 currentCounter = SDL_GetPerformanceCounter();
     double frameTime =
         static_cast<double>(currentCounter - previousCounter) /
@@ -5456,7 +5422,7 @@ int main(int argc, char** argv) {
       observedJumpAudioSerial = game.jumpAudioSerial;
     }
     if (observedCrashAudioSerial != game.crashAudioSerial) {
-      playMissSounds(audio);
+      playFailMusic(audio);
       observedCrashAudioSerial = game.crashAudioSerial;
     }
     if (observedStage4BallCollisionAudioSerial !=
