@@ -1,0 +1,66 @@
+{
+  "method": "exact RGB comparison of reconstructed opaque sprite pixels against MAME screenshots",
+  "checks": [
+    {
+      "label": "run-a-00",
+      "frame": 1326,
+      "display_bank": 1,
+      "matched_at_upright": {
+        "x": 21,
+        "y": 208
+      },
+      "matched_opaque_pixels": 731,
+      "tested_opaque_pixels": 731,
+      "mismatched_opaque_pixels": 0
+    },
+    {
+      "label": "run-b-00",
+      "frame": 1328,
+      "display_bank": 1,
+      "matched_at_upright": {
+        "x": 21,
+        "y": 208
+      },
+      "matched_opaque_pixels": 731,
+      "tested_opaque_pixels": 731,
+      "mismatched_opaque_pixels": 0
+    },
+    {
+      "label": "run-c-00",
+      "frame": 1336,
+      "display_bank": 1,
+      "matched_at_upright": {
+        "x": 21,
+        "y": 208
+      },
+      "matched_opaque_pixels": 714,
+      "tested_opaque_pixels": 714,
+      "mismatched_opaque_pixels": 0
+    },
+    {
+      "label": "airborne-13",
+      "frame": 1360,
+      "display_bank": 1,
+      "matched_at_upright": {
+        "x": 21,
+        "y": 176
+      },
+      "matched_opaque_pixels": 692,
+      "tested_opaque_pixels": 692,
+      "mismatched_opaque_pixels": 0
+    },
+    {
+      "label": "hoop-crossing",
+      "frame": 1395,
+      "display_bank": 0,
+      "matched_at_upright": {
+        "x": 52,
+        "y": 156
+      },
+      "matched_opaque_pixels": 295,
+      "tested_opaque_pixels": 295,
+      "mismatched_opaque_pixels": 0
+    }
+  ],
+  "passed": true
+}
