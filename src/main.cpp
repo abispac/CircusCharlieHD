@@ -85,8 +85,15 @@ float stage3CameraFor(float playerWorldX) {
 // The original board places the ring tube directly below the crowd fascia
 // (about source y=140), not at the top of the crowd.
 constexpr float kTrackY = 350.0F;
-constexpr float kBackSpeed = -150.0F;
-constexpr float kForwardSpeed = 195.0F;
+// Event 1 movement is a direct 8.8 fixed-point scroll command in the ROM,
+// not an acceleration curve.  $7363 writes FE80 (-1.5 source px/frame) for
+// RIGHT and 0130 (+1.1875 source px/frame) for LEFT at 60.606 Hz.  Convert
+// those cabinet pixels to this renderer's 480/224 horizontal coordinate.
+constexpr float kSourceToWorldX = 480.0F / 224.0F;
+constexpr float kForwardSpeed =
+    1.5F * static_cast<float>(kBoardRefresh) * kSourceToWorldX;
+constexpr float kBackSpeed =
+    -1.1875F * static_cast<float>(kBoardRefresh) * kSourceToWorldX;
 constexpr float kRingRailSpeed = 65.0F;
 constexpr float kRingActivationLead = 900.0F;
 constexpr float kCourseLength = 6000.0F;
@@ -197,6 +204,8 @@ struct Options {
   bool showHelp = false;
   std::string capturePath;
   std::string captureScene = "gameplay";
+  std::string tracePath;
+  std::string traceMode = "hold-right";
 };
 
 struct Vec2 {
@@ -534,6 +543,8 @@ void printUsage() {
       << "  --debug\n"
       << "  --lion-test\n"
       << "  --capture FILE.png\n"
+      << "  --trace FILE.csv\n"
+      << "  --trace-mode hold-right|right-release|right-left|forward-jump\n"
       << "  --capture-scene start|select|layout|large|prize|gameplay|stage2|stage2-goal|stage3|stage3-transfer|stage3-approach|stage3-goal|stage3-roof|stage4|stage4-jump|stage4-fall|stage4-goal|ring|extra|crash|goal|tally\n";
 }
 
@@ -549,6 +560,17 @@ std::optional<Options> parseOptions(int argc, char** argv) {
       options.debug = true;
     } else if (argument == "--capture" && index + 1 < argc) {
       options.capturePath = argv[++index];
+    } else if (argument == "--trace" && index + 1 < argc) {
+      options.tracePath = argv[++index];
+    } else if (argument == "--trace-mode" && index + 1 < argc) {
+      options.traceMode = argv[++index];
+      if (options.traceMode != "hold-right" &&
+          options.traceMode != "right-release" &&
+          options.traceMode != "right-left" &&
+          options.traceMode != "forward-jump") {
+        std::cerr << "Unknown Level 1 trace mode.\n";
+        return std::nullopt;
+      }
     } else if (argument == "--capture-scene" && index + 1 < argc) {
       options.captureScene = argv[++index];
       if (options.captureScene != "start" &&
@@ -2546,21 +2568,10 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   if (moveLeft != moveRight) {
     targetSpeed = moveLeft ? kBackSpeed : kForwardSpeed;
   }
-  const bool reversing =
-      targetSpeed != 0.0F && game.player.runSpeed != 0.0F &&
-      ((targetSpeed < 0.0F) != (game.player.runSpeed < 0.0F));
-  // A direction change on the original board brakes almost immediately.
-  // The previous generic easing carried Charlie forward for several frames
-  // after LEFT was pressed, creating the visible "walking on ice" slide and
-  // making a backward hoop jump unnecessarily hard to time.
-  const float movementResponse =
-      targetSpeed == 0.0F ? 24.0F : (reversing ? 32.0F : 18.0F);
-  game.player.runSpeed +=
-      (targetSpeed - game.player.runSpeed) * static_cast<float>(kFixedDt) *
-      movementResponse;
-  if (std::abs(game.player.runSpeed) < 0.5F && targetSpeed == 0.0F) {
-    game.player.runSpeed = 0.0F;
-  }
+  // The board clears <$B1:$B2 every sample, then copies one table value for
+  // the active direction.  Therefore press, release, and reversal are all
+  // immediate; retaining velocity here creates motion absent from the ROM.
+  game.player.runSpeed = targetSpeed;
 
   game.player.position.x +=
       game.player.runSpeed * static_cast<float>(kFixedDt);
@@ -2590,13 +2601,6 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   }
 
   if (jumpPressed && game.player.grounded) {
-    // Commit to reverse motion on the same board sample as LEFT + JUMP.
-    // Without this, the direction easing could leave one residual forward
-    // frame and let the hoop collision run before the reverse-jump exemption
-    // became active.
-    if (moveLeft && !moveRight) {
-      game.player.runSpeed = std::min(game.player.runSpeed, -75.0F);
-    }
     // In the recorded Event 1 opening, three reverse jumps summon a Charlie
     // doll on the overhead rail. The player earns the extra life only by
     // intercepting that moving doll, not at the instant of the third jump.
@@ -4906,6 +4910,10 @@ int main(int argc, char** argv) {
   game.debug = options.debug;
   game.lionOnlyTest = options.lionTest;
   resetCourse(game);
+  if (!options.tracePath.empty()) {
+    game.selectedEvent = 0;
+    startGame(game);
+  }
   if (!options.capturePath.empty()) {
     if (options.captureScene == "start") {
       game.credits = 1;
@@ -5241,6 +5249,20 @@ int main(int argc, char** argv) {
   const Uint64 frequency = SDL_GetPerformanceFrequency();
   Uint64 previousCounter = SDL_GetPerformanceCounter();
   const Uint64 startCounter = previousCounter;
+  std::ofstream movementTrace;
+  int movementTraceFrame = 0;
+  if (!options.tracePath.empty()) {
+    movementTrace.open(options.tracePath);
+    if (!movementTrace) {
+      std::cerr << "Could not open movement trace: " << options.tracePath
+                << '\n';
+      running = false;
+    } else {
+      movementTrace
+          << "frame,input_left,input_right,input_jump,player_x,player_y,"
+             "delta_x,run_speed,camera_x,grounded,jump_frame\n";
+    }
+  }
 
   while (running) {
     SDL_Event event;
@@ -5356,9 +5378,30 @@ int main(int argc, char** argv) {
         static_cast<double>(frequency);
     previousCounter = currentCounter;
     frameTime = std::min(frameTime, 0.1);
+    if (!options.tracePath.empty()) frameTime = kFixedDt;
     accumulator += frameTime;
 
     const Uint8* keyboard = SDL_GetKeyboardState(nullptr);
+    std::array<Uint8, SDL_NUM_SCANCODES> traceKeyboard{};
+    bool traceLeft = false;
+    bool traceRight = false;
+    bool traceJump = false;
+    if (!options.tracePath.empty()) {
+      if (options.traceMode == "hold-right") {
+        traceRight = true;
+      } else if (options.traceMode == "right-release") {
+        traceRight = movementTraceFrame < 60;
+      } else if (options.traceMode == "right-left") {
+        traceRight = movementTraceFrame < 60;
+        traceLeft = movementTraceFrame >= 60;
+      } else if (options.traceMode == "forward-jump") {
+        traceRight = true;
+        traceJump = movementTraceFrame == 10;
+      }
+      traceKeyboard[SDL_SCANCODE_LEFT] = traceLeft ? 1 : 0;
+      traceKeyboard[SDL_SCANCODE_RIGHT] = traceRight ? 1 : 0;
+      keyboard = traceKeyboard.data();
+    }
     float controllerAxis = 0.0F;
     if (controller) {
       controllerAxis =
@@ -5374,8 +5417,9 @@ int main(int argc, char** argv) {
         controllerAxis = 1.0F;
       }
     }
-    bool jumpForStep = jumpQueued;
+    bool jumpForStep = jumpQueued || traceJump;
     while (accumulator >= kFixedDt) {
+      const float previousPlayerX = game.player.position.x;
       updateGame(game, keyboard, jumpForStep, controllerAxis);
       awardScoreLives(game);
       if (game.score > game.highScore) {
@@ -5385,6 +5429,19 @@ int main(int argc, char** argv) {
       jumpForStep = false;
       jumpQueued = false;
       accumulator -= kFixedDt;
+      if (movementTrace) {
+        movementTrace << movementTraceFrame << ',' << (traceLeft ? 1 : 0)
+                      << ',' << (traceRight ? 1 : 0) << ','
+                      << (traceJump ? 1 : 0) << ',' << std::fixed
+                      << std::setprecision(6) << game.player.position.x << ','
+                      << game.player.position.y << ','
+                      << (game.player.position.x - previousPlayerX) << ','
+                      << game.player.runSpeed << ',' << game.cameraX << ','
+                      << (game.player.grounded ? 1 : 0) << ','
+                      << game.player.jumpFrame << '\n';
+        ++movementTraceFrame;
+        if (movementTraceFrame >= 120) running = false;
+      }
     }
 
     const bool shouldPlayEventSelectMusic =
