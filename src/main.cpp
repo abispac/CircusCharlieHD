@@ -96,6 +96,11 @@ constexpr float kBackSpeed =
     -1.1875F * static_cast<float>(kBoardRefresh) * kSourceToWorldX;
 constexpr float kRingRailSpeed = 65.0F;
 constexpr float kRingActivationLead = 900.0F;
+constexpr std::array<std::uint8_t, 10> kLevel1HoopActivationReload{
+    0xdc, 0xf4, 0xd4, 0xec, 0xdc, 0xe4, 0xde, 0x1b, 0xee, 0xf6};
+constexpr std::uint16_t kLevel1InitialHoopX = 0xd480;
+constexpr std::uint16_t kLevel1InitialActivationAccumulator = 0xb180;
+constexpr float kLevel1RiderCollisionScreenX = 98.0F;
 constexpr float kCourseLength = 6000.0F;
 constexpr float kGoalScreenX = 150.0F;
 constexpr float kGoalPlatformTop = kGroundY - 25.0F;
@@ -219,6 +224,10 @@ struct Hoop {
   float openingTop = kGroundY - 154.0F;
   bool cleared = false;
   float previousWorldX = 0.0F;
+  // circusc4 stores each active hoop's horizontal position as an 8.8 value
+  // at object-slot offsets +$06/+$07. It is independent of course world X.
+  std::uint16_t sourceXFixed = 0;
+  bool active = false;
 };
 
 struct FirePot {
@@ -398,6 +407,12 @@ struct Game {
   bool highScoreDirty = false;
   bool debug = false;
   bool lionOnlyTest = false;
+  // Event 1 object scheduler mirrors <$C2:$C3 / $20c2:$20c3 and the course
+  // byte index at $2208. Slot zero is already live when player control starts.
+  std::uint16_t level1HoopActivationAccumulator =
+      kLevel1InitialActivationAccumulator;
+  std::size_t level1HoopCourseIndex = 1;
+  std::size_t level1HoopActivations = 1;
 };
 
 struct RenderSurface {
@@ -1469,34 +1484,27 @@ void resetCourse(Game& game) {
 
   game.stage2Monkeys.clear();
 
-  // Event 1 is laid out in the same difficulty progression visible in the
-  // recorded 60M-to-GOAL run: two introductory rings, alternating floor fire
-  // and moving rings, a close double-ring test, then the final 10M gauntlet.
-  // Moving obstacles start farther ahead so their measured 65-unit rail motion
-  // meets a lion running near the measured 195-unit forward speed.
-  game.hoops = {
-      {railStartForIntercept(620.0F), kBigHoopOpeningBottom,
-       kBigHoopOpeningTop, false},
-      {railStartForIntercept(1040.0F), kBigHoopOpeningBottom,
-       kBigHoopOpeningTop, false},
-      {railStartForIntercept(1780.0F), kBigHoopOpeningBottom,
-       kBigHoopOpeningTop, false},
-      {railStartForIntercept(2260.0F), kBigHoopOpeningBottom,
-       kBigHoopOpeningTop, false},
-      {railStartForIntercept(2700.0F), kBigHoopOpeningBottom,
-       kBigHoopOpeningTop, false},
-      {railStartForIntercept(3940.0F), kBigHoopOpeningBottom,
-       kBigHoopOpeningTop, false},
-      {railStartForIntercept(3990.0F), kBigHoopOpeningBottom,
-       kBigHoopOpeningTop, false},
-      {railStartForIntercept(4480.0F), kBigHoopOpeningBottom,
-       kBigHoopOpeningTop, false},
-      {railStartForIntercept(5050.0F), kBigHoopOpeningBottom,
-       kBigHoopOpeningTop, false},
-      {railStartForIntercept(5650.0F), kBigHoopOpeningBottom,
-       kBigHoopOpeningTop, false},
-  };
-  for (auto& hoop : game.hoops) hoop.previousWorldX = hoop.worldX;
+  // $6ee9-$7073 builds four reusable hoop composites. $7607-$767e admits
+  // them from a course-byte timer and seeds the chosen slot at X=$ff80;
+  // $7539-$7554 subsequently advances its object-local 8.8 X. Reuse the same
+  // four slots across ten course activations, keeping inactive entries absent
+  // from rendering/collision until the ROM scheduler admits them.
+  game.hoops.assign(4, {});
+  for (auto& hoop : game.hoops) {
+    hoop.openingBottom = kBigHoopOpeningBottom;
+    hoop.openingTop = kBigHoopOpeningTop;
+  }
+  game.level1HoopActivationAccumulator =
+      kLevel1InitialActivationAccumulator;
+  game.level1HoopCourseIndex = 1;
+  game.level1HoopActivations = 1;
+  game.hoops.front().active = true;
+  game.hoops.front().sourceXFixed = kLevel1InitialHoopX;
+  game.hoops.front().worldX =
+      kLevel1RiderCollisionScreenX +
+      (static_cast<float>(kLevel1InitialHoopX) / 256.0F - 64.0F) *
+          kSourceToWorldX;
+  game.hoops.front().previousWorldX = game.hoops.front().worldX;
   game.firePots = {
       {1560.0F},
       {2040.0F},
@@ -2582,16 +2590,56 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   game.cameraX =
       std::max(0.0F, game.player.position.x - 78.0F);
 
+  // $7539-$7554 adds (<$b1:$b2 - $0080) to every live hoop's own X.
+  // $7607-$766d applies that same signed delta to the independent activation
+  // accumulator; unsigned underflow allocates the first free object slot and
+  // reloads the accumulator from the course table at $f7c4 onward.
+  const std::int32_t level1ObjectDelta =
+      moveRight != moveLeft ? (moveRight ? -0x0200 : 0x00b0) : -0x0080;
+  for (auto& hoop : game.hoops) {
+    if (!hoop.active) continue;
+    hoop.previousWorldX = hoop.worldX;
+    const std::uint16_t previousFixed = hoop.sourceXFixed;
+    hoop.sourceXFixed = static_cast<std::uint16_t>(
+        static_cast<std::int32_t>(hoop.sourceXFixed) + level1ObjectDelta);
+    // $7586-$75e9 frees a reusable slot after its 8.8 X wraps past the left
+    // edge. Do not confuse that wrap with the freshly spawned $ff80 value.
+    if (previousFixed < 0x1000 && hoop.sourceXFixed > 0xf000) {
+      hoop.active = false;
+      continue;
+    }
+    hoop.worldX = game.cameraX + kLevel1RiderCollisionScreenX +
+                  (static_cast<float>(hoop.sourceXFixed) / 256.0F - 64.0F) *
+                      kSourceToWorldX;
+  }
+  const std::int32_t activationSum =
+      static_cast<std::int32_t>(game.level1HoopActivationAccumulator) +
+      level1ObjectDelta;
+  const auto freeHoop = std::find_if(
+      game.hoops.begin(), game.hoops.end(),
+      [](const Hoop& hoop) { return !hoop.active; });
+  if (activationSum < 0 && freeHoop != game.hoops.end() &&
+      game.level1HoopActivations < kLevel1HoopActivationReload.size()) {
+    auto& hoop = *freeHoop;
+    hoop.active = true;
+    hoop.cleared = false;
+    // $767e seeds $ff80 before the ordinary active-object pass later in the
+    // same board frame. The trace therefore presents $ff00 for an idle spawn
+    // and $fd80 for the second, forward-moving spawn.
+    hoop.sourceXFixed = static_cast<std::uint16_t>(0xff80 + level1ObjectDelta);
+    hoop.worldX = game.cameraX + kLevel1RiderCollisionScreenX +
+                  (static_cast<float>(hoop.sourceXFixed) / 256.0F - 64.0F) *
+                      kSourceToWorldX;
+    hoop.previousWorldX = hoop.worldX;
+    game.level1HoopActivationAccumulator = static_cast<std::uint16_t>(
+        kLevel1HoopActivationReload[game.level1HoopCourseIndex++] << 8U);
+    ++game.level1HoopActivations;
+  } else {
+    game.level1HoopActivationAccumulator =
+        static_cast<std::uint16_t>(activationSum);
+  }
   const float ringTravel =
       kRingRailSpeed * static_cast<float>(kFixedDt);
-  for (auto& hoop : game.hoops) {
-    hoop.previousWorldX = hoop.worldX;
-    // Cleared hoops remain physical, visible, and movable. The arcade lets
-    // Charlie cross the same hoop in either direction after passing it.
-    if (hoop.worldX - game.cameraX <= kRingActivationLead) {
-      hoop.worldX -= ringTravel;
-    }
-  }
   for (auto& ring : game.bonusRings) {
     // Passing through removes only the prize. The physical ring stays on its
     // ceiling rail and remains visible, matching the original arcade behavior.
@@ -2613,7 +2661,8 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         const auto nextHoop = std::find_if(
             game.hoops.begin(), game.hoops.end(),
             [&game](const Hoop& hoop) {
-              return hoop.worldX > game.player.position.x + 80.0F;
+              return hoop.active &&
+                     hoop.worldX > game.player.position.x + 80.0F;
             });
         if (nextHoop != game.hoops.end()) {
           game.extraCharlieTriggered = true;
@@ -2657,6 +2706,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   for (std::size_t hoopIndex = 0; hoopIndex < game.hoops.size();
        ++hoopIndex) {
     auto& hoop = game.hoops[hoopIndex];
+    if (!hoop.active) continue;
     if (overlapsHoop(game.player, hoop)) {
       // circusc4 tests the staged rider composite at $25f0-$2640 before the
       // next composite is copied to buffered sprite RAM.  At the Event 1
@@ -2695,7 +2745,8 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
       const auto nextHoop = std::find_if(
           game.hoops.begin(), game.hoops.end(),
           [&game](const Hoop& candidate) {
-            return candidate.worldX > game.player.position.x + 40.0F;
+            return candidate.active &&
+                   candidate.worldX > game.player.position.x + 40.0F;
           });
       if (nextHoop != game.hoops.end()) {
         game.extraCharlieTriggered = true;
@@ -2727,7 +2778,8 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     const bool sharesHoopLane = std::any_of(
         game.hoops.begin(), game.hoops.end(),
         [&firePot](const Hoop& hoop) {
-          return std::abs(hoop.worldX - firePot.worldX) <
+          return hoop.active &&
+                 std::abs(hoop.worldX - firePot.worldX) <
                  kHoopPotSafetyDistance;
         });
     const bool backwardJump =
@@ -3384,6 +3436,7 @@ void drawExtraCharlie(SDL_Renderer* renderer, const Game& game,
   }
   const Hoop& hoop = game.hoops[
       static_cast<std::size_t>(game.extraCharlieHoopIndex)];
+  if (!hoop.active) return;
   const float x = hoop.worldX - cameraX;
   if (x < -60.0F || x > kWorldWidth + 60.0F) return;
 
@@ -4777,6 +4830,7 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
   drawCourseMarkers(renderer, game, camera, assets.goalPlatform);
 
   for (const auto& hoop : game.hoops) {
+    if (!hoop.active) continue;
     drawHoop(renderer, hoop, camera, lowDetail, hoopFrame);
   }
   drawStageProps(renderer, game, camera, propsFrame, assets.rewardBag);
@@ -4804,6 +4858,7 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
                        game.player.facingRight);
     }
     for (const auto& hoop : game.hoops) {
+      if (!hoop.active) continue;
       drawHoopForeground(renderer, hoop, camera, hoopFrame);
     }
     drawBonusRingForegrounds(renderer, game, camera, propsFrame);
@@ -5100,6 +5155,7 @@ int main(int argc, char** argv) {
       for (auto& hoop : game.hoops) {
         hoop.worldX = -10000.0F;
         hoop.previousWorldX = hoop.worldX;
+        hoop.active = false;
       }
       for (auto& ring : game.bonusRings) ring.worldX = -10000.0F;
       for (auto& firePot : game.firePots) firePot.retired = true;
@@ -5114,9 +5170,11 @@ int main(int argc, char** argv) {
       for (auto& hoop : game.hoops) {
         hoop.worldX = -10000.0F;
         hoop.previousWorldX = hoop.worldX;
+        hoop.active = false;
       }
       game.hoops.front().worldX = game.player.position.x + 150.0F;
       game.hoops.front().previousWorldX = game.hoops.front().worldX;
+      game.hoops.front().active = true;
       for (auto& ring : game.bonusRings) ring.worldX = -10000.0F;
       for (auto& firePot : game.firePots) firePot.retired = true;
       game.extraCharlieActive = false;
@@ -5130,6 +5188,7 @@ int main(int argc, char** argv) {
       for (auto& hoop : game.hoops) {
         hoop.worldX = -10000.0F;
         hoop.previousWorldX = hoop.worldX;
+        hoop.active = false;
       }
       for (auto& ring : game.bonusRings) ring.worldX = -10000.0F;
       game.bonusRings.front().worldX = game.player.position.x + 150.0F;
@@ -5148,6 +5207,7 @@ int main(int argc, char** argv) {
       for (auto& hoop : game.hoops) {
         hoop.worldX = -10000.0F;
         hoop.previousWorldX = hoop.worldX;
+        hoop.active = false;
       }
       game.bonusRings.front().worldX =
           game.player.position.x + kLionCollisionCenterOffset;
@@ -5163,6 +5223,7 @@ int main(int argc, char** argv) {
         game.hoops[index].worldX = index == 0 ? game.player.position.x + 76.0F
                                               : -10000.0F;
         game.hoops[index].previousWorldX = game.hoops[index].worldX;
+        game.hoops[index].active = index == 0;
       }
       game.hoops.front().cleared = true;
       game.extraCharlieTriggered = true;
@@ -5196,6 +5257,7 @@ int main(int argc, char** argv) {
       for (auto& hoop : game.hoops) {
         hoop.worldX = -10000.0F;
         hoop.previousWorldX = hoop.worldX;
+        hoop.active = false;
       }
       for (auto& ring : game.bonusRings) ring.collected = true;
     } else if (options.captureScene == "tally") {
@@ -5444,6 +5506,7 @@ int main(int argc, char** argv) {
         std::size_t nearestHoop = 0;
         float nearestDistance = std::numeric_limits<float>::max();
         for (std::size_t index = 0; index < game.hoops.size(); ++index) {
+          if (!game.hoops[index].active) continue;
           const float distance = std::abs(
               game.hoops[index].worldX - game.cameraX -
               (game.player.position.x - game.cameraX +

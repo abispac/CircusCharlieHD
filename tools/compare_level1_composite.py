@@ -50,9 +50,20 @@ def main() -> int:
         )
         if aligned_native is None:
             continue
-        expected_relative_x = (
-            int(object_row["x_hi"], 16) - 0x40
-        ) * SOURCE_TO_WORLD_X
+        if object_frame < mame_visible_frame and int(
+            aligned_native["scene"]
+        ) != PLAYING_SCENE:
+            print(
+                "first expanded-state divergence: native frame "
+                f"{aligned_native_frame}, MAME frame {object_frame}; "
+                "MAME remains Playing but native has already entered "
+                f"scene={aligned_native['scene']}"
+            )
+            return 1
+        object_x = int(object_row["x_hi"], 16) + (
+            int(object_row["x_lo"], 16) / 256.0
+        )
+        expected_relative_x = (object_x - 0x40) * SOURCE_TO_WORLD_X
         player_screen_x = (
             float(aligned_native["player_x"])
             - float(aligned_native["camera_x"])
