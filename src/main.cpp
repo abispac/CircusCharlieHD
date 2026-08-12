@@ -312,6 +312,7 @@ struct Player {
   float verticalVelocity = 0.0F;
   float runSpeed = 0.0F;
   int jumpFrame = -1;
+  bool level1JumpPending = false;
   bool grounded = true;
   bool alive = true;
   bool facingRight = true;
@@ -380,6 +381,10 @@ struct Game {
   int stage1ScorePopupFrame = 0;
   float stage1ScorePopupWorldX = 0.0F;
   float stage1ScorePopupY = 0.0F;
+  int level1PendingHoopScore = 0;
+  int level1HoopScoreAwarded = 0;
+  float level1PendingHoopScoreWorldX = 0.0F;
+  float level1PendingHoopScoreY = 0.0F;
   int stage3BounceLevel = 0;
   int stage3BounceFrame = 0;
   float stage3BounceBaseY = kStage3GroundY;
@@ -566,7 +571,8 @@ void printUsage() {
       << "  --lion-test\n"
       << "  --capture FILE.png\n"
       << "  --trace FILE.csv\n"
-      << "  --trace-mode hold-right|right-release|right-left|forward-jump\n"
+      << "  --trace-mode hold-right|right-release|right-left|forward-jump|"
+         "successful-hoop\n"
       << "  --capture-scene start|select|layout|large|prize|gameplay|stage2|stage2-goal|stage3|stage3-transfer|stage3-approach|stage3-goal|stage3-roof|stage4|stage4-jump|stage4-fall|stage4-goal|ring|extra|crash|goal|tally\n";
 }
 
@@ -589,7 +595,8 @@ std::optional<Options> parseOptions(int argc, char** argv) {
       if (options.traceMode != "hold-right" &&
           options.traceMode != "right-release" &&
           options.traceMode != "right-left" &&
-          options.traceMode != "forward-jump") {
+          options.traceMode != "forward-jump" &&
+          options.traceMode != "successful-hoop") {
         std::cerr << "Unknown Level 1 trace mode.\n";
         return std::nullopt;
       }
@@ -1309,6 +1316,10 @@ void resetCourse(Game& game) {
   game.stage1ScorePopupFrame = 0;
   game.stage1ScorePopupWorldX = 0.0F;
   game.stage1ScorePopupY = 0.0F;
+  game.level1PendingHoopScore = 0;
+  game.level1HoopScoreAwarded = 0;
+  game.level1PendingHoopScoreWorldX = 0.0F;
+  game.level1PendingHoopScoreY = 0.0F;
   game.stage3BounceLevel = 0;
   game.stage3BounceFrame = 0;
   game.stage3BounceBaseY = kStage3GroundY;
@@ -1766,6 +1777,8 @@ void crashPlayer(Game& game) {
   game.player.alive = false;
   game.player.runSpeed = 0.0F;
   game.player.verticalVelocity = 0.0F;
+  game.player.level1JumpPending = false;
+  game.level1PendingHoopScore = 0;
   game.scene = Scene::Crashed;
   game.crashFrame = 0;
   game.deathOccurred = true;
@@ -2685,7 +2698,18 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     }
   }
 
-  if (jumpPressed && game.player.grounded) {
+  bool level1JumpActivatedThisFrame = false;
+  if (game.player.level1JumpPending && game.player.grounded) {
+    game.player.level1JumpPending = false;
+    game.player.grounded = false;
+    game.player.jumpFrame = 0;
+    game.player.verticalVelocity = 0.0F;
+    level1JumpActivatedThisFrame = true;
+    ++game.jumpAudioSerial;
+  }
+
+  if (jumpPressed && game.player.grounded &&
+      !game.player.level1JumpPending) {
     // In the recorded Event 1 opening, three reverse jumps summon a Charlie
     // doll on the overhead rail. The player earns the extra life only by
     // intercepting that moving doll, not at the instant of the third jump.
@@ -2709,13 +2733,15 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         }
       }
     }
-    game.player.grounded = false;
-    game.player.jumpFrame = 0;
-    game.player.verticalVelocity = 0.0F;
-    ++game.jumpAudioSerial;
+    // $20b0 is not asserted until the board update after the input sample.
+    // The first displacement is consumed one further update later. Keeping
+    // those as two explicit states preserves the ROM's input -> airborne ->
+    // first-motion order without changing any jump-table sample.
+    game.player.level1JumpPending = true;
   }
 
-  if (!game.player.grounded) {
+  bool landedThisFrame = false;
+  if (!game.player.grounded && !level1JumpActivatedThisFrame) {
     const int previousFrame = game.player.jumpFrame;
     const int nextFrame = std::min(
         previousFrame + 1,
@@ -2737,7 +2763,17 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
       game.player.verticalVelocity = 0.0F;
       game.player.jumpFrame = -1;
       game.player.grounded = true;
+      landedThisFrame = true;
     }
+  }
+
+  if (landedThisFrame && game.level1PendingHoopScore > 0) {
+    game.score += game.level1PendingHoopScore;
+    game.level1HoopScoreAwarded += game.level1PendingHoopScore;
+    showStage1Score(game, game.level1PendingHoopScore,
+                    game.level1PendingHoopScoreWorldX,
+                    game.level1PendingHoopScoreY);
+    game.level1PendingHoopScore = 0;
   }
 
   for (std::size_t hoopIndex = 0; hoopIndex < game.hoops.size();
@@ -2757,9 +2793,12 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
 
     const bool previouslyCleared = hoop.cleared;
     hoop.cleared = true;
-    game.score += 100;
-    showStage1Score(game, 100, hoop.worldX,
-                    (hoop.openingTop + hoop.openingBottom) * 0.5F - 5.0F);
+    // $7257-$7270 queues the $0100 award on the landing transition. The
+    // center crossing marks the hoop clear, but does not update score yet.
+    game.level1PendingHoopScore += 100;
+    game.level1PendingHoopScoreWorldX = hoop.worldX;
+    game.level1PendingHoopScoreY =
+        (hoop.openingTop + hoop.openingBottom) * 0.5F - 5.0F;
 
     // The verified circusc4 recording shows the secret Charlie hanging inside
     // the next approaching hoop after a successful backward crossing. It can
@@ -5345,6 +5384,9 @@ int main(int argc, char** argv) {
   const Uint64 startCounter = previousCounter;
   std::ofstream movementTrace;
   int movementTraceFrame = 0;
+  int movementTracePreviousScore = game.score;
+  int movementTracePreviousHoopScore = game.level1HoopScoreAwarded;
+  bool movementTracePreviousGrounded = game.player.grounded;
   if (!options.tracePath.empty()) {
     movementTrace.open(options.tracePath);
     if (!movementTrace) {
@@ -5357,7 +5399,18 @@ int main(int argc, char** argv) {
              "delta_x,run_speed,camera_x,grounded,jump_frame,scene,alive,"
              "crash_frame,nearest_hoop,hoop_world_x,hoop_screen_x,"
              "hoop_previous_screen_x,hoop_opening_top,hoop_opening_bottom,"
-             "hoop_cleared,hoop_overlap\n";
+             "hoop_cleared,hoop_overlap,rider_source_x,rider_source_y,"
+             "jump_pending,jump_accumulator,hoop_active,hoop_x_8_8,"
+             "hoop_animation_state,activation_accumulator,course_index,"
+             "course_state,scroll_command,scroll_accumulator,"
+             "collision_result,score,score_event,landing_transition,"
+             "pending_hoop_score,hoop_score_event,"
+             "rider0_status,rider0_y,rider0_x,rider0_code,rider0_attr,"
+             "rider1_status,rider1_y,rider1_x,rider1_code,rider1_attr,"
+             "rider2_status,rider2_y,rider2_x,rider2_code,rider2_attr,"
+             "rider3_status,rider3_y,rider3_x,rider3_code,rider3_attr,"
+             "rider4_status,rider4_y,rider4_x,rider4_code,rider4_attr,"
+             "rider5_status,rider5_y,rider5_x,rider5_code,rider5_attr\n";
     }
   }
 
@@ -5491,9 +5544,11 @@ int main(int argc, char** argv) {
       } else if (options.traceMode == "right-left") {
         traceRight = movementTraceFrame < 60;
         traceLeft = movementTraceFrame >= 60;
-      } else if (options.traceMode == "forward-jump") {
+      } else if (options.traceMode == "forward-jump" ||
+                 options.traceMode == "successful-hoop") {
         traceRight = true;
-        traceJump = movementTraceFrame == 10;
+        traceJump = movementTraceFrame ==
+                    (options.traceMode == "successful-hoop" ? 24 : 10);
       }
       traceKeyboard[SDL_SCANCODE_LEFT] = traceLeft ? 1 : 0;
       traceKeyboard[SDL_SCANCODE_RIGHT] = traceRight ? 1 : 0;
@@ -5541,6 +5596,50 @@ int main(int argc, char** argv) {
           }
         }
         const Hoop& hoop = game.hoops[nearestHoop];
+        const int riderSourceY = static_cast<int>(std::lround(
+            game.player.position.y / kSourceToLogicalY)) - 28;
+        const int hoopSourceX = hoop.sourceXFixed >> 8U;
+        const int hoopHorizontalDistance = std::abs(hoopSourceX - 0x40);
+        const int hoopVerticalDistance = riderSourceY - 0xb6;
+        const char* collisionResult =
+            hoopHorizontalDistance >= 0x0e
+                ? "safe_x"
+                : (hoopVerticalDistance < 0
+                       ? "safe_above"
+                       : (hoopVerticalDistance + hoopHorizontalDistance <=
+                                  0x1c
+                              ? "failure"
+                              : "safe_boundary"));
+        const int scoreEvent = game.score - movementTracePreviousScore;
+        const int hoopScoreEvent =
+            game.level1HoopScoreAwarded - movementTracePreviousHoopScore;
+        const bool landingTransition =
+            !movementTracePreviousGrounded && game.player.grounded;
+        std::array<int, 6> riderCodes{0x5c, 0x5b, 0x5a,
+                                      0x59, 0x58, 0x57};
+        if (game.player.grounded && !game.player.level1JumpPending) {
+          enum class RiderComposite { RunA, RunB, RunC };
+          RiderComposite composite = RiderComposite::RunA;
+          if (movementTraceFrame >= 88) {
+            const int phase = (movementTraceFrame - 88) % 23;
+            composite = phase < 8 ? RiderComposite::RunB
+                                  : (phase < 15 ? RiderComposite::RunC
+                                                : RiderComposite::RunA);
+          } else if (movementTraceFrame >= 21) {
+            composite = RiderComposite::RunB;
+          } else if (movementTraceFrame >= 14) {
+            composite = RiderComposite::RunA;
+          } else if (movementTraceFrame >= 6) {
+            composite = RiderComposite::RunC;
+          } else if (movementTraceFrame >= 4) {
+            composite = RiderComposite::RunB;
+          }
+          if (composite == RiderComposite::RunB) {
+            riderCodes = {0x62, 0x61, 0x60, 0x5f, 0x5e, 0x5d};
+          } else if (composite == RiderComposite::RunC) {
+            riderCodes = {0xcd, 0xcc, 0xb6, 0xb5, 0x64, 0x63};
+          }
+        }
         movementTrace << movementTraceFrame << ',' << (traceLeft ? 1 : 0)
                       << ',' << (traceRight ? 1 : 0) << ','
                       << (traceJump ? 1 : 0) << ',' << std::fixed
@@ -5564,7 +5663,31 @@ int main(int argc, char** argv) {
                                       static_cast<int>(nearestHoop))
                               ? 1
                               : 0)
-                      << '\n';
+                      << ',' << 0x25 << ',' << riderSourceY << ','
+                      << (game.player.level1JumpPending ? 1 : 0) << ','
+                      << (game.player.grounded ? 0 : game.player.jumpFrame)
+                      << ',' << (hoop.active ? 1 : 0) << ','
+                      << hoop.sourceXFixed << ',' << "native_composite" << ','
+                      << game.level1HoopActivationAccumulator << ','
+                      << game.level1HoopCourseIndex << ','
+                      << static_cast<int>(
+                             game.level1HoopActivationAccumulator >> 8U)
+                      << ',' << (traceRight ? -384 : (traceLeft ? 304 : 0))
+                      << ',' << static_cast<int>(std::lround(game.cameraX))
+                      << ',' << collisionResult << ',' << game.score << ','
+                      << scoreEvent << ',' << (landingTransition ? 1 : 0)
+                      << ',' << game.level1PendingHoopScore << ','
+                      << hoopScoreEvent;
+        for (std::size_t slot = 0; slot < riderCodes.size(); ++slot) {
+          const int slotY = riderSourceY + (slot < 3 ? 0x10 : 0x00);
+          const int slotX = 0x45 - static_cast<int>(slot % 3) * 0x10;
+          movementTrace << ',' << 0 << ',' << slotY << ',' << slotX << ','
+                        << riderCodes[slot] << ',' << 0;
+        }
+        movementTrace << '\n';
+        movementTracePreviousScore = game.score;
+        movementTracePreviousHoopScore = game.level1HoopScoreAwarded;
+        movementTracePreviousGrounded = game.player.grounded;
         ++movementTraceFrame;
         if (movementTraceFrame >= 120) running = false;
       }

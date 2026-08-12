@@ -55,3 +55,16 @@ units ahead of the rider axis, while native's nearest authored hoop is
 `496.167358` units ahead. By frame 68 / MAME frame 1390, MAME has entered hoop
 failure while native is still `Playing`. Resolving that requires the later,
 separately scoped hoop object activation/position pass.
+
+## Successful large-hoop sequence
+
+The follow-up deterministic success run is documented in
+`docs/LEVEL1_SUCCESSFUL_LARGE_HOOP_TRACE.md`. With RIGHT held and JUMP sampled
+at MAME frame 1346, the first large hoop is cleared and Charlie lands at frame
+1410. Native now reproduces the input-latch/airborne/first-displacement order
+and commits the 100-point hoop award on landing, as `$7257-$7270` does.
+
+The frame comparator finds no divergence through MAME frame 1430/native frame
+108, 20 frames after landing. Jump samples, collision constants, activation
+logic, course data, artwork, fire pots, bonus rings, and Levels 2-4 were not
+changed by this pass.
