@@ -20,8 +20,8 @@ The capture is intended to resolve only:
 - both 64-entry buffered sprite-RAM banks at `$3800-$39ff`
 - every 16-byte object record at `$2400-$27ff`
 - rider, jump, scroll, activation, course, score, and `$26d0` state fields
-- new sprite code/attribute layouts as lossless screenshots
-- a 12-frame screenshot and RAM burst for each manual marker
+- optional new sprite code/attribute layouts as lossless screenshots
+- one exact screenshot and RAM snapshot for each manual marker
 - work RAM, color RAM, video RAM, and both sprite banks for each burst frame
 
 Coordinates are not excluded from the trace. Automatic screenshot signatures
@@ -42,8 +42,14 @@ The script reads these keys without forwarding or synthesizing game input:
 | `X` | finalize the capture files |
 
 Keys are edge-triggered. Release and press a key again to add another marker
-of the same type. Each press captures the current frame and the following 11
-frames, preserving animation and one-frame sprite buffering transitions.
+of the same type. Each press captures that exact frame. Press the marker more
+than once while an object animates to preserve additional poses. Continuous
+sprite and object traces preserve the frames between markers.
+
+Automatic screenshots are disabled by default because repeated lossless PNG
+writes can interrupt real-time audio and gameplay on macOS. They can be
+enabled deliberately with `CIRCUS_MANUAL_AUTO_LIMIT`, but are not needed for
+this guided marker pass.
 
 ## Priority-aware extra-Charlie verification
 

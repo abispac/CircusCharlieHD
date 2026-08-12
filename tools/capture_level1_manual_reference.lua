@@ -15,8 +15,13 @@ local player_port = assert(machine.ioport.ports[":P1"])
 
 local prefix = os.getenv("CIRCUS_MANUAL_CAPTURE_PREFIX") or
   "/tmp/circusc4-level1-manual/capture"
-local burst_frames = tonumber(os.getenv("CIRCUS_MANUAL_BURST_FRAMES") or "12")
-local auto_limit = tonumber(os.getenv("CIRCUS_MANUAL_AUTO_LIMIT") or "1000")
+-- Lossless MAME snapshots can stall real-time audio on some Macs.  Manual
+-- markers therefore capture one exact frame by default.  The full hardware
+-- state remains continuous, and the player may press a marker repeatedly for
+-- multiple animation poses.  Automatic screenshots are opt-in for the same
+-- reason.
+local burst_frames = tonumber(os.getenv("CIRCUS_MANUAL_BURST_FRAMES") or "1")
+local auto_limit = tonumber(os.getenv("CIRCUS_MANUAL_AUTO_LIMIT") or "0")
 local test_frames = tonumber(os.getenv("CIRCUS_MANUAL_TEST_FRAMES") or "0")
 
 local state_file = assert(io.open(prefix .. "-state.csv", "w"))
@@ -171,7 +176,7 @@ local function start_marker(label)
     remaining = burst_frames,
   }
   machine:popmessage(string.format(
-    "Captured %s marker %d (%d-frame burst)", label, marker_id, burst_frames))
+    "Captured %s marker %d", label, marker_id))
 end
 
 local function sprite_signature()
