@@ -102,9 +102,34 @@ def main() -> int:
         )
         return 1
 
+    # The focused MAME capture continues through frame 1410. After the
+    # buffered failure first appears, both the staged rider row and hoop X
+    # remain frozen. Verify that the native failure state does the same so the
+    # reported next divergence is not merely the first unchecked frame.
+    last_mame_frame = max(int(row["frame"]) for row in objects)
+    for mame_frame in range(mame_visible_frame, last_mame_frame + 1):
+        aligned_frame = mame_frame - args.native_frame_zero
+        aligned_native = next(
+            (row for row in native if int(row["frame"]) == aligned_frame),
+            None,
+        )
+        if aligned_native is None:
+            continue
+        if int(aligned_native["scene"]) == PLAYING_SCENE or abs(
+            float(aligned_native["player_y"]) - expected_y
+        ) > 0.0001:
+            print(
+                "first post-failure divergence: native frame "
+                f"{aligned_frame}, MAME frame {mame_frame}; "
+                f"scene={aligned_native['scene']}, "
+                f"player_y={aligned_native['player_y']}"
+            )
+            return 1
+
     print(
         f"failure transition synchronized at native frame {native_frame} / "
-        f"MAME frame {mame_visible_frame}"
+        f"MAME frame {mame_visible_frame}; no divergence through MAME frame "
+        f"{last_mame_frame}"
     )
     return 0
 

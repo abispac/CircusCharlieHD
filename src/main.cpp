@@ -154,11 +154,18 @@ constexpr float kHoopPotSafetyDistance = 76.0F;
 // The HD hoop source has about 50% transparent horizontal padding. A
 // 108-unit destination produces the measured 46-unit visible MAME width.
 constexpr float kBigRingVisualHalfWidth = 54.0F;
-// Both ring types use the arcade board's narrow foreground collision plane.
-// Testing the full visible width makes reverse crossings fail before the
-// rider has actually reached the flame edge.
-constexpr float kBigRingCollisionHalfWidth = 7.0F;
 constexpr float kBonusRingCollisionHalfWidth = 3.5F;
+// circusc4 $7130-$7192 does not test the large hoop's rendered extents. It
+// compares one fixed rider X against the object's source X high byte, then
+// combines that distance with a rider-composite Y offset. Keep these values
+// in original 224x256 board coordinates; converting the HD artwork bounds
+// back into collision geometry caused the former three-frame-early failure.
+constexpr int kLevel1RiderCollisionSourceX = 0x40;
+constexpr int kLevel1RiderGroundSourceY = 0xd0;
+constexpr int kLevel1RiderCollisionBaseY = 0xb6;
+constexpr int kLevel1HoopHorizontalLimit = 0x0e;
+constexpr int kLevel1HoopCombinedLimit = 0x1c;
+constexpr int kLevel1FourthHoopYOffset = 0x10;
 // Measured from hoop-extra.avi frame 800 after correcting the original
 // 224x256 board image to the game's 480x640 logical display: the prize hoop
 // has a visible flame oval about 50x110, centred 170 units above the grass
@@ -1713,29 +1720,41 @@ int timeBonusFor(int bonus) {
   return 200;
 }
 
-bool overlapsHoop(const Player& player, const Hoop& hoop) {
-  const float playerCenterX =
-      player.position.x + kLionCollisionCenterOffset;
-  const float playerLeft = playerCenterX - kLionCollisionLeft;
-  const float playerRight = playerCenterX + kLionCollisionRight;
-  const float hoopLeft = hoop.worldX - kBigRingCollisionHalfWidth;
-  const float hoopRight = hoop.worldX + kBigRingCollisionHalfWidth;
-  if (playerRight < hoopLeft || playerLeft > hoopRight) return false;
+int level1RiderCollisionSourceY(const Player& player) {
+  // The native ground contact is source row 236, while $2644 is the upper
+  // rider-composite row and rests at $D0. All Level 1 jump samples are exact
+  // source-pixel displacements, so this recovers the byte read at $713D
+  // without introducing a second jump table or modifying its samples.
+  return static_cast<int>(std::lround(player.position.y / kSourceToLogicalY)) -
+         (236 - kLevel1RiderGroundSourceY);
+}
 
-  // A reverse jump through an already-passed hoop is a deliberate arcade
-  // secret, not a precision challenge. Because both the rider and rail hoop
-  // travel left, their overlap can occur at either edge of the fixed jump
-  // arc. Treat the complete airborne reverse arc as a valid crossing. Merely
-  // walking backward into the flames remains fatal, and forward collision is
-  // completely unchanged.
-  if (!player.grounded && player.runSpeed < -20.0F) return false;
+bool overlapsLevel1LargeHoop(const Player& player, const Hoop& hoop,
+                             std::size_t hoopSlot, bool trackedHoop) {
+  const int hoopSourceX = static_cast<int>(hoop.sourceXFixed >> 8U);
+  const int horizontalDistance =
+      std::abs(hoopSourceX - kLevel1RiderCollisionSourceX);
 
-  const float playerTop = player.position.y - kLionCollisionTop;
-  const float playerBottom = player.position.y - kLionCollisionBottom;
-  const bool withinOpening =
-      playerTop > hoop.openingTop + 3.0F &&
-      playerBottom < hoop.openingBottom - 2.0F;
-  return !withinOpening;
+  // $7137 CMPA #$0E / $7139 BCC: equality is outside the collision test.
+  if (horizontalDistance >= kLevel1HoopHorizontalLimit) return false;
+
+  // $7140 sends the tracked/cleared hoop to its reward-state branch at
+  // $71A0. That branch never reaches the failure jump at $7192.
+  if (trackedHoop) return false;
+
+  int riderSourceY = level1RiderCollisionSourceY(player);
+  // The fourth reusable hardware slot ($2760) uses the same test after the
+  // explicit +$10 adjustment at $714B.
+  if (hoopSlot == 3) riderSourceY += kLevel1FourthHoopYOffset;
+  const int verticalDistance = riderSourceY - kLevel1RiderCollisionBaseY;
+
+  // $714F BPL; a rider above $B6 cannot hit an ordinary large hoop.
+  if (verticalDistance < 0) return false;
+
+  // $718C-$7192: failure is the inclusive Manhattan boundary
+  // (riderY-$B6)+abs(hoopX-$40) <= $1C.
+  return verticalDistance + horizontalDistance <=
+         kLevel1HoopCombinedLimit;
 }
 
 void crashPlayer(Game& game) {
@@ -2566,6 +2585,24 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   game.player.previous = game.player.position;
   game.previousCameraX = game.cameraX;
 
+  // The board calls $7130-$7192 before this logic tick's jump update,
+  // scheduler update, and active-hoop movement. Test the already staged
+  // rider/object bytes here; testing after movement is one board sample too
+  // early and then requires an artificial rollback of the jump sample.
+  for (std::size_t hoopIndex = 0; hoopIndex < game.hoops.size();
+       ++hoopIndex) {
+    const auto& hoop = game.hoops[hoopIndex];
+    if (!hoop.active) continue;
+    const bool trackedHoop =
+        game.extraCharlieActive &&
+        game.extraCharlieHoopIndex == static_cast<int>(hoopIndex);
+    if (overlapsLevel1LargeHoop(game.player, hoop, hoopIndex,
+                                trackedHoop)) {
+      crashPlayer(game);
+      return;
+    }
+  }
+
   const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
                         keyboard[SDL_SCANCODE_A] ||
                         controllerAxis < -0.35F;
@@ -2707,19 +2744,6 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
        ++hoopIndex) {
     auto& hoop = game.hoops[hoopIndex];
     if (!hoop.active) continue;
-    if (overlapsHoop(game.player, hoop)) {
-      // circusc4 tests the staged rider composite at $25f0-$2640 before the
-      // next composite is copied to buffered sprite RAM.  At the Event 1
-      // failure branch ($7130-$7192 -> $7c47), the visible rider therefore
-      // remains at the preceding board sample while its six sprite codes
-      // change to the failure pose. Preserve that one-frame buffered pose;
-      // do not compensate by modifying the jump table or hoop geometry.
-      game.player.position.y = game.player.previous.y;
-      if (game.player.jumpFrame > 0) --game.player.jumpFrame;
-      crashPlayer(game);
-      return;
-    }
-
     const float previousRelativeX =
         game.player.previous.x + kLionCollisionCenterOffset -
         hoop.previousWorldX;
@@ -5533,7 +5557,14 @@ int main(int argc, char** argv) {
                       << ',' << hoop.previousWorldX - game.previousCameraX
                       << ',' << hoop.openingTop << ',' << hoop.openingBottom
                       << ',' << (hoop.cleared ? 1 : 0) << ','
-                      << (overlapsHoop(game.player, hoop) ? 1 : 0) << '\n';
+                      << (overlapsLevel1LargeHoop(
+                              game.player, hoop, nearestHoop,
+                              game.extraCharlieActive &&
+                                  game.extraCharlieHoopIndex ==
+                                      static_cast<int>(nearestHoop))
+                              ? 1
+                              : 0)
+                      << '\n';
         ++movementTraceFrame;
         if (movementTraceFrame >= 120) running = false;
       }
