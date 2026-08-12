@@ -129,3 +129,10 @@ hardware slot in every observed frame. Because the requested whole-composite
 test is therefore 266/268 rather than zero-mismatch, it was not exported.
 Score/bonus object graphics also remain unmapped. `misc/UNRESOLVED.md`
 records this boundary; no object was guessed or manually repaired.
+
+`tools/capture_level1_manual_reference.lua` and
+`docs/level1-manual-reference-capture.md` provide the read-only manual Level 1
+capture pass for resolving these remaining objects. The capture preserves all
+later hardware sprite slots so the hanging extra-Charlie candidate can be
+verified with a hardware-derived priority/occlusion mask rather than rejected
+because two genuine pixels are covered in the final framebuffer.
