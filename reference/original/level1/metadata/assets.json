@@ -1030,6 +1030,180 @@
       ]
     },
     {
+      "asset": "fire-pot/fire-pot-00.png",
+      "sha256": "93d26d24e19d673fec90153a6eb1ce2f9ba54246c003c616dc3b509b0f269807",
+      "rendering": "gfx_16x16x4_packed_msb; sprite PROM lookup; indirect color 0 transparent; ascending-slot draw; ROT90 clockwise; tight alpha crop",
+      "geometry": {
+        "driver_cell_bounds": {
+          "x": 210,
+          "y": 93,
+          "width": 32,
+          "height": 32
+        },
+        "upright_uncropped_size": {
+          "width": 32,
+          "height": 32
+        },
+        "opaque_crop_in_upright": {
+          "x": 4,
+          "y": 0,
+          "width": 24,
+          "height": 31
+        },
+        "composite_anchor_in_png": {
+          "x": -4,
+          "y": 0
+        },
+        "png_size": {
+          "width": 24,
+          "height": 31
+        }
+      },
+      "components": [
+        {
+          "hardware_slot": 11,
+          "code": "0x0ed",
+          "attribute": "0x03",
+          "color_index": 3,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 0,
+            "y": 0
+          },
+          "sprite_rom_region_offset": "0x07680",
+          "sprite_rom_file": "380_j09.14e",
+          "sprite_rom_file_offset": "0x1680"
+        },
+        {
+          "hardware_slot": 12,
+          "code": "0x0ef",
+          "attribute": "0x00",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 16,
+            "y": 0
+          },
+          "sprite_rom_region_offset": "0x07780",
+          "sprite_rom_file": "380_j09.14e",
+          "sprite_rom_file_offset": "0x1780"
+        },
+        {
+          "hardware_slot": 13,
+          "code": "0x0ec",
+          "attribute": "0x03",
+          "color_index": 3,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 0,
+            "y": 16
+          },
+          "sprite_rom_region_offset": "0x07600",
+          "sprite_rom_file": "380_j09.14e",
+          "sprite_rom_file_offset": "0x1600"
+        },
+        {
+          "hardware_slot": 14,
+          "code": "0x0ee",
+          "attribute": "0x00",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 16,
+            "y": 16
+          },
+          "sprite_rom_region_offset": "0x07700",
+          "sprite_rom_file": "380_j09.14e",
+          "sprite_rom_file_offset": "0x1700"
+        }
+      ],
+      "source_frames": [
+        1700
+      ],
+      "hardware_slots": [
+        11,
+        12,
+        13,
+        14
+      ],
+      "capture": "dedicated unmodified circusc4 attract-mode capture"
+    },
+    {
+      "asset": "bonus-ring/ring-00.png",
+      "sha256": "24c4740451e702a0d3c40d7fb91693a28c83d092288d0d76c8ff8d65c6e911ad",
+      "rendering": "gfx_16x16x4_packed_msb; sprite PROM lookup; indirect color 0 transparent; ascending-slot draw; ROT90 clockwise; tight alpha crop",
+      "geometry": {
+        "driver_cell_bounds": {
+          "x": 156,
+          "y": 150,
+          "width": 32,
+          "height": 16
+        },
+        "upright_uncropped_size": {
+          "width": 16,
+          "height": 32
+        },
+        "opaque_crop_in_upright": {
+          "x": 2,
+          "y": 0,
+          "width": 14,
+          "height": 32
+        },
+        "composite_anchor_in_png": {
+          "x": -2,
+          "y": 0
+        },
+        "png_size": {
+          "width": 14,
+          "height": 32
+        }
+      },
+      "components": [
+        {
+          "hardware_slot": 9,
+          "code": "0x0e9",
+          "attribute": "0x05",
+          "color_index": 5,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 0,
+            "y": 0
+          },
+          "sprite_rom_region_offset": "0x07480",
+          "sprite_rom_file": "380_j09.14e",
+          "sprite_rom_file_offset": "0x1480"
+        },
+        {
+          "hardware_slot": 10,
+          "code": "0x0eb",
+          "attribute": "0x05",
+          "color_index": 5,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 16,
+            "y": 0
+          },
+          "sprite_rom_region_offset": "0x07580",
+          "sprite_rom_file": "380_j09.14e",
+          "sprite_rom_file_offset": "0x1580"
+        }
+      ],
+      "source_frames": [
+        2900
+      ],
+      "hardware_slots": [
+        9,
+        10
+      ],
+      "capture": "dedicated unmodified circusc4 attract-mode capture"
+    },
+    {
       "asset": "misc/failure-effect-left.png",
       "sha256": "ea1eb6f440172546e38cfa1b845301ef37be0f246de4597d887eb1dfdadc42c5",
       "rendering": "gfx_16x16x4_packed_msb; sprite PROM lookup; indirect color 0 transparent; ascending-slot draw; ROT90 clockwise; tight alpha crop",

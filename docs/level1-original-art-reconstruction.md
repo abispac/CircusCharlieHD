@@ -60,6 +60,16 @@ records are `$26D0/$26E0/$26F0`, with source Y rows `$9C/$AC/$BC`. The three
 visible animation states are color/attribute values `03`, `04`, and `05`,
 exported as `large-hoop/hoop-00.png` through `hoop-02.png`.
 
+A second, dedicated unmodified attract-mode capture maps two more Level 1
+objects. The fire pot occupies slots 11–14 and is assembled from cells
+`ED EF EC EE` as a two-by-two composite; its left column carries color
+attribute `03`, while the right column uses color 0. The
+small/bonus ring occupies slots 9–10 and uses cells `E9 EB`, deliberately
+omitting the large hoop's middle `EA` cell. One independently zero-mismatch
+frame of each object is exported. Other apparent palette phases were not
+exported because overlap/priority prevented a zero-mismatch whole-composite
+comparison.
+
 The synchronized failure trace also identifies and exports the separate
 three-cell left/right failure effects. These effects do not replace the six
 rider records; they are later hardware slots layered with the death rider.
@@ -68,18 +78,24 @@ rider records; they are later hardware slots layered with the death rider.
 
 `tools/capture_level1_original_art.lua` reproduces the successful hoop input,
 self-terminates, captures MAME frames, and records both raw sprite-RAM banks.
+`tools/capture_level1_unresolved_art.lua` performs the separate, self-
+terminating unmodified attract-mode capture used for the unresolved-object
+pass.
 `tools/reconstruct_level1_original_art.py` decodes the ROM/PROM data, assembles
 the component cells, rotates and crops them, writes metadata, and performs an
 exact RGB comparison against unscaled 224×256 MAME screenshots.
 
-The verification covers Run A, Run B, Run C, airborne, and the large hoop.
-Every reconstructed opaque pixel matched the corresponding MAME frame:
+The verification covers Run A, Run B, Run C, airborne, the large hoop, the
+fire pot, and the small/bonus ring. Every reconstructed opaque pixel matched
+the corresponding MAME frame:
 
 - Run A: 731/731 pixels
 - Run B: 731/731 pixels
 - Run C: 714/714 pixels
 - airborne: 692/692 pixels
 - large hoop: 295/295 pixels
+- fire pot: 412/412 pixels
+- small/bonus ring: 145/145 pixels
 
 The machine-readable report is `reference/original/level1/metadata/verification.json`.
 
@@ -89,6 +105,8 @@ The machine-readable report is `reference/original/level1/metadata/verification.
   verified death composite
 - `reference/original/level1/large-hoop/`: three distinct palette animation
   states
+- `reference/original/level1/fire-pot/`: one verified composite
+- `reference/original/level1/bonus-ring/`: one verified composite
 - `reference/original/level1/misc/`: two verified failure-effect composites
 - `reference/original/level1/metadata/assets.json`: codes, ROM offsets/files,
   colors, attributes, flips, slots, component offsets, anchors, bounds,
@@ -103,8 +121,11 @@ tightly cropped. No scaled derivatives are part of the reference set.
 
 ## Unresolved objects
 
-The successful-hoop trace does not confidently identify the complete fire
-pot, small/bonus ring, hidden coin, extra Charlie, goal platform, or
-score/bonus object composites. Placeholder `UNRESOLVED.md` files document
-that boundary. Those objects require dedicated observed sprite-RAM captures;
-they were deliberately not guessed or extracted as unrelated raw sheets.
+The hidden coin and goal platform did not occur in the dedicated attract-mode
+capture, so no hardware-backed composite could be established. The hanging
+extra-Charlie candidate was identified as cells `41/42/43/44` in slots
+0/1/45/46, but two of its opaque pixels are changed by an overlapping later
+hardware slot in every observed frame. Because the requested whole-composite
+test is therefore 266/268 rather than zero-mismatch, it was not exported.
+Score/bonus object graphics also remain unmapped. `misc/UNRESOLVED.md`
+records this boundary; no object was guessed or manually repaired.

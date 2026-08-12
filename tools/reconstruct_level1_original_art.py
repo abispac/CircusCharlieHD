@@ -153,6 +153,25 @@ def hoop_cells(color: int) -> list[Cell]:
     return [Cell(code, color, x, 156, slot=45 + index, attr=color) for index, (code, x) in enumerate(zip((0xE4, 0xE5, 0xE6), (156, 172, 188)))]
 
 
+def fire_pot_cells(color: int) -> list[Cell]:
+    # The two columns are emitted in slots 11-14.  The color attribute is
+    # carried by the left cells; the right cells intentionally use color 0.
+    return [
+        Cell(0xED, color, 210, 93, slot=11, attr=color),
+        Cell(0xEF, 0, 226, 93, slot=12, attr=0),
+        Cell(0xEC, color, 210, 109, slot=13, attr=color),
+        Cell(0xEE, 0, 226, 109, slot=14, attr=0),
+    ]
+
+
+def bonus_ring_cells(color: int) -> list[Cell]:
+    # Small rings omit the middle EAh cell used by the large three-cell hoop.
+    return [
+        Cell(0xE9, color, 156, 150, slot=9, attr=color),
+        Cell(0xEB, color, 172, 150, slot=10, attr=color),
+    ]
+
+
 def export_asset(decoder: Decoder, root: Path, relative: str, cells: list[Cell], extra: dict, metadata: list[dict]) -> None:
     pixels, geometry = compose(decoder, cells)
     path = root / relative
@@ -170,7 +189,19 @@ def export_asset(decoder: Decoder, root: Path, relative: str, cells: list[Cell],
     })
 
 
-def verify(decoder: Decoder, trace_csv: Path, capture_dir: Path) -> dict:
+def best_screen_match(decoder: Decoder, cells: list[Cell], screenshot: Path) -> dict:
+    _, _, screen = read_rgb_png(screenshot)
+    pixels, _ = compose(decoder, cells)
+    points = [(x, y, pixel[:3]) for y, row in enumerate(pixels) for x, pixel in enumerate(row) if pixel[3]]
+    best = (0, 0, 0)
+    for origin_y in range(257 - len(pixels)):
+        for origin_x in range(225 - len(pixels[0])):
+            matched = sum(screen[origin_y + y][origin_x + x] == rgb for x, y, rgb in points)
+            best = max(best, (matched, origin_x, origin_y))
+    return {"matched_at_upright": {"x": best[1], "y": best[2]}, "matched_opaque_pixels": best[0], "tested_opaque_pixels": len(points), "mismatched_opaque_pixels": len(points) - best[0]}
+
+
+def verify(decoder: Decoder, trace_csv: Path, capture_dir: Path, unresolved_trace_csv: Path | None = None, unresolved_capture_dir: Path | None = None) -> dict:
     rows = list(csv.DictReader(trace_csv.open()))
     checks = []
     targets = {
@@ -201,6 +232,17 @@ def verify(decoder: Decoder, trace_csv: Path, capture_dir: Path) -> dict:
             candidates.append((best[0], len(points), bank, best[1], best[2]))
         matched, tested, bank, origin_x, origin_y = max(candidates)
         checks.append({"label": label, "frame": frame, "display_bank": bank, "matched_at_upright": {"x": origin_x, "y": origin_y}, "matched_opaque_pixels": matched, "tested_opaque_pixels": tested, "mismatched_opaque_pixels": tested - matched})
+    if unresolved_trace_csv and unresolved_capture_dir:
+        unresolved_rows = list(csv.DictReader(unresolved_trace_csv.open()))
+        dedicated = [
+            ("fire-pot-color-03", 1700, [11, 12, 13, 14]),
+            ("bonus-ring-color-05", 2900, [9, 10]),
+        ]
+        for label, frame, slots in dedicated:
+            frame_rows = [row for row in unresolved_rows if int(row["frame"]) == frame and int(row["bank"]) == 0 and int(row["slot"]) in slots]
+            cells = [Cell(int(row["decoded_code"]), int(row["color"]), int(row["x"]), int(row["y"]), int(row["slot"]), int(row["attr"], 16), row["flipx"] == "1", row["flipy"] == "1") for row in frame_rows]
+            screenshot = unresolved_capture_dir / f"capture-frame-{frame:05d}.png"
+            checks.append({"label": label, "frame": frame, "display_bank": 0, **best_screen_match(decoder, cells, screenshot)})
     return {"method": "exact RGB comparison of reconstructed opaque sprite pixels against MAME screenshots", "checks": checks, "passed": all(check["mismatched_opaque_pixels"] == 0 for check in checks)}
 
 
@@ -210,6 +252,8 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--trace-csv", type=Path)
     parser.add_argument("--capture-dir", type=Path)
+    parser.add_argument("--unresolved-trace-csv", type=Path)
+    parser.add_argument("--unresolved-capture-dir", type=Path)
     args = parser.parse_args()
     decoder, root, metadata = Decoder(args.rom_dir), args.output, []
 
@@ -224,15 +268,15 @@ def main() -> None:
         export_asset(decoder, root, relative, rider_cells(codes), {"source_frames": frames, "object_records": RIDER_RECORDS, "state_note": "airborne.png is intentionally pixel-identical to run-c.png; jump state changes absolute hardware X/source Y, not codes, attributes, flips, or relative placement" if "airborne" in relative else None}, metadata)
     for index, color in enumerate((3, 4, 5)):
         export_asset(decoder, root, f"large-hoop/hoop-{index:02d}.png", hoop_cells(color), {"source_frames": "observed repeatedly during synchronized frames 1326-1410", "object_records": ["0x26d0", "0x26e0", "0x26f0"], "logical_rows": ["0x9c", "0xac", "0xbc"]}, metadata)
+    export_asset(decoder, root, "fire-pot/fire-pot-00.png", fire_pot_cells(3), {"source_frames": [1700], "hardware_slots": [11, 12, 13, 14], "capture": "dedicated unmodified circusc4 attract-mode capture"}, metadata)
+    export_asset(decoder, root, "bonus-ring/ring-00.png", bonus_ring_cells(5), {"source_frames": [2900], "hardware_slots": [9, 10], "capture": "dedicated unmodified circusc4 attract-mode capture"}, metadata)
     export_asset(decoder, root, "misc/failure-effect-left.png", [Cell(c, 0, 90, y, slot=23 + i, attr=0) for i, (c, y) in enumerate(zip((0x18, 0x17, 0x16), (64, 80, 96)))], {"source_frames": list(range(1390, 1411)), "object_records": "separate failure-effect hardware slots; not the rider records"}, metadata)
     export_asset(decoder, root, "misc/failure-effect-right.png", [Cell(c, 0, 82, y, slot=26 + i, attr=0) for i, (c, y) in enumerate(zip((0x18, 0x17, 0x16), (160, 176, 192)))], {"source_frames": list(range(1390, 1411)), "object_records": "separate failure-effect hardware slots; not the rider records"}, metadata)
 
     for directory in ("fire-pot", "bonus-ring", "metadata"):
         (root / directory).mkdir(parents=True, exist_ok=True)
-    (root / "fire-pot" / "UNRESOLVED.md").write_text("No fire-pot composite was mapped with sufficient sprite-RAM evidence in the synchronized successful-hoop trace. No guessed export was created.\n")
-    (root / "bonus-ring" / "UNRESOLVED.md").write_text("No small/bonus-ring composite was mapped with sufficient sprite-RAM evidence in the synchronized successful-hoop trace. No guessed export was created.\n")
-    (root / "misc" / "UNRESOLVED.md").write_text("Hidden coin, extra Charlie, goal platform, and score/bonus object graphics still require dedicated observed sprite-RAM captures; none were guessed.\n")
-    verification = verify(decoder, args.trace_csv, args.capture_dir) if args.trace_csv and args.capture_dir else {"passed": False, "reason": "verification inputs not supplied"}
+    (root / "misc" / "UNRESOLVED.md").write_text("Hidden coin and goal platform were not observed in the dedicated attract-mode sprite capture. The hanging extra-Charlie four-cell candidate was identified (codes 41/42/43/44, slots 0/1/45/46), but two opaque pixels are altered by overlapping hardware priority and it therefore fails the required zero-mismatch whole-composite verification. Score/bonus object graphics are also not confidently mapped. No PNG was exported for these unresolved objects.\n")
+    verification = verify(decoder, args.trace_csv, args.capture_dir, args.unresolved_trace_csv, args.unresolved_capture_dir) if args.trace_csv and args.capture_dir else {"passed": False, "reason": "verification inputs not supplied"}
     (root / "metadata" / "assets.json").write_text(json.dumps({"rom_set": "circusc4", "assets": metadata}, indent=2) + "\n")
     (root / "metadata" / "verification.json").write_text(json.dumps(verification, indent=2) + "\n")
     (root / "metadata" / "palette.json").write_text(json.dumps({"resistor_weights": {"red_green": [33, 71, 151], "blue": [81, 174]}, "indirect_rgb": decoder.palette, "sprite_lookup": list(decoder.lookup)}, indent=2) + "\n")

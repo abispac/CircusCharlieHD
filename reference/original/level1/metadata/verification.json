@@ -60,6 +60,30 @@
       "matched_opaque_pixels": 295,
       "tested_opaque_pixels": 295,
       "mismatched_opaque_pixels": 0
+    },
+    {
+      "label": "fire-pot-color-03",
+      "frame": 1700,
+      "display_bank": 0,
+      "matched_at_upright": {
+        "x": 121,
+        "y": 210
+      },
+      "matched_opaque_pixels": 412,
+      "tested_opaque_pixels": 412,
+      "mismatched_opaque_pixels": 0
+    },
+    {
+      "label": "bonus-ring-color-05",
+      "frame": 2900,
+      "display_bank": 0,
+      "matched_at_upright": {
+        "x": 78,
+        "y": 156
+      },
+      "matched_opaque_pixels": 145,
+      "tested_opaque_pixels": 145,
+      "mismatched_opaque_pixels": 0
     }
   ],
   "passed": true
