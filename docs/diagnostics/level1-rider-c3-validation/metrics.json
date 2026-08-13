@@ -1,0 +1,724 @@
+{
+  "normalization": "least-squares similarity fit of hip, shoulder and seat to authoritative HD guide points",
+  "poses": {
+    "run-a": {
+      "source_dimensions": [
+        1448,
+        1086
+      ],
+      "normalization_scale": 0.449308,
+      "normalization_rotation_deg": -2.7349,
+      "landmarks": {
+        "charlie_head": {
+          "normalized_delta": [
+            0.0206,
+            0.1067
+          ],
+          "hd_delta_px": [
+            15.9,
+            54.6
+          ]
+        },
+        "charlie_torso": {
+          "normalized_delta": [
+            -0.0089,
+            -0.0393
+          ],
+          "hd_delta_px": [
+            -6.8,
+            -20.1
+          ]
+        },
+        "charlie_pelvis": {
+          "normalized_delta": [
+            -0.0681,
+            -0.1046
+          ],
+          "hd_delta_px": [
+            -52.3,
+            -53.5
+          ]
+        },
+        "seat": {
+          "normalized_delta": [
+            -0.0681,
+            -0.1046
+          ],
+          "hd_delta_px": [
+            -52.3,
+            -53.5
+          ]
+        },
+        "grip": {
+          "normalized_delta": [
+            -0.126,
+            0.0624
+          ],
+          "hd_delta_px": [
+            -96.8,
+            31.9
+          ]
+        },
+        "boot": {
+          "normalized_delta": [
+            -0.1434,
+            -0.0093
+          ],
+          "hd_delta_px": [
+            -110.1,
+            -4.8
+          ]
+        },
+        "lion_head": {
+          "normalized_delta": [
+            -0.0074,
+            0.0411
+          ],
+          "hd_delta_px": [
+            -5.7,
+            21.1
+          ]
+        },
+        "head_base": {
+          "normalized_delta": [
+            0.0139,
+            0.0652
+          ],
+          "hd_delta_px": [
+            10.7,
+            33.4
+          ]
+        },
+        "muzzle": {
+          "normalized_delta": [
+            -0.0389,
+            0.1088
+          ],
+          "hd_delta_px": [
+            -29.9,
+            55.7
+          ]
+        },
+        "shoulder": {
+          "normalized_delta": [
+            0.0183,
+            0.0301
+          ],
+          "hd_delta_px": [
+            14.0,
+            15.4
+          ]
+        },
+        "hip": {
+          "normalized_delta": [
+            0.0498,
+            0.0745
+          ],
+          "hd_delta_px": [
+            38.3,
+            38.1
+          ]
+        },
+        "tail_base": {
+          "normalized_delta": [
+            0.0677,
+            0.0886
+          ],
+          "hd_delta_px": [
+            52.0,
+            45.4
+          ]
+        },
+        "tail_tip": {
+          "normalized_delta": [
+            0.1138,
+            -0.0688
+          ],
+          "hd_delta_px": [
+            87.4,
+            -35.2
+          ]
+        },
+        "rear1": {
+          "normalized_delta": [
+            -0.0997,
+            0.0117
+          ],
+          "hd_delta_px": [
+            -76.6,
+            6.0
+          ]
+        },
+        "rear2": {
+          "normalized_delta": [
+            -0.0496,
+            -0.0519
+          ],
+          "hd_delta_px": [
+            -38.1,
+            -26.6
+          ]
+        },
+        "front1": {
+          "normalized_delta": [
+            0.1296,
+            -0.0203
+          ],
+          "hd_delta_px": [
+            99.5,
+            -10.4
+          ]
+        },
+        "front2": {
+          "normalized_delta": [
+            0.1189,
+            -0.0136
+          ],
+          "hd_delta_px": [
+            91.3,
+            -6.9
+          ]
+        },
+        "torso_top": {
+          "normalized_delta": [
+            0.0453,
+            0.1308
+          ],
+          "hd_delta_px": [
+            34.8,
+            67.0
+          ]
+        },
+        "torso_bottom": {
+          "normalized_delta": [
+            0.0375,
+            0.0482
+          ],
+          "hd_delta_px": [
+            28.8,
+            24.7
+          ]
+        }
+      },
+      "normalized_torso_length": 0.3574,
+      "normalized_body_height": 0.2457,
+      "alpha_removed_percent": 0.25469,
+      "alpha_changed_percent": 35.28293,
+      "after_fully_opaque_percent": 27.20537
+    },
+    "run-b": {
+      "source_dimensions": [
+        1448,
+        1086
+      ],
+      "normalization_scale": 0.460818,
+      "normalization_rotation_deg": -1.4066,
+      "landmarks": {
+        "charlie_head": {
+          "normalized_delta": [
+            0.014,
+            0.1199
+          ],
+          "hd_delta_px": [
+            10.7,
+            61.4
+          ]
+        },
+        "charlie_torso": {
+          "normalized_delta": [
+            -0.017,
+            -0.03
+          ],
+          "hd_delta_px": [
+            -13.1,
+            -15.4
+          ]
+        },
+        "charlie_pelvis": {
+          "normalized_delta": [
+            -0.0723,
+            -0.1033
+          ],
+          "hd_delta_px": [
+            -55.5,
+            -52.9
+          ]
+        },
+        "seat": {
+          "normalized_delta": [
+            -0.0723,
+            -0.1033
+          ],
+          "hd_delta_px": [
+            -55.5,
+            -52.9
+          ]
+        },
+        "grip": {
+          "normalized_delta": [
+            -0.1358,
+            0.0856
+          ],
+          "hd_delta_px": [
+            -104.3,
+            43.9
+          ]
+        },
+        "boot": {
+          "normalized_delta": [
+            -0.1534,
+            -0.02
+          ],
+          "hd_delta_px": [
+            -117.8,
+            -10.2
+          ]
+        },
+        "lion_head": {
+          "normalized_delta": [
+            0.0046,
+            0.0501
+          ],
+          "hd_delta_px": [
+            3.6,
+            25.7
+          ]
+        },
+        "head_base": {
+          "normalized_delta": [
+            0.0147,
+            0.0603
+          ],
+          "hd_delta_px": [
+            11.3,
+            30.9
+          ]
+        },
+        "muzzle": {
+          "normalized_delta": [
+            -0.0036,
+            0.1218
+          ],
+          "hd_delta_px": [
+            -2.8,
+            62.4
+          ]
+        },
+        "shoulder": {
+          "normalized_delta": [
+            0.0183,
+            0.0275
+          ],
+          "hd_delta_px": [
+            14.0,
+            14.1
+          ]
+        },
+        "hip": {
+          "normalized_delta": [
+            0.054,
+            0.0758
+          ],
+          "hd_delta_px": [
+            41.5,
+            38.8
+          ]
+        },
+        "tail_base": {
+          "normalized_delta": [
+            0.0834,
+            0.0068
+          ],
+          "hd_delta_px": [
+            64.1,
+            3.5
+          ]
+        },
+        "tail_tip": {
+          "normalized_delta": [
+            0.0785,
+            -0.0215
+          ],
+          "hd_delta_px": [
+            60.3,
+            -11.0
+          ]
+        },
+        "rear1": {
+          "normalized_delta": [
+            0.0794,
+            -0.0543
+          ],
+          "hd_delta_px": [
+            61.0,
+            -27.8
+          ]
+        },
+        "rear2": {
+          "normalized_delta": [
+            -0.0019,
+            0.0381
+          ],
+          "hd_delta_px": [
+            -1.5,
+            19.5
+          ]
+        },
+        "front1": {
+          "normalized_delta": [
+            0.0633,
+            0.0096
+          ],
+          "hd_delta_px": [
+            48.6,
+            4.9
+          ]
+        },
+        "front2": {
+          "normalized_delta": [
+            0.0539,
+            0.0338
+          ],
+          "hd_delta_px": [
+            41.4,
+            17.3
+          ]
+        },
+        "torso_top": {
+          "normalized_delta": [
+            0.03,
+            0.1279
+          ],
+          "hd_delta_px": [
+            23.1,
+            65.5
+          ]
+        },
+        "torso_bottom": {
+          "normalized_delta": [
+            0.0258,
+            0.0562
+          ],
+          "hd_delta_px": [
+            19.8,
+            28.8
+          ]
+        }
+      },
+      "normalized_torso_length": 0.3554,
+      "normalized_body_height": 0.2565,
+      "alpha_removed_percent": 0.2627,
+      "alpha_changed_percent": 34.67283,
+      "after_fully_opaque_percent": 27.02922
+    },
+    "run-c": {
+      "source_dimensions": [
+        1672,
+        941
+      ],
+      "normalization_scale": 0.47252,
+      "normalization_rotation_deg": -4.482,
+      "landmarks": {
+        "charlie_head": {
+          "normalized_delta": [
+            0.1963,
+            0.1163
+          ],
+          "hd_delta_px": [
+            150.8,
+            59.6
+          ]
+        },
+        "charlie_torso": {
+          "normalized_delta": [
+            0.125,
+            -0.0547
+          ],
+          "hd_delta_px": [
+            96.0,
+            -28.0
+          ]
+        },
+        "charlie_pelvis": {
+          "normalized_delta": [
+            0.0318,
+            -0.1105
+          ],
+          "hd_delta_px": [
+            24.4,
+            -56.6
+          ]
+        },
+        "seat": {
+          "normalized_delta": [
+            0.0318,
+            -0.1105
+          ],
+          "hd_delta_px": [
+            24.4,
+            -56.6
+          ]
+        },
+        "grip": {
+          "normalized_delta": [
+            0.0389,
+            0.0839
+          ],
+          "hd_delta_px": [
+            29.9,
+            43.0
+          ]
+        },
+        "boot": {
+          "normalized_delta": [
+            -0.0425,
+            0.0015
+          ],
+          "hd_delta_px": [
+            -32.6,
+            0.8
+          ]
+        },
+        "lion_head": {
+          "normalized_delta": [
+            -0.0313,
+            0.0783
+          ],
+          "hd_delta_px": [
+            -24.0,
+            40.1
+          ]
+        },
+        "head_base": {
+          "normalized_delta": [
+            -0.0288,
+            0.0849
+          ],
+          "hd_delta_px": [
+            -22.1,
+            43.5
+          ]
+        },
+        "muzzle": {
+          "normalized_delta": [
+            -0.0844,
+            0.1261
+          ],
+          "hd_delta_px": [
+            -64.9,
+            64.6
+          ]
+        },
+        "shoulder": {
+          "normalized_delta": [
+            -0.0157,
+            0.0595
+          ],
+          "hd_delta_px": [
+            -12.1,
+            30.5
+          ]
+        },
+        "hip": {
+          "normalized_delta": [
+            -0.0161,
+            0.0511
+          ],
+          "hd_delta_px": [
+            -12.3,
+            26.1
+          ]
+        },
+        "tail_base": {
+          "normalized_delta": [
+            0.0098,
+            -0.061
+          ],
+          "hd_delta_px": [
+            7.5,
+            -31.2
+          ]
+        },
+        "tail_tip": {
+          "normalized_delta": [
+            -0.084,
+            -0.1807
+          ],
+          "hd_delta_px": [
+            -64.5,
+            -92.5
+          ]
+        },
+        "rear1": {
+          "normalized_delta": [
+            -0.1013,
+            -0.1316
+          ],
+          "hd_delta_px": [
+            -77.8,
+            -67.4
+          ]
+        },
+        "rear2": {
+          "normalized_delta": [
+            -0.1525,
+            -0.0548
+          ],
+          "hd_delta_px": [
+            -117.1,
+            -28.1
+          ]
+        },
+        "front1": {
+          "normalized_delta": [
+            -0.0766,
+            0.0778
+          ],
+          "hd_delta_px": [
+            -58.9,
+            39.8
+          ]
+        },
+        "front2": {
+          "normalized_delta": [
+            -0.0943,
+            0.1468
+          ],
+          "hd_delta_px": [
+            -72.5,
+            75.2
+          ]
+        },
+        "torso_top": {
+          "normalized_delta": [
+            -0.0088,
+            0.111
+          ],
+          "hd_delta_px": [
+            -6.8,
+            56.8
+          ]
+        },
+        "torso_bottom": {
+          "normalized_delta": [
+            -0.0206,
+            0.0239
+          ],
+          "hd_delta_px": [
+            -15.8,
+            12.3
+          ]
+        }
+      },
+      "normalized_torso_length": 0.3965,
+      "normalized_body_height": 0.2261,
+      "alpha_removed_percent": 0.41408,
+      "alpha_changed_percent": 39.47413,
+      "after_fully_opaque_percent": 29.22658
+    }
+  },
+  "transitions": {
+    "run-a->run-b": {
+      "shoulder": [
+        -0.0208,
+        -0.0182
+      ],
+      "hip": [
+        -0.0166,
+        0.0013
+      ],
+      "lion_head": [
+        -0.0088,
+        -0.0222
+      ],
+      "head_base": [
+        -0.02,
+        -0.0206
+      ],
+      "seat": [
+        -0.0251,
+        0.0012
+      ],
+      "charlie_pelvis": [
+        -0.0251,
+        0.0012
+      ],
+      "charlie_torso": [
+        -0.029,
+        -0.0063
+      ],
+      "charlie_head": [
+        -0.0275,
+        -0.0025
+      ]
+    },
+    "run-b->run-c": {
+      "shoulder": [
+        -0.034,
+        0.0476
+      ],
+      "hip": [
+        -0.0805,
+        -0.0247
+      ],
+      "lion_head": [
+        -0.0359,
+        0.0437
+      ],
+      "head_base": [
+        -0.0435,
+        0.0402
+      ],
+      "seat": [
+        0.0832,
+        -0.0072
+      ],
+      "charlie_pelvis": [
+        0.0832,
+        -0.0072
+      ],
+      "charlie_torso": [
+        0.1212,
+        -0.0091
+      ],
+      "charlie_head": [
+        0.1511,
+        0.0121
+      ]
+    },
+    "run-c->run-a": {
+      "shoulder": [
+        0.0548,
+        -0.0294
+      ],
+      "hip": [
+        0.0971,
+        0.0234
+      ],
+      "lion_head": [
+        0.0448,
+        -0.0215
+      ],
+      "head_base": [
+        0.0636,
+        -0.0197
+      ],
+      "seat": [
+        -0.0582,
+        0.006
+      ],
+      "charlie_pelvis": [
+        -0.0582,
+        0.006
+      ],
+      "charlie_torso": [
+        -0.0922,
+        0.0154
+      ],
+      "charlie_head": [
+        -0.1236,
+        -0.0097
+      ]
+    }
+  }
+}
