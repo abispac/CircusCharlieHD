@@ -110,8 +110,9 @@ Native Level 1 now has:
 The first active object is initialized to the traced state immediately before
 the native/MAME control alignment (`$26d0 X=$d480`, accumulator `$b180`). The
 first native update therefore produces MAME frame 1322's `$d280` and `$af80`.
-Large hoops no longer use `railStartForIntercept()`. That approximation remains
-only for bonus rings, which this pass intentionally does not modify.
+Large hoops no longer use `railStartForIntercept()`. A later verified pass also
+removed it from associated small/prize rings after tracing `$75eb-$7606`; see
+`docs/level1-remaining-rom-fidelity.md`.
 
 ## Earliest remaining divergence
 

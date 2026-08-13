@@ -93,25 +93,17 @@ Current user-control model:
 - Releasing both directions decelerates quickly to a stop. Reversing uses a
   stronger response so the rider brakes in roughly one board frame instead of
   sliding forward after LEFT is pressed.
-- Large and small fire rings continue moving along the overhead rail even when
-  the lion is stopped or reversing.
-- Large rings use approximately `476` logical units of separation. A small
-  ring follows the second large ring by approximately `493` logical units,
-  matching the corresponding `222`- and `230`-source-pixel trace distances.
-- The late double-ring test deliberately compresses the two centers to about
-  `67` logical units after rail compensation, so the flames visually overlap
-  like the recorded arcade sequence instead of reading as two separate tests.
+- Large hoops and their associated small/prize rings continue moving along the
+  overhead rail even when the lion is stopped or reversing.
+- Four reusable large-hoop records are scheduled by the ROM reload table. Each
+  owns one small-ring record positioned from the large hoop's integer 8.8 X
+  byte minus 16 source pixels; there are no independently authored small-ring
+  world positions.
 - Passing through a small ring consumes its randomized prize once but never
   stops, hides, or removes the moving ring itself.
-- Small rings use a `7`-logical-unit collision plane, thinner than the
-  regular ring, plus a `98`-unit vertical safe opening. Their `112 x 198`
-  target rectangle produces an approximately `50 x 110` visible oval because
-  the source texture contains transparent horizontal padding. The
-  visual preserves the broad oval surrounding the arcade money bag while the
-  physical flame crossing remains narrow. Contact outside that
-  opening while airborne burns both Charlie and the lion; running beneath the
-  suspended ring is safe. A centered arcade jump passes and collects the
-  randomized prize.
+- The original collision scan does not test associated small-ring records
+  `$2400-$24bf`. A centered airborne crossing can collect its randomized
+  prize, but the small ring is not treated as an independent fire hazard.
 - Stage 1 displays a short point popup at the object for every scored arcade
   action: `100` for a hoop crossing, `200` for a firepot, `500` or `1000` for
   a randomized moneybag, and `5000` for the hidden coin.
