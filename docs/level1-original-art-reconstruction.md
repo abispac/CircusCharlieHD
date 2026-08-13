@@ -74,6 +74,28 @@ The synchronized failure trace also identifies and exports the separate
 three-cell left/right failure effects. These effects do not replace the six
 rider records; they are later hardware slots layered with the death rider.
 
+A pair of manual Level 1 runs completed the remaining sprite-object mapping.
+The hanging extra Charlie is a four-cell composite in slots `0/1/45/46`, with
+codes `42 44 41 43` in hardware-slot order. Two pixels belonging to cell `41`
+are covered in the final framebuffer by genuine later sprite slot 59 (code
+`13F`). The priority-aware verifier therefore compares all 266 unobscured
+pixels exactly and records the two covered coordinates rather than altering
+or discarding the underlying composite.
+
+The hidden fire-pot coin uses single-cell animation codes `140/141`, with
+attribute `20` or horizontally flipped `60` according to travel direction.
+`misc/hidden-coin-00.png` exports the fully visible code-`140` phase captured
+at frame 1898. The alternate phase was observed in sprite RAM, but the manual
+screenshot did not land on a frame that independently proves every opaque
+pixel, so it is intentionally not exported.
+
+The finish capture maps the three-cell `GOAL` sign (`C4 C3 C2`) and the
+three-cell `GREAT` (`15 14 13`) and `FAR OUT` (`12 11 10`) presentation words.
+All three exported composites are exact framebuffer matches. The striped
+platform body itself belongs to the scrolling background tilemap, not those
+sprite slots; it remains unexported until its full tile composition and
+priority can be isolated with the same zero-pixel standard.
+
 ## Verification
 
 `tools/capture_level1_original_art.lua` reproduces the successful hoop input,
@@ -96,6 +118,12 @@ the corresponding MAME frame:
 - large hoop: 295/295 pixels
 - fire pot: 412/412 pixels
 - small/bonus ring: 145/145 pixels
+- hidden coin: 20/20 pixels
+- hanging extra Charlie: 266/266 unobscured pixels, with 2/2 remaining pixels
+  accounted for by authentic later sprite-slot priority
+- GOAL sign: 385/385 pixels
+- GREAT: 708/708 pixels
+- FAR OUT: 520/520 pixels
 
 The machine-readable report is `reference/original/level1/metadata/verification.json`.
 

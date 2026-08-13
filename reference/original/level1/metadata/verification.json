@@ -1,90 +1,120 @@
 {
-  "method": "exact RGB comparison of reconstructed opaque sprite pixels against MAME screenshots",
+  "method": "manual-capture exact RGB verification; legacy verification inputs were not supplied",
   "checks": [
-    {
-      "label": "run-a-00",
-      "frame": 1326,
-      "display_bank": 1,
-      "matched_at_upright": {
-        "x": 21,
-        "y": 208
-      },
-      "matched_opaque_pixels": 731,
-      "tested_opaque_pixels": 731,
-      "mismatched_opaque_pixels": 0
-    },
-    {
-      "label": "run-b-00",
-      "frame": 1328,
-      "display_bank": 1,
-      "matched_at_upright": {
-        "x": 21,
-        "y": 208
-      },
-      "matched_opaque_pixels": 731,
-      "tested_opaque_pixels": 731,
-      "mismatched_opaque_pixels": 0
-    },
-    {
-      "label": "run-c-00",
-      "frame": 1336,
-      "display_bank": 1,
-      "matched_at_upright": {
-        "x": 21,
-        "y": 208
-      },
-      "matched_opaque_pixels": 714,
-      "tested_opaque_pixels": 714,
-      "mismatched_opaque_pixels": 0
-    },
-    {
-      "label": "airborne-13",
-      "frame": 1360,
-      "display_bank": 1,
-      "matched_at_upright": {
-        "x": 21,
-        "y": 176
-      },
-      "matched_opaque_pixels": 692,
-      "tested_opaque_pixels": 692,
-      "mismatched_opaque_pixels": 0
-    },
-    {
-      "label": "hoop-crossing",
-      "frame": 1395,
-      "display_bank": 0,
-      "matched_at_upright": {
-        "x": 52,
-        "y": 156
-      },
-      "matched_opaque_pixels": 295,
-      "tested_opaque_pixels": 295,
-      "mismatched_opaque_pixels": 0
-    },
-    {
-      "label": "fire-pot-color-03",
-      "frame": 1700,
-      "display_bank": 0,
-      "matched_at_upright": {
-        "x": 121,
-        "y": 210
-      },
-      "matched_opaque_pixels": 412,
-      "tested_opaque_pixels": 412,
-      "mismatched_opaque_pixels": 0
-    },
-    {
-      "label": "bonus-ring-color-05",
-      "frame": 2900,
-      "display_bank": 0,
-      "matched_at_upright": {
-        "x": 78,
-        "y": 156
-      },
-      "matched_opaque_pixels": 145,
-      "tested_opaque_pixels": 145,
-      "mismatched_opaque_pixels": 0
-    }
+    {"label":"run-a-00","frame":1326,"display_bank":1,"matched_at_upright":{"x":21,"y":208},"matched_opaque_pixels":731,"tested_opaque_pixels":731,"mismatched_opaque_pixels":0},
+    {"label":"run-b-00","frame":1328,"display_bank":1,"matched_at_upright":{"x":21,"y":208},"matched_opaque_pixels":731,"tested_opaque_pixels":731,"mismatched_opaque_pixels":0},
+    {"label":"run-c-00","frame":1336,"display_bank":1,"matched_at_upright":{"x":21,"y":208},"matched_opaque_pixels":714,"tested_opaque_pixels":714,"mismatched_opaque_pixels":0},
+    {"label":"airborne-13","frame":1360,"display_bank":1,"matched_at_upright":{"x":21,"y":176},"matched_opaque_pixels":692,"tested_opaque_pixels":692,"mismatched_opaque_pixels":0},
+    {"label":"hoop-crossing","frame":1395,"display_bank":0,"matched_at_upright":{"x":52,"y":156},"matched_opaque_pixels":295,"tested_opaque_pixels":295,"mismatched_opaque_pixels":0},
+    {"label":"fire-pot-color-03","frame":1700,"display_bank":0,"matched_at_upright":{"x":121,"y":210},"matched_opaque_pixels":412,"tested_opaque_pixels":412,"mismatched_opaque_pixels":0},
+    {"label":"bonus-ring-color-05","frame":2900,"display_bank":0,"matched_at_upright":{"x":78,"y":156},"matched_opaque_pixels":145,"tested_opaque_pixels":145,"mismatched_opaque_pixels":0}
   ],
-  "passed": true
+  "passed": true,
+  "legacy_checks_note": "Preserved from the prior exact reconstruction run; legacy capture inputs were not supplied during this manual-capture extension.",
+  "manual_capture_checks": [
+    {
+      "matched_at_upright": {
+        "x": 186,
+        "y": 149
+      },
+      "tested_opaque_pixels": 268,
+      "matched_unobscured_pixels": 266,
+      "priority_obscured_pixels": 2,
+      "mismatched_unobscured_pixels": 0,
+      "obscured_pixel_details": [
+        {
+          "x": 191,
+          "y": 149,
+          "expected_rgb": [
+            222,
+            222,
+            255
+          ],
+          "actual_rgb": [
+            184,
+            184,
+            174
+          ],
+          "covering_sprites": [
+            {
+              "slot": 59,
+              "code": "0x13f"
+            }
+          ]
+        },
+        {
+          "x": 190,
+          "y": 149,
+          "expected_rgb": [
+            222,
+            222,
+            255
+          ],
+          "actual_rgb": [
+            255,
+            255,
+            255
+          ],
+          "covering_sprites": [
+            {
+              "slot": 59,
+              "code": "0x13f"
+            }
+          ]
+        }
+      ],
+      "mismatched_pixel_details": [],
+      "label": "extra-charlie",
+      "frame": 985,
+      "display_bank": 0
+    },
+    {
+      "matched_at_upright": {
+        "x": 106,
+        "y": 156
+      },
+      "matched_opaque_pixels": 20,
+      "tested_opaque_pixels": 20,
+      "mismatched_opaque_pixels": 0,
+      "label": "hidden-coin-00",
+      "frame": 1898,
+      "display_bank": 1
+    },
+    {
+      "matched_at_upright": {
+        "x": 143,
+        "y": 244
+      },
+      "matched_opaque_pixels": 385,
+      "tested_opaque_pixels": 385,
+      "mismatched_opaque_pixels": 0,
+      "label": "goal-sign",
+      "frame": 3952,
+      "display_bank": 0
+    },
+    {
+      "matched_at_upright": {
+        "x": 128,
+        "y": 90
+      },
+      "matched_opaque_pixels": 708,
+      "tested_opaque_pixels": 708,
+      "mismatched_opaque_pixels": 0,
+      "label": "great",
+      "frame": 4143,
+      "display_bank": 0
+    },
+    {
+      "matched_at_upright": {
+        "x": 32,
+        "y": 82
+      },
+      "matched_opaque_pixels": 520,
+      "tested_opaque_pixels": 520,
+      "mismatched_opaque_pixels": 0,
+      "label": "far-out",
+      "frame": 4143,
+      "display_bank": 0
+    }
+  ]
 }

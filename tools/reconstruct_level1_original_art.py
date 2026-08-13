@@ -172,6 +172,70 @@ def bonus_ring_cells(color: int) -> list[Cell]:
     ]
 
 
+def manual_sprite_rows(path: Path, frame: int, bank: int, slots: set[int]) -> tuple[list[Cell], list[Cell]]:
+    with path.open() as handle:
+        rows = [row for row in csv.DictReader(handle) if int(row["frame"]) == frame and int(row["bank"]) == bank]
+    def make_cell(row: dict[str, str]) -> Cell:
+        return Cell(int(row["decoded_code"]), int(row["color"]), int(row["x"]), int(row["y"]),
+                    int(row["slot"]), int(row["attr"], 16), row["flipx"] == "1", row["flipy"] == "1")
+    return [make_cell(row) for row in rows if int(row["slot"]) in slots], [make_cell(row) for row in rows]
+
+
+def priority_aware_screen_match(decoder: Decoder, cells: list[Cell], all_cells: list[Cell], screenshot: Path) -> dict:
+    """Verify a composite while allowing only genuine later sprite-slot coverage."""
+    _, _, screen = read_rgb_png(screenshot)
+    pixels, geometry = compose(decoder, cells)
+    ordinary = best_screen_match(decoder, cells, screenshot)
+    origin_x = ordinary["matched_at_upright"]["x"]
+    origin_y = ordinary["matched_at_upright"]["y"]
+    bounds = geometry["driver_cell_bounds"]
+    crop = geometry["opaque_crop_in_upright"]
+    max_y = bounds["y"] + bounds["height"]
+    owner: dict[tuple[int, int], tuple[int, tuple[int, int, int]]] = {}
+    for cell in sorted(cells, key=lambda item: item.slot if item.slot is not None else -1):
+        for source_y in range(16):
+            for source_x in range(16):
+                pixel = decoder.pixel(cell, source_x, source_y)
+                if not pixel[3]:
+                    continue
+                board_x, board_y = cell.x + source_x, cell.y + source_y
+                screen_x = origin_x + max_y - 1 - board_y - crop["x"]
+                screen_y = origin_y + board_x - bounds["x"] - crop["y"]
+                owner[(screen_x, screen_y)] = (cell.slot or 0, pixel[:3])
+    mismatched, obscured = [], []
+    for (screen_x, screen_y), (owner_slot, expected) in owner.items():
+        actual = screen[screen_y][screen_x]
+        if actual == expected:
+            continue
+        covering = []
+        board_y = origin_x + max_y - 1 - crop["x"] - screen_x
+        board_x = screen_y - origin_y + bounds["x"] + crop["y"]
+        for cell in all_cells:
+            if cell.slot is None or cell.slot <= owner_slot:
+                continue
+            source_x, source_y = board_x - cell.x, board_y - cell.y
+            if 0 <= source_x < 16 and 0 <= source_y < 16:
+                pixel = decoder.pixel(cell, source_x, source_y)
+                if pixel[3] and pixel[:3] == actual:
+                    covering.append({"slot": cell.slot, "code": f"0x{cell.code:03x}"})
+        record = {"x": screen_x, "y": screen_y, "expected_rgb": expected, "actual_rgb": actual}
+        if covering:
+            record["covering_sprites"] = covering
+            obscured.append(record)
+        else:
+            mismatched.append(record)
+    tested = len(owner)
+    return {
+        "matched_at_upright": {"x": origin_x, "y": origin_y},
+        "tested_opaque_pixels": tested,
+        "matched_unobscured_pixels": tested - len(obscured) - len(mismatched),
+        "priority_obscured_pixels": len(obscured),
+        "mismatched_unobscured_pixels": len(mismatched),
+        "obscured_pixel_details": obscured,
+        "mismatched_pixel_details": mismatched,
+    }
+
+
 def export_asset(decoder: Decoder, root: Path, relative: str, cells: list[Cell], extra: dict, metadata: list[dict]) -> None:
     pixels, geometry = compose(decoder, cells)
     path = root / relative
@@ -254,6 +318,8 @@ def main() -> None:
     parser.add_argument("--capture-dir", type=Path)
     parser.add_argument("--unresolved-trace-csv", type=Path)
     parser.add_argument("--unresolved-capture-dir", type=Path)
+    parser.add_argument("--manual-session-01", type=Path)
+    parser.add_argument("--manual-session-02", type=Path)
     args = parser.parse_args()
     decoder, root, metadata = Decoder(args.rom_dir), args.output, []
 
@@ -273,10 +339,68 @@ def main() -> None:
     export_asset(decoder, root, "misc/failure-effect-left.png", [Cell(c, 0, 90, y, slot=23 + i, attr=0) for i, (c, y) in enumerate(zip((0x18, 0x17, 0x16), (64, 80, 96)))], {"source_frames": list(range(1390, 1411)), "object_records": "separate failure-effect hardware slots; not the rider records"}, metadata)
     export_asset(decoder, root, "misc/failure-effect-right.png", [Cell(c, 0, 82, y, slot=26 + i, attr=0) for i, (c, y) in enumerate(zip((0x18, 0x17, 0x16), (160, 176, 192)))], {"source_frames": list(range(1390, 1411)), "object_records": "separate failure-effect hardware slots; not the rider records"}, metadata)
 
+    manual_checks = []
+    if args.manual_session_01 and args.manual_session_02:
+        session1, session2 = args.manual_session_01, args.manual_session_02
+        extra, all_extra = manual_sprite_rows(session2 / "capture-sprites.csv", 985, 0, {0, 1, 45, 46})
+        export_asset(decoder, root, "misc/extra-charlie.png", extra, {
+            "source_frames": [985, 1142], "capture": "manual Level 1; awarded after three backward jumps at the start",
+            "verification_note": "266 pixels match the framebuffer directly; two underlying pixels are genuinely covered by later hardware sprite slot 59",
+        }, metadata)
+        extra_check = priority_aware_screen_match(decoder, extra, all_extra, next(session2.glob("*frame-000985*.png")))
+        extra_check.update({"label": "extra-charlie", "frame": 985, "display_bank": 0})
+        manual_checks.append(extra_check)
+
+        for index, (frame, bank, code) in enumerate(((1898, 1, 0x140),)):
+            coin, _ = manual_sprite_rows(session2 / "capture-sprites.csv", frame, bank, {24})
+            relative = f"misc/hidden-coin-{index:02d}.png"
+            export_asset(decoder, root, relative, coin, {
+                "source_frames": [frame], "capture": "manual Level 1 hidden fire-pot coin",
+                "animation_code": f"0x{code:03x}",
+            }, metadata)
+            shot = next(session2.glob(f"*frame-{frame:06d}*.png"))
+            check = best_screen_match(decoder, coin, shot)
+            check.update({"label": f"hidden-coin-{index:02d}", "frame": frame, "display_bank": bank})
+            manual_checks.append(check)
+
+        goal, _ = manual_sprite_rows(session1 / "capture-sprites.csv", 3952, 0, {60, 61, 62})
+        export_asset(decoder, root, "misc/goal-sign.png", goal, {
+            "source_frames": [3952, 4143, 4253], "capture": "manual Level 1 goal/finish presentation",
+        }, metadata)
+        goal_check = best_screen_match(decoder, goal, next(session1.glob("*frame-003952*.png")))
+        goal_check.update({"label": "goal-sign", "frame": 3952, "display_bank": 0})
+        manual_checks.append(goal_check)
+
+        for label, slots in (("great", {0, 1, 2}), ("far-out", {3, 4, 5})):
+            words, _ = manual_sprite_rows(session1 / "capture-sprites.csv", 4143, 0, slots)
+            export_asset(decoder, root, f"misc/{label}.png", words, {
+                "source_frames": [4143, 4253], "capture": "manual Level 1 finish presentation",
+            }, metadata)
+            check = best_screen_match(decoder, words, next(session1.glob("*frame-004143*.png")))
+            check.update({"label": label, "frame": 4143, "display_bank": 0})
+            manual_checks.append(check)
+
     for directory in ("fire-pot", "bonus-ring", "metadata"):
         (root / directory).mkdir(parents=True, exist_ok=True)
-    (root / "misc" / "UNRESOLVED.md").write_text("Hidden coin and goal platform were not observed in the dedicated attract-mode sprite capture. The hanging extra-Charlie four-cell candidate was identified (codes 41/42/43/44, slots 0/1/45/46), but two opaque pixels are altered by overlapping hardware priority and it therefore fails the required zero-mismatch whole-composite verification. Score/bonus object graphics are also not confidently mapped. No PNG was exported for these unresolved objects.\n")
-    verification = verify(decoder, args.trace_csv, args.capture_dir, args.unresolved_trace_csv, args.unresolved_capture_dir) if args.trace_csv and args.capture_dir else {"passed": False, "reason": "verification inputs not supplied"}
+    (root / "misc" / "UNRESOLVED.md").write_text("The striped goal platform body is a background-tile composite rather than the three-cell GOAL sprite sign exported here. It has not yet been isolated into a transparent tile composite with a zero-pixel proof, so it remains unexported. The Level 1 score numerals are ordinary reusable score glyph sprites and were not exported as a unique object. No unidentified or guessed PNG was emitted.\n")
+    if args.trace_csv and args.capture_dir:
+        verification = verify(decoder, args.trace_csv, args.capture_dir, args.unresolved_trace_csv, args.unresolved_capture_dir)
+    elif manual_checks:
+        previous_path = root / "metadata" / "verification.json"
+        previous_checks = json.loads(previous_path.read_text()).get("checks", []) if previous_path.exists() else []
+        verification = {
+            "method": "exact RGB comparison of reconstructed opaque sprite pixels against MAME screenshots",
+            "checks": previous_checks,
+            "passed": all(check.get("mismatched_opaque_pixels", 0) == 0 for check in previous_checks),
+            "legacy_checks_note": "Preserved from the prior exact reconstruction run; legacy capture inputs were not supplied during this manual-capture extension.",
+        }
+    else:
+        verification = {"passed": False, "reason": "verification inputs not supplied"}
+    if manual_checks:
+        verification["manual_capture_checks"] = manual_checks
+        verification["passed"] = verification.get("passed", False) and all(
+            check.get("mismatched_opaque_pixels", check.get("mismatched_unobscured_pixels", 0)) == 0
+            for check in manual_checks)
     (root / "metadata" / "assets.json").write_text(json.dumps({"rom_set": "circusc4", "assets": metadata}, indent=2) + "\n")
     (root / "metadata" / "verification.json").write_text(json.dumps(verification, indent=2) + "\n")
     (root / "metadata" / "palette.json").write_text(json.dumps({"resistor_weights": {"red_green": [33, 71, 151], "blue": [81, 174]}, "indirect_rgb": decoder.palette, "sprite_lookup": list(decoder.lookup)}, indent=2) + "\n")

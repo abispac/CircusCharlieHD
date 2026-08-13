@@ -1406,6 +1406,408 @@
         1410
       ],
       "object_records": "separate failure-effect hardware slots; not the rider records"
+    },
+    {
+      "asset": "misc/extra-charlie.png",
+      "sha256": "1f8d8e03c7e00c5432823e1badff4e323f401e42bf31895664dcba76462b2efc",
+      "rendering": "gfx_16x16x4_packed_msb; sprite PROM lookup; indirect color 0 transparent; ascending-slot draw; ROT90 clockwise; tight alpha crop",
+      "geometry": {
+        "driver_cell_bounds": {
+          "x": 144,
+          "y": 34,
+          "width": 32,
+          "height": 32
+        },
+        "upright_uncropped_size": {
+          "width": 32,
+          "height": 32
+        },
+        "opaque_crop_in_upright": {
+          "x": 12,
+          "y": 5,
+          "width": 17,
+          "height": 27
+        },
+        "composite_anchor_in_png": {
+          "x": -12,
+          "y": -5
+        },
+        "png_size": {
+          "width": 17,
+          "height": 27
+        }
+      },
+      "components": [
+        {
+          "hardware_slot": 0,
+          "code": "0x042",
+          "attribute": "0x80",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": true,
+          "driver_offset": {
+            "x": 0,
+            "y": 16
+          },
+          "sprite_rom_region_offset": "0x02100",
+          "sprite_rom_file": "380_j07.12e",
+          "sprite_rom_file_offset": "0x0100"
+        },
+        {
+          "hardware_slot": 1,
+          "code": "0x044",
+          "attribute": "0x80",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": true,
+          "driver_offset": {
+            "x": 16,
+            "y": 16
+          },
+          "sprite_rom_region_offset": "0x02200",
+          "sprite_rom_file": "380_j07.12e",
+          "sprite_rom_file_offset": "0x0200"
+        },
+        {
+          "hardware_slot": 45,
+          "code": "0x041",
+          "attribute": "0x80",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": true,
+          "driver_offset": {
+            "x": 0,
+            "y": 0
+          },
+          "sprite_rom_region_offset": "0x02080",
+          "sprite_rom_file": "380_j07.12e",
+          "sprite_rom_file_offset": "0x0080"
+        },
+        {
+          "hardware_slot": 46,
+          "code": "0x043",
+          "attribute": "0x80",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": true,
+          "driver_offset": {
+            "x": 16,
+            "y": 0
+          },
+          "sprite_rom_region_offset": "0x02180",
+          "sprite_rom_file": "380_j07.12e",
+          "sprite_rom_file_offset": "0x0180"
+        }
+      ],
+      "source_frames": [
+        985,
+        1142
+      ],
+      "capture": "manual Level 1; awarded after three backward jumps at the start",
+      "verification_note": "266 pixels match the framebuffer directly; two underlying pixels are genuinely covered by later hardware sprite slot 59"
+    },
+    {
+      "asset": "misc/hidden-coin-00.png",
+      "sha256": "47c8176a405664380a1974de657116699da065c2abd4ef204f2f82a1ecf795f2",
+      "rendering": "gfx_16x16x4_packed_msb; sprite PROM lookup; indirect color 0 transparent; ascending-slot draw; ROT90 clockwise; tight alpha crop",
+      "geometry": {
+        "driver_cell_bounds": {
+          "x": 147,
+          "y": 119,
+          "width": 16,
+          "height": 16
+        },
+        "upright_uncropped_size": {
+          "width": 16,
+          "height": 16
+        },
+        "opaque_crop_in_upright": {
+          "x": 3,
+          "y": 7,
+          "width": 10,
+          "height": 2
+        },
+        "composite_anchor_in_png": {
+          "x": -3,
+          "y": -7
+        },
+        "png_size": {
+          "width": 10,
+          "height": 2
+        }
+      },
+      "components": [
+        {
+          "hardware_slot": 24,
+          "code": "0x140",
+          "attribute": "0x60",
+          "color_index": 0,
+          "flip_x": true,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 0,
+            "y": 0
+          },
+          "sprite_rom_region_offset": "0x0a000",
+          "sprite_rom_file": "380_j11.16e",
+          "sprite_rom_file_offset": "0x0000"
+        }
+      ],
+      "source_frames": [
+        1898
+      ],
+      "capture": "manual Level 1 hidden fire-pot coin",
+      "animation_code": "0x140"
+    },
+    {
+      "asset": "misc/goal-sign.png",
+      "sha256": "5f1e6d1c3afe10e4b74739b5c9a41d192d7d3592d709d57fec72b24ad138779f",
+      "rendering": "gfx_16x16x4_packed_msb; sprite PROM lookup; indirect color 0 transparent; ascending-slot draw; ROT90 clockwise; tight alpha crop",
+      "geometry": {
+        "driver_cell_bounds": {
+          "x": 244,
+          "y": 49,
+          "width": 16,
+          "height": 48
+        },
+        "upright_uncropped_size": {
+          "width": 48,
+          "height": 16
+        },
+        "opaque_crop_in_upright": {
+          "x": 0,
+          "y": 0,
+          "width": 35,
+          "height": 11
+        },
+        "composite_anchor_in_png": {
+          "x": 0,
+          "y": 0
+        },
+        "png_size": {
+          "width": 35,
+          "height": 11
+        }
+      },
+      "components": [
+        {
+          "hardware_slot": 60,
+          "code": "0x0c4",
+          "attribute": "0x00",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 0,
+            "y": 0
+          },
+          "sprite_rom_region_offset": "0x06200",
+          "sprite_rom_file": "380_j09.14e",
+          "sprite_rom_file_offset": "0x0200"
+        },
+        {
+          "hardware_slot": 61,
+          "code": "0x0c3",
+          "attribute": "0x00",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 0,
+            "y": 16
+          },
+          "sprite_rom_region_offset": "0x06180",
+          "sprite_rom_file": "380_j09.14e",
+          "sprite_rom_file_offset": "0x0180"
+        },
+        {
+          "hardware_slot": 62,
+          "code": "0x0c2",
+          "attribute": "0x00",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 0,
+            "y": 32
+          },
+          "sprite_rom_region_offset": "0x06100",
+          "sprite_rom_file": "380_j09.14e",
+          "sprite_rom_file_offset": "0x0100"
+        }
+      ],
+      "source_frames": [
+        3952,
+        4143,
+        4253
+      ],
+      "capture": "manual Level 1 goal/finish presentation"
+    },
+    {
+      "asset": "misc/great.png",
+      "sha256": "3a3b618f9365965bdc6a2826c7cd95c3e8c078adaca6aa242b3a2a654f02bdb6",
+      "rendering": "gfx_16x16x4_packed_msb; sprite PROM lookup; indirect color 0 transparent; ascending-slot draw; ROT90 clockwise; tight alpha crop",
+      "geometry": {
+        "driver_cell_bounds": {
+          "x": 90,
+          "y": 64,
+          "width": 16,
+          "height": 48
+        },
+        "upright_uncropped_size": {
+          "width": 48,
+          "height": 16
+        },
+        "opaque_crop_in_upright": {
+          "x": 0,
+          "y": 0,
+          "width": 47,
+          "height": 16
+        },
+        "composite_anchor_in_png": {
+          "x": 0,
+          "y": 0
+        },
+        "png_size": {
+          "width": 47,
+          "height": 16
+        }
+      },
+      "components": [
+        {
+          "hardware_slot": 0,
+          "code": "0x015",
+          "attribute": "0x00",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 0,
+            "y": 0
+          },
+          "sprite_rom_region_offset": "0x00a80",
+          "sprite_rom_file": "380_j06.11e",
+          "sprite_rom_file_offset": "0x0a80"
+        },
+        {
+          "hardware_slot": 1,
+          "code": "0x014",
+          "attribute": "0x00",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 0,
+            "y": 16
+          },
+          "sprite_rom_region_offset": "0x00a00",
+          "sprite_rom_file": "380_j06.11e",
+          "sprite_rom_file_offset": "0x0a00"
+        },
+        {
+          "hardware_slot": 2,
+          "code": "0x013",
+          "attribute": "0x00",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 0,
+            "y": 32
+          },
+          "sprite_rom_region_offset": "0x00980",
+          "sprite_rom_file": "380_j06.11e",
+          "sprite_rom_file_offset": "0x0980"
+        }
+      ],
+      "source_frames": [
+        4143,
+        4253
+      ],
+      "capture": "manual Level 1 finish presentation"
+    },
+    {
+      "asset": "misc/far-out.png",
+      "sha256": "c229742251dfc75fe164efb05843488204729cdcc68e9368265c1a085a5ad4e3",
+      "rendering": "gfx_16x16x4_packed_msb; sprite PROM lookup; indirect color 0 transparent; ascending-slot draw; ROT90 clockwise; tight alpha crop",
+      "geometry": {
+        "driver_cell_bounds": {
+          "x": 82,
+          "y": 160,
+          "width": 16,
+          "height": 48
+        },
+        "upright_uncropped_size": {
+          "width": 48,
+          "height": 16
+        },
+        "opaque_crop_in_upright": {
+          "x": 0,
+          "y": 0,
+          "width": 41,
+          "height": 16
+        },
+        "composite_anchor_in_png": {
+          "x": 0,
+          "y": 0
+        },
+        "png_size": {
+          "width": 41,
+          "height": 16
+        }
+      },
+      "components": [
+        {
+          "hardware_slot": 3,
+          "code": "0x012",
+          "attribute": "0x00",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 0,
+            "y": 0
+          },
+          "sprite_rom_region_offset": "0x00900",
+          "sprite_rom_file": "380_j06.11e",
+          "sprite_rom_file_offset": "0x0900"
+        },
+        {
+          "hardware_slot": 4,
+          "code": "0x011",
+          "attribute": "0x00",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 0,
+            "y": 16
+          },
+          "sprite_rom_region_offset": "0x00880",
+          "sprite_rom_file": "380_j06.11e",
+          "sprite_rom_file_offset": "0x0880"
+        },
+        {
+          "hardware_slot": 5,
+          "code": "0x010",
+          "attribute": "0x00",
+          "color_index": 0,
+          "flip_x": false,
+          "flip_y": false,
+          "driver_offset": {
+            "x": 0,
+            "y": 32
+          },
+          "sprite_rom_region_offset": "0x00800",
+          "sprite_rom_file": "380_j06.11e",
+          "sprite_rom_file_offset": "0x0800"
+        }
+      ],
+      "source_frames": [
+        4143,
+        4253
+      ],
+      "capture": "manual Level 1 finish presentation"
     }
   ]
 }
