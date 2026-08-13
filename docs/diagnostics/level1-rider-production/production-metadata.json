@@ -7,8 +7,18 @@
     512,
     640
   ],
-  "production_scale_rule": "one common uniform source-to-production scale for A2/B2/C8",
-  "common_production_scale": 0.41865765732,
+  "production_scale_rule": "offline per-source identity-feature normalization; identical 1024x768 runtime rendering",
+  "base_production_scale": 0.41865765732,
+  "identity_normalization_factors": {
+    "run-a": 0.9911990483448263,
+    "run-b": 1.0088182063229234,
+    "run-c": 1.0570370848668775
+  },
+  "effective_source_to_canvas_scales": {
+    "run-a": 0.4149730715178584,
+    "run-b": 0.4223494669209195,
+    "run-c": 0.44253666965072896
+  },
   "old_effective_scales": {
     "run-a": 0.41336292208,
     "run-b": 0.42395239256,
@@ -21,7 +31,7 @@
       "source": "run/run a 2.png",
       "source_sha256": "50f2b9b381c630d8740c1b947e1ce0e97824dc987370b2715a93948b6d09d207",
       "output": "assets/stage1-rider-run-a-hd.png",
-      "output_sha256": "abda6b1c8dea82840fd8e4ca2c580101edc45cdc6fd3844a6c9bb1f593038c73",
+      "output_sha256": "1204bf3a29ba238ceb9a58ecce60af7fbb9acb8b6fb63b24f07d5c73d09a7e85",
       "cleanup": {
         "continuous_restoration": "round(alpha * 255 / 253), clipped to 255",
         "support": "alpha >= 32 expanded with deterministic 9x9 max filter",
@@ -31,11 +41,12 @@
         "changed_percent": 35.282933
       },
       "production_transform": {
-        "scale": 0.41865765732,
+        "offline_identity_factor": 0.9911990483448263,
+        "source_to_canvas_scale": 0.4149730715178584,
         "rotation_degrees": -2.734871,
         "translation": [
-          231.655238,
-          207.723256
+          234.122539,
+          211.527703
         ],
         "source_anchor": [
           718.131548,
@@ -56,19 +67,19 @@
           0,
           255
         ],
-        "fully_transparent_percent": 87.325795,
-        "fully_opaque_percent": 9.135691,
-        "low_alpha_1_31_percent": 0.327047,
+        "fully_transparent_percent": 87.544505,
+        "fully_opaque_percent": 8.978017,
+        "low_alpha_1_31_percent": 0.325775,
         "alpha_gt_0_bounds": [
-          224,
-          248,
-          814,
+          227,
+          251,
+          812,
           639
         ],
         "alpha_gte_224_bounds": [
-          226,
-          250,
-          813,
+          229,
+          254,
+          810,
           637
         ],
         "canvas_edge_contact": false
@@ -78,7 +89,7 @@
       "source": "run/Run b 2.png",
       "source_sha256": "add70517b36a9b921d7a43d8286d7e35f26ba8d132aad4746dca7a1261429a90",
       "output": "assets/stage1-rider-run-b-hd.png",
-      "output_sha256": "553c8c6f3060dd18ec5d6462ac57788678af0887c75b8149fe0d2e6c32e6d9a5",
+      "output_sha256": "1bb6202247d3894c848e5c95180b33513ae2f0d55cb8ff91904d9c46d72bc99e",
       "cleanup": {
         "continuous_restoration": "round(alpha * 255 / 253), clipped to 255",
         "support": "alpha >= 32 expanded with deterministic 9x9 max filter",
@@ -88,11 +99,12 @@
         "changed_percent": 34.672833
       },
       "production_transform": {
-        "scale": 0.41865765732,
+        "offline_identity_factor": 1.0088182063229234,
+        "source_to_canvas_scale": 0.4223494669209195,
         "rotation_degrees": -1.406612,
         "translation": [
-          208.522138,
-          224.58976
+          205.846008,
+          220.926587
         ],
         "source_anchor": [
           749.021806,
@@ -113,19 +125,19 @@
           0,
           255
         ],
-        "fully_transparent_percent": 87.563578,
-        "fully_opaque_percent": 9.100087,
-        "low_alpha_1_31_percent": 0.317764,
+        "fully_transparent_percent": 87.347412,
+        "fully_opaque_percent": 9.274038,
+        "low_alpha_1_31_percent": 0.32018,
         "alpha_gt_0_bounds": [
-          206,
-          258,
-          809,
+          203,
+          255,
+          811,
           660
         ],
         "alpha_gte_224_bounds": [
-          208,
-          260,
-          808,
+          205,
+          257,
+          810,
           659
         ],
         "canvas_edge_contact": false
@@ -135,7 +147,7 @@
       "source": "run/run c 8.png",
       "source_sha256": "949ff7cd42c37a02980cea7cd3f103288dfbe1e785d365da111ad7574e2b4d9d",
       "output": "assets/stage1-rider-run-c-hd.png",
-      "output_sha256": "9d9161652c47b726f1c6f84d27f22adb1b9c3861bbea97bae69e1682aa988739",
+      "output_sha256": "26d25ca614e979c5fdffec690e5c40b125238cb45100e64b8137874f7d197421",
       "cleanup": {
         "continuous_restoration": "round(alpha * 255 / 253), clipped to 255",
         "support": "alpha >= 32 expanded with deterministic 9x9 max filter",
@@ -145,11 +157,12 @@
         "changed_percent": 34.570111
       },
       "production_transform": {
-        "scale": 0.41865765732,
+        "offline_identity_factor": 1.0570370848668775,
+        "source_to_canvas_scale": 0.44253666965072896,
         "rotation_degrees": -6.077358,
         "translation": [
-          145.558501,
-          249.580879
+          124.657746,
+          227.31251
         ],
         "source_anchor": [
           969.088108,
@@ -170,20 +183,20 @@
           0,
           255
         ],
-        "fully_transparent_percent": 87.62207,
-        "fully_opaque_percent": 9.142939,
-        "low_alpha_1_31_percent": 0.324631,
+        "fully_transparent_percent": 86.168162,
+        "fully_opaque_percent": 10.203425,
+        "low_alpha_1_31_percent": 0.369644,
         "alpha_gt_0_bounds": [
-          157,
-          293,
-          763,
-          697
+          136,
+          273,
+          777,
+          701
         ],
         "alpha_gte_224_bounds": [
-          158,
-          295,
-          761,
-          695
+          138,
+          276,
+          775,
+          698
         ],
         "canvas_edge_contact": false
       }

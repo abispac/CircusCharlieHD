@@ -1,0 +1,243 @@
+{
+  "method": "least-squares offline per-source scalar using Charlie head, lion head, mane and saddle dimensions against the A2/B2 mean; dimensions include retained pose rotation",
+  "units": "production canvas pixels [width,height]",
+  "raw_source_feature_pixels": {
+    "run-a": {
+      "charlie_head": [
+        525.0,
+        300.0
+      ],
+      "lion_head": [
+        515.0,
+        440.0
+      ],
+      "mane": [
+        405.0,
+        490.0
+      ],
+      "saddle": [
+        265.0,
+        215.0
+      ],
+      "torso_depth": [
+        500.0,
+        340.0
+      ]
+    },
+    "run-b": {
+      "charlie_head": [
+        520.0,
+        285.0
+      ],
+      "lion_head": [
+        515.0,
+        430.0
+      ],
+      "mane": [
+        405.0,
+        475.0
+      ],
+      "saddle": [
+        255.0,
+        205.0
+      ],
+      "torso_depth": [
+        490.0,
+        315.0
+      ]
+    },
+    "run-c": {
+      "charlie_head": [
+        380.0,
+        305.0
+      ],
+      "lion_head": [
+        530.0,
+        395.0
+      ],
+      "mane": [
+        435.0,
+        425.0
+      ],
+      "saddle": [
+        285.0,
+        190.0
+      ],
+      "torso_depth": [
+        610.0,
+        275.0
+      ]
+    }
+  },
+  "grounded_target_source_pixels": {
+    "charlie_head": [
+      522.5,
+      292.5
+    ],
+    "lion_head": [
+      515.0,
+      435.0
+    ],
+    "mane": [
+      405.0,
+      482.5
+    ],
+    "saddle": [
+      260.0,
+      210.0
+    ]
+  },
+  "base_production_scale": 0.41865765732,
+  "identity_normalization_factors": {
+    "run-a": 0.9911990483448263,
+    "run-b": 1.0088182063229234,
+    "run-c": 1.0570370848668775
+  },
+  "effective_source_to_canvas_scales": {
+    "run-a": 0.4149730715178584,
+    "run-b": 0.4223494669209195,
+    "run-c": 0.44253666965072896
+  },
+  "final_target_pixels": {
+    "charlie_head": [
+      218.75,
+      122.46
+    ],
+    "lion_head": [
+      215.61,
+      182.12
+    ],
+    "mane": [
+      169.56,
+      202.0
+    ],
+    "saddle": [
+      108.85,
+      87.92
+    ]
+  },
+  "final_feature_pixels": {
+    "run-a": {
+      "charlie_head": [
+        223.55,
+        134.75
+      ],
+      "lion_head": [
+        222.18,
+        192.58
+      ],
+      "mane": [
+        177.57,
+        211.12
+      ],
+      "saddle": [
+        114.1,
+        94.36
+      ],
+      "torso_depth": [
+        213.98,
+        150.83
+      ]
+    },
+    "run-b": {
+      "charlie_head": [
+        222.51,
+        125.72
+      ],
+      "lion_head": [
+        221.9,
+        186.89
+      ],
+      "mane": [
+        175.92,
+        204.75
+      ],
+      "saddle": [
+        109.79,
+        89.2
+      ],
+      "torso_depth": [
+        210.15,
+        138.08
+      ]
+    },
+    "run-c": {
+      "charlie_head": [
+        181.51,
+        152.02
+      ],
+      "lion_head": [
+        251.73,
+        198.65
+      ],
+      "mane": [
+        211.33,
+        207.4
+      ],
+      "saddle": [
+        134.32,
+        96.96
+      ],
+      "torso_depth": [
+        281.31,
+        149.59
+      ]
+    }
+  },
+  "percent_difference_from_grounded_target": {
+    "run-a": {
+      "charlie_head": [
+        2.19,
+        10.04
+      ],
+      "lion_head": [
+        3.05,
+        5.74
+      ],
+      "mane": [
+        4.72,
+        4.51
+      ],
+      "saddle": [
+        4.82,
+        7.32
+      ]
+    },
+    "run-b": {
+      "charlie_head": [
+        1.72,
+        2.66
+      ],
+      "lion_head": [
+        2.92,
+        2.62
+      ],
+      "mane": [
+        3.75,
+        1.36
+      ],
+      "saddle": [
+        0.86,
+        1.46
+      ]
+    },
+    "run-c": {
+      "charlie_head": [
+        -17.02,
+        24.14
+      ],
+      "lion_head": [
+        16.75,
+        9.08
+      ],
+      "mane": [
+        24.63,
+        2.67
+      ],
+      "saddle": [
+        23.4,
+        10.28
+      ]
+    }
+  }
+}

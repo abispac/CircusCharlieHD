@@ -22,13 +22,21 @@ master before doing any work. It then creates production copies with:
 2. removal only of alpha values below 32 that fall outside the spatial support
    of the antialiased subject fringe (`alpha >= 32`, expanded by a deterministic
    9-by-9 maximum filter);
-3. one common source-to-production uniform scale, `0.41865765732`, applied
-   directly and identically to A2, B2 and C8;
-4. pose-specific translation only to place each accepted source anchor at the
-   shared gameplay anchor. The accepted artwork rotations are retained, but no
-   pose has a separate production scale.
+3. measurement of Charlie's head, the lion's head, the mane/head envelope and
+   saddle directly in each unmodified master;
+4. a least-squares offline per-source scalar that brings those stable identity
+   features toward the A2/B2 grounded mean, without using the outer silhouette,
+   limbs, tail, torso span or hip/shoulder/seat triangle;
+5. pose-specific translation only to place each accepted source anchor at the
+   shared gameplay anchor. The accepted artwork rotations are retained.
 
-The old effective per-pose scales were A `0.41336292208`, B
+The resulting identity factors are A `0.9911990483`, B `1.0088182063`, and C
+`1.0570370849`; their effective source-to-canvas scales are respectively
+`0.4149730715`, `0.4223494669`, and `0.4425366697`. These are offline
+source-density compensation factors. The renderer still draws every final
+1024x768 asset using one identical runtime rectangle and scale.
+
+The rejected effective per-pose geometry-fit scales were A `0.41336292208`, B
 `0.42395239256`, and C `0.57708686360`. The disproportionate C scale was the
 cause of the visible small -> medium -> giant transition. Those values are now
 historical metadata only and do not participate in rendering.
@@ -97,13 +105,14 @@ The machine-readable results are:
 ## Visual diagnostics
 
 - Common-scale A/B/C side-by-side:
-  `docs/diagnostics/level1-rider-production/common-scale-side-by-side.jpg`
+  `docs/diagnostics/level1-rider-production/identity-scale-side-by-side.jpg`
 - Gameplay-anchor overlays (A/B, B/C, C/A):
-  `docs/diagnostics/level1-rider-production/common-scale-anchor-overlays.jpg`
-- Common-scale runtime sequence (A, B, grounded C, airborne C, landing A):
-  `docs/diagnostics/level1-rider-production/common-scale-runtime-contact-sheet.jpg`
+  `docs/diagnostics/level1-rider-production/identity-scale-anchor-overlays.jpg`
+- Identity-scale runtime sequence (A, B, grounded C, airborne C, landing A),
+  preserving each actual 960x1280 renderer capture without diagnostic resizing:
+  `docs/diagnostics/level1-rider-production/identity-scale-runtime-contact-sheet.jpg`
 - Measured identity-feature envelopes:
-  `docs/diagnostics/level1-rider-production/common-scale-identity-measurements.json`
+  `docs/diagnostics/level1-rider-production/identity-scale-measurements.json`
 - Full native sequence:
   `docs/diagnostics/level1-rider-production/successful-large-hoop-native-contact-sheet.jpg`
 - Original arcade A/B/C against final HD A/B/C at the shared anchor:
@@ -116,8 +125,9 @@ The machine-readable results are:
 1. alpha/edge artifact: no material artifact visible on the three inspection
    backgrounds; fine antialiasing remains intentionally preserved;
 2. artwork alignment: accepted pose/foreshortening differences remain visible,
-   but all three masters now use one physical production scale, the common
-   gameplay anchor is stable, and the extended C pose is not cropped;
+   but all three production assets now compensate for differing intrinsic
+   source density, the common gameplay anchor is stable, and the extended C
+   pose is not cropped;
 3. renderer integration: none found in the deterministic sequence;
 4. gameplay/ROM divergence: none through the 120-frame comparison window.
 

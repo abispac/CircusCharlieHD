@@ -11,10 +11,11 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import base64
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageCms, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,10 +23,27 @@ OUTPUT = ROOT / "assets"
 DIAGNOSTICS = ROOT / "docs/diagnostics/level1-rider-production"
 CANVAS = (1024, 768)
 GAMEPLAY_ANCHOR = (512, 640)
-# Production scale is the mean effective scale previously used for accepted
-# grounded A2/B2. It is applied directly and identically to A2, B2 and C8.
-# The former per-pose scales remain recorded only as historical metadata.
-COMMON_PRODUCTION_SCALE = 0.41865765732
+# Fixed LittleCMS sRGB profile bytes. Creating a fresh profile at runtime puts
+# the current time in its ICC header and makes otherwise identical PNG builds
+# hash differently.
+SRGB_ICC = base64.b64decode(
+    "AAACTGxjbXMEQAAAbW50clJHQiBYWVogB+oACAANAAcABQAhYWNzcEFQUEwAAAAAAAAA"
+    "AAAAAAAAAAAAAAAAAAAAAAAAAPbWAAEAAAAA0y1sY21zAAAAAAAAAAAAAAAAAAAAAAAA"
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALZGVzYwAAAQgAAAA2Y3BydAAAAUAA"
+    "AABMd3RwdAAAAYwAAAAUY2hhZAAAAaAAAAAsclhZWgAAAcwAAAAUYlhZWgAAAeAAAAAU"
+    "Z1hZWgAAAfQAAAAUclRSQwAAAggAAAAgZ1RSQwAAAggAAAAgYlRSQwAAAggAAAAgY2hy"
+    "bQAAAigAAAAkbWx1YwAAAAAAAAABAAAADGVuVVMAAAAaAAAAHABzAFIARwBCACAAYgB1"
+    "AGkAbAB0AC0AaQBuAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAADAAAAAcAE4AbwAgAGMA"
+    "bwBwAHkAcgBpAGcAaAB0ACwAIAB1AHMAZQAgAGYAcgBlAGUAbAB5WFlaIAAAAAAAAPbW"
+    "AAEAAAAA0y1zZjMyAAAAAAABDEIAAAXe///zJQAAB5MAAP2Q///7of///aIAAAPcAADA"
+    "blhZWiAAAAAAAABvoAAAOPUAAAOQWFlaIAAAAAAAACSfAAAPhAAAtsNYWVogAAAAAAAA"
+    "YpcAALeHAAAY2XBhcmEAAAAAAAMAAAACZmYAAPKnAAANWQAAE9AAAApbY2hybQAAAAAA"
+    "AwAAAACj1wAAVHsAAEzNAACZmgAAJmYAAA9c"
+)
+# This is only the base source-to-canvas density. Each master receives an
+# offline identity-normalization factor derived below from stable head/mane/
+# saddle feature sizes. Runtime still draws every 1024x768 PNG identically.
+BASE_PRODUCTION_SCALE = 0.41865765732
 
 POSES = {
     "run-a": {
@@ -108,7 +126,48 @@ def clean_alpha(image: Image.Image) -> tuple[Image.Image, dict]:
     }
 
 
-def production_transform(image: Image.Image, specification: dict) -> tuple[Image.Image, list[float]]:
+def feature_dimensions(bounds):
+    left, top, right, bottom = bounds
+    return [float(right - left), float(bottom - top)]
+
+
+def identity_normalization_factors():
+    # A2/B2 establish the grounded physical-size target. Use all dimensions of
+    # the stable identity envelopes together; no pose span, limb, tail, torso,
+    # hip/shoulder/seat triangle, or outer silhouette participates.
+    fitted_features = ("charlie_head", "lion_head", "mane", "saddle")
+    raw = {
+        pose: {
+            feature: feature_dimensions(bounds)
+            for feature, bounds in features.items()
+        }
+        for pose, features in IDENTITY_FEATURES.items()
+    }
+    target = {
+        feature: [
+            (raw["run-a"][feature][axis] + raw["run-b"][feature][axis]) / 2.0
+            for axis in range(2)
+        ]
+        for feature in fitted_features
+    }
+    factors = {}
+    for pose in POSES:
+        source_values = []
+        target_values = []
+        for feature in fitted_features:
+            source_values.extend(raw[pose][feature])
+            target_values.extend(target[feature])
+        source_vector = np.asarray(source_values, dtype=np.float64)
+        target_vector = np.asarray(target_values, dtype=np.float64)
+        factors[pose] = float(
+            np.dot(source_vector, target_vector) /
+            np.dot(source_vector, source_vector)
+        )
+    return raw, target, factors
+
+
+def production_transform(image: Image.Image, specification: dict,
+                         production_scale: float) -> tuple[Image.Image, list[float]]:
     angle = math.radians(specification["rotation_degrees"])
     rotation = np.asarray(
         ((math.cos(angle), -math.sin(angle)),
@@ -117,9 +176,9 @@ def production_transform(image: Image.Image, specification: dict) -> tuple[Image
     )
     source_anchor = np.asarray(specification["source_anchor"], dtype=np.float64)
     translation = np.asarray(GAMEPLAY_ANCHOR, dtype=np.float64) - (
-        source_anchor @ (COMMON_PRODUCTION_SCALE * rotation)
+        source_anchor @ (production_scale * rotation)
     )
-    forward = COMMON_PRODUCTION_SCALE * rotation.T
+    forward = production_scale * rotation.T
     inverse = np.linalg.inv(forward)
     offset = -inverse @ translation
     production = image.transform(
@@ -165,18 +224,17 @@ def checkerboard(size, step=24):
 
 
 def save_srgb(image: Image.Image, path: Path) -> None:
-    profile = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
-    image.save(path, "PNG", optimize=False, compress_level=9, icc_profile=profile)
+    image.save(path, "PNG", optimize=False, compress_level=9, icc_profile=SRGB_ICC)
 
 
-def transformed_feature_size(bounds, angle_degrees):
+def transformed_feature_size(bounds, angle_degrees, production_scale):
     left, top, right, bottom = bounds
     width, height = right - left, bottom - top
     angle = math.radians(abs(angle_degrees))
-    rendered_width = COMMON_PRODUCTION_SCALE * (
+    rendered_width = production_scale * (
         width * math.cos(angle) + height * math.sin(angle)
     )
-    rendered_height = COMMON_PRODUCTION_SCALE * (
+    rendered_height = production_scale * (
         width * math.sin(angle) + height * math.cos(angle)
     )
     return [round(rendered_width, 2), round(rendered_height, 2)]
@@ -188,7 +246,31 @@ def composite_on_checker(image):
     return background.convert("RGB")
 
 
-def build_common_scale_diagnostics(prepared):
+def feature_canvas_bounds(pose, feature, production_scale):
+    specification = POSES[pose]
+    angle = math.radians(specification["rotation_degrees"])
+    rotation = np.asarray(
+        ((math.cos(angle), -math.sin(angle)),
+         (math.sin(angle), math.cos(angle))),
+        dtype=np.float64,
+    )
+    source_anchor = np.asarray(specification["source_anchor"], dtype=np.float64)
+    translation = np.asarray(GAMEPLAY_ANCHOR, dtype=np.float64) - (
+        source_anchor @ (production_scale * rotation)
+    )
+    left, top, right, bottom = IDENTITY_FEATURES[pose][feature]
+    corners = np.asarray(
+        ((left, top), (right, top), (right, bottom), (left, bottom)),
+        dtype=np.float64,
+    )
+    transformed = corners @ (production_scale * rotation) + translation
+    return (
+        float(transformed[:, 0].min()), float(transformed[:, 1].min()),
+        float(transformed[:, 0].max()), float(transformed[:, 1].max()),
+    )
+
+
+def build_identity_scale_diagnostics(prepared, raw, target, factors):
     cell = (512, 384)
     side_by_side = Image.new("RGB", (cell[0] * 3, cell[1]), (20, 20, 20))
     for column, pose in enumerate(("run-a", "run-b", "run-c")):
@@ -196,7 +278,7 @@ def build_common_scale_diagnostics(prepared):
             cell, Image.Resampling.LANCZOS
         )
         side_by_side.paste(panel, (column * cell[0], 0))
-    side_by_side.save(DIAGNOSTICS / "common-scale-side-by-side.jpg", quality=95)
+    side_by_side.save(DIAGNOSTICS / "identity-scale-side-by-side.jpg", quality=95)
 
     pairs = (("run-a", "run-b"), ("run-b", "run-c"), ("run-c", "run-a"))
     overlays = Image.new("RGB", (cell[0] * 3, cell[1]), (20, 20, 20))
@@ -210,24 +292,71 @@ def build_common_scale_diagnostics(prepared):
         second_color.putalpha(second_image.getchannel("A").point(lambda value: value // 2))
         canvas.alpha_composite(first_color)
         canvas.alpha_composite(second_color)
-        overlays.paste(canvas.convert("RGB").resize(cell, Image.Resampling.LANCZOS), (column * cell[0], 0))
-    overlays.save(DIAGNOSTICS / "common-scale-anchor-overlays.jpg", quality=95)
+        draw = ImageDraw.Draw(canvas)
+        for pose, color in ((first, (0, 210, 255, 255)),
+                            (second, (255, 64, 130, 255))):
+            production_scale = BASE_PRODUCTION_SCALE * factors[pose]
+            for feature in ("charlie_head", "lion_head", "saddle"):
+                draw.rectangle(
+                    feature_canvas_bounds(pose, feature, production_scale),
+                    outline=color, width=6,
+                )
+        draw.line(
+            ((GAMEPLAY_ANCHOR[0] - 16, GAMEPLAY_ANCHOR[1]),
+             (GAMEPLAY_ANCHOR[0] + 16, GAMEPLAY_ANCHOR[1])),
+            fill=(255, 255, 255, 255), width=4,
+        )
+        draw.line(
+            ((GAMEPLAY_ANCHOR[0], GAMEPLAY_ANCHOR[1] - 16),
+             (GAMEPLAY_ANCHOR[0], GAMEPLAY_ANCHOR[1] + 16)),
+            fill=(255, 255, 255, 255), width=4,
+        )
+        panel = canvas.convert("RGB").resize(cell, Image.Resampling.LANCZOS)
+        ImageDraw.Draw(panel).text(
+            (12, 12), f"{first} (cyan) / {second} (pink)",
+            fill=(255, 255, 255),
+        )
+        overlays.paste(panel, (column * cell[0], 0))
+    overlays.save(DIAGNOSTICS / "identity-scale-anchor-overlays.jpg", quality=95)
 
     measurements = {}
     for pose, features in IDENTITY_FEATURES.items():
         measurements[pose] = {
             feature: transformed_feature_size(
-                bounds, POSES[pose]["rotation_degrees"]
+                bounds, POSES[pose]["rotation_degrees"],
+                BASE_PRODUCTION_SCALE * factors[pose],
             )
             for feature, bounds in features.items()
         }
-    (DIAGNOSTICS / "common-scale-identity-measurements.json").write_text(
+    final_target = {
+        feature: [round(value * BASE_PRODUCTION_SCALE, 2) for value in dimensions]
+        for feature, dimensions in target.items()
+    }
+    differences = {}
+    for pose, features in measurements.items():
+        differences[pose] = {
+            feature: [
+                round((features[feature][axis] / final_target[feature][axis] - 1.0) * 100.0, 2)
+                for axis in range(2)
+            ]
+            for feature in target
+        }
+    (DIAGNOSTICS / "identity-scale-measurements.json").write_text(
         json.dumps(
             {
-                "method": "accepted master-space feature envelopes transformed with the one common production scale; dimensions include retained pose rotation",
+                "method": "least-squares offline per-source scalar using Charlie head, lion head, mane and saddle dimensions against the A2/B2 mean; dimensions include retained pose rotation",
                 "units": "production canvas pixels [width,height]",
-                "common_production_scale": COMMON_PRODUCTION_SCALE,
-                "features": measurements,
+                "raw_source_feature_pixels": raw,
+                "grounded_target_source_pixels": target,
+                "base_production_scale": BASE_PRODUCTION_SCALE,
+                "identity_normalization_factors": factors,
+                "effective_source_to_canvas_scales": {
+                    pose: BASE_PRODUCTION_SCALE * factor
+                    for pose, factor in factors.items()
+                },
+                "final_target_pixels": final_target,
+                "final_feature_pixels": measurements,
+                "percent_difference_from_grounded_target": differences,
             },
             indent=2,
         ) + "\n",
@@ -238,7 +367,12 @@ def build_common_scale_diagnostics(prepared):
 def main() -> int:
     OUTPUT.mkdir(parents=True, exist_ok=True)
     DIAGNOSTICS.mkdir(parents=True, exist_ok=True)
-    metadata = {"canvas": list(CANVAS), "gameplay_anchor": list(GAMEPLAY_ANCHOR), "production_scale_rule": "one common uniform source-to-production scale for A2/B2/C8", "common_production_scale": COMMON_PRODUCTION_SCALE, "old_effective_scales": {pose: specification["old_effective_scale"] for pose, specification in POSES.items()}, "alpha_representation": "straight/unassociated RGBA", "color_profile": "embedded sRGB ICC", "poses": {}}
+    raw_features, target_features, normalization_factors = identity_normalization_factors()
+    effective_scales = {
+        pose: BASE_PRODUCTION_SCALE * factor
+        for pose, factor in normalization_factors.items()
+    }
+    metadata = {"canvas": list(CANVAS), "gameplay_anchor": list(GAMEPLAY_ANCHOR), "production_scale_rule": "offline per-source identity-feature normalization; identical 1024x768 runtime rendering", "base_production_scale": BASE_PRODUCTION_SCALE, "identity_normalization_factors": normalization_factors, "effective_source_to_canvas_scales": effective_scales, "old_effective_scales": {pose: specification["old_effective_scale"] for pose, specification in POSES.items()}, "alpha_representation": "straight/unassociated RGBA", "color_profile": "embedded sRGB ICC", "poses": {}}
     prepared = {}
     for pose, specification in POSES.items():
         source = specification["source"]
@@ -249,14 +383,17 @@ def main() -> int:
             )
         image = Image.open(source).convert("RGBA")
         cleaned, cleanup = clean_alpha(image)
-        production, translation = production_transform(cleaned, specification)
+        production_scale = effective_scales[pose]
+        production, translation = production_transform(
+            cleaned, specification, production_scale
+        )
         save_srgb(production, specification["output"])
         prepared[pose] = production
         metadata["poses"][pose] = {
             "source": str(source.relative_to(ROOT)), "source_sha256": actual_source_hash,
             "output": str(specification["output"].relative_to(ROOT)), "output_sha256": sha256(specification["output"]),
             "cleanup": cleanup,
-            "production_transform": {"scale": COMMON_PRODUCTION_SCALE, "rotation_degrees": specification["rotation_degrees"], "translation": [round(value, 6) for value in translation], "source_anchor": list(specification["source_anchor"])},
+            "production_transform": {"offline_identity_factor": normalization_factors[pose], "source_to_canvas_scale": production_scale, "rotation_degrees": specification["rotation_degrees"], "translation": [round(value, 6) for value in translation], "source_anchor": list(specification["source_anchor"])},
             "production_anchor": list(GAMEPLAY_ANCHOR), "output_stats": alpha_stats(production),
         }
 
@@ -269,7 +406,9 @@ def main() -> int:
             base.alpha_composite(prepared[pose])
             sheet.paste(base.resize(cell, Image.Resampling.LANCZOS).convert("RGB"), (column * cell[0], row * cell[1]))
     sheet.save(DIAGNOSTICS / "alpha-light-dark-checkerboard.jpg", quality=95)
-    build_common_scale_diagnostics(prepared)
+    build_identity_scale_diagnostics(
+        prepared, raw_features, target_features, normalization_factors
+    )
     (DIAGNOSTICS / "production-metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
 
     failures = [pose for pose, item in metadata["poses"].items() if item["output_stats"]["dimensions"] != list(CANVAS) or item["output_stats"]["mode"] != "RGBA" or item["output_stats"]["canvas_edge_contact"]]

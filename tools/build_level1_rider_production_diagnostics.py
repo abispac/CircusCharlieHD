@@ -69,13 +69,34 @@ def gameplay_sheet(capture_dir: Path) -> None:
         (57, "Run C airborne"),
         (88, "Landing Run A"),
     )
-    runtime_sheet = Image.new("RGB", (360 * 5, 522), (8, 9, 12))
+    # Preserve each renderer capture at its exact native backing-store pixels. No
+    # diagnostic resizing is permitted in this physical-size proof.
+    first_matches = sorted(capture_dir.glob(f"native-frame-{runtime_frames[0][0]:03d}-mame-*.png"))
+    if len(first_matches) != 1:
+        raise SystemExit("could not determine native runtime capture dimensions")
+    native_size = Image.open(first_matches[0]).size
+    header = 42
+    runtime_sheet = Image.new(
+        "RGB", (native_size[0] * 5, native_size[1] + header), (8, 9, 12)
+    )
     for column, (native_frame, title) in enumerate(runtime_frames):
         matches = sorted(capture_dir.glob(f"native-frame-{native_frame:03d}-mame-*.png"))
         if len(matches) != 1:
             raise SystemExit(f"expected one runtime capture for native frame {native_frame}")
-        runtime_sheet.paste(labelled(Image.open(matches[0]), title), (column * 360, 0))
-    runtime_sheet.save(OUTPUT / "common-scale-runtime-contact-sheet.jpg", quality=94)
+        capture = Image.open(matches[0]).convert("RGB")
+        if capture.size != native_size:
+            raise SystemExit(
+                f"runtime capture {matches[0]} is {capture.size}, expected {native_size}"
+            )
+        panel = Image.new(
+            "RGB", (native_size[0], native_size[1] + header), (16, 18, 23)
+        )
+        panel.paste(capture, (0, header))
+        ImageDraw.Draw(panel).text(
+            (12, 10), title, fill=(245, 245, 245), font=font(20)
+        )
+        runtime_sheet.paste(panel, (column * native_size[0], 0))
+    runtime_sheet.save(OUTPUT / "identity-scale-runtime-contact-sheet.jpg", quality=94)
 
 
 def anchored_original(path: Path) -> Image.Image:
