@@ -1,0 +1,648 @@
+{
+  "source": "assets/stage1-rider-walk-12-v9.png",
+  "atlas": {
+    "width": 2048,
+    "height": 1059,
+    "columns": 4,
+    "rows": 3,
+    "cell_width": 512,
+    "cell_height": 353
+  },
+  "authoritative_original_canvas": {
+    "width": 48,
+    "height": 32,
+    "gameplay_anchor": {
+      "x": 24,
+      "y": 32
+    }
+  },
+  "native_render": {
+    "width": 118.8,
+    "grounded_source_anchor": {
+      "x": 256,
+      "y": 348
+    },
+    "airborne_source_anchor": {
+      "x": 256,
+      "y": 312
+    },
+    "airborne_frame": 4,
+    "airborne_anchor_shift_source_pixels": 36,
+    "airborne_anchor_shift_logical_pixels": 8.353,
+    "current_airborne_iou_against_authoritative": 0.0784
+  },
+  "closest_frames": {
+    "run-a": {
+      "frame": 3,
+      "iou": 0.1076,
+      "all_iou": [
+        0.0987,
+        0.1011,
+        0.1076,
+        0.1027,
+        0.1015,
+        0.1056,
+        0.1027,
+        0.1045,
+        0.1035,
+        0.1022,
+        0.1051,
+        0.1027
+      ]
+    },
+    "run-b": {
+      "frame": 8,
+      "iou": 0.0973,
+      "all_iou": [
+        0.0931,
+        0.0924,
+        0.0976,
+        0.0922,
+        0.0915,
+        0.0962,
+        0.0929,
+        0.0973,
+        0.0948,
+        0.091,
+        0.0954,
+        0.097
+      ],
+      "automatic_frame": 3,
+      "selection_note": "reviewed articulation match; automatic silhouette winner frame 3 differs by 0.0003"
+    },
+    "run-c": {
+      "frame": 9,
+      "iou": 0.1031,
+      "all_iou": [
+        0.0957,
+        0.0891,
+        0.097,
+        0.1003,
+        0.0955,
+        0.0916,
+        0.0998,
+        0.091,
+        0.1031,
+        0.0913,
+        0.0945,
+        0.0963
+      ]
+    },
+    "airborne": {
+      "frame": 9,
+      "iou": 0.1031,
+      "all_iou": [
+        0.0957,
+        0.0891,
+        0.097,
+        0.1003,
+        0.0955,
+        0.0916,
+        0.0998,
+        0.091,
+        0.1031,
+        0.0913,
+        0.0945,
+        0.0963
+      ]
+    }
+  },
+  "frames": [
+    {
+      "frame": 1,
+      "alpha_bounds": {
+        "left": 49,
+        "top": 15,
+        "right": 512,
+        "bottom": 344,
+        "width": 463,
+        "height": 329
+      },
+      "padding": {
+        "left": 49,
+        "top": 15,
+        "right": 0,
+        "bottom": 9
+      },
+      "charlie_color_bounds": {
+        "left": 52,
+        "top": 20,
+        "right": 512,
+        "bottom": 343,
+        "center_x": 328.56,
+        "center_y": 206.09
+      },
+      "lion_color_bounds": {
+        "left": 52,
+        "top": 20,
+        "right": 512,
+        "bottom": 343,
+        "center_x": 323.17,
+        "center_y": 217.91
+      },
+      "bottom_contact_x_ranges": [
+        [
+          93,
+          99
+        ],
+        [
+          149,
+          185
+        ],
+        [
+          496,
+          511
+        ]
+      ],
+      "ground_anchor_delta": -4,
+      "airborne_anchor_delta": 32
+    },
+    {
+      "frame": 2,
+      "alpha_bounds": {
+        "left": 59,
+        "top": 19,
+        "right": 510,
+        "bottom": 346,
+        "width": 451,
+        "height": 327
+      },
+      "padding": {
+        "left": 59,
+        "top": 19,
+        "right": 2,
+        "bottom": 7
+      },
+      "charlie_color_bounds": {
+        "left": 59,
+        "top": 23,
+        "right": 509,
+        "bottom": 345,
+        "center_x": 339.55,
+        "center_y": 200.53
+      },
+      "lion_color_bounds": {
+        "left": 59,
+        "top": 23,
+        "right": 509,
+        "bottom": 345,
+        "center_x": 335.55,
+        "center_y": 213.39
+      },
+      "bottom_contact_x_ranges": [
+        [
+          59,
+          63
+        ],
+        [
+          263,
+          277
+        ],
+        [
+          293,
+          324
+        ]
+      ],
+      "ground_anchor_delta": -2,
+      "airborne_anchor_delta": 34
+    },
+    {
+      "frame": 3,
+      "alpha_bounds": {
+        "left": 67,
+        "top": 15,
+        "right": 503,
+        "bottom": 344,
+        "width": 436,
+        "height": 329
+      },
+      "padding": {
+        "left": 67,
+        "top": 15,
+        "right": 9,
+        "bottom": 9
+      },
+      "charlie_color_bounds": {
+        "left": 67,
+        "top": 20,
+        "right": 501,
+        "bottom": 344,
+        "center_x": 327.41,
+        "center_y": 199.46
+      },
+      "lion_color_bounds": {
+        "left": 67,
+        "top": 24,
+        "right": 501,
+        "bottom": 344,
+        "center_x": 321.06,
+        "center_y": 211.47
+      },
+      "bottom_contact_x_ranges": [
+        [
+          315,
+          352
+        ],
+        [
+          431,
+          464
+        ]
+      ],
+      "ground_anchor_delta": -4,
+      "airborne_anchor_delta": 32
+    },
+    {
+      "frame": 4,
+      "alpha_bounds": {
+        "left": 100,
+        "top": 19,
+        "right": 512,
+        "bottom": 312,
+        "width": 412,
+        "height": 293
+      },
+      "padding": {
+        "left": 100,
+        "top": 19,
+        "right": 0,
+        "bottom": 41
+      },
+      "charlie_color_bounds": {
+        "left": 100,
+        "top": 23,
+        "right": 512,
+        "bottom": 312,
+        "center_x": 343.21,
+        "center_y": 197.63
+      },
+      "lion_color_bounds": {
+        "left": 100,
+        "top": 23,
+        "right": 512,
+        "bottom": 312,
+        "center_x": 341.58,
+        "center_y": 209.58
+      },
+      "bottom_contact_x_ranges": [
+        [
+          136,
+          148
+        ],
+        [
+          469,
+          501
+        ]
+      ],
+      "ground_anchor_delta": -36,
+      "airborne_anchor_delta": 0
+    },
+    {
+      "frame": 5,
+      "alpha_bounds": {
+        "left": 68,
+        "top": 5,
+        "right": 512,
+        "bottom": 338,
+        "width": 444,
+        "height": 333
+      },
+      "padding": {
+        "left": 68,
+        "top": 5,
+        "right": 0,
+        "bottom": 15
+      },
+      "charlie_color_bounds": {
+        "left": 70,
+        "top": 12,
+        "right": 512,
+        "bottom": 337,
+        "center_x": 338.11,
+        "center_y": 195.36
+      },
+      "lion_color_bounds": {
+        "left": 70,
+        "top": 12,
+        "right": 512,
+        "bottom": 337,
+        "center_x": 332.91,
+        "center_y": 207.01
+      },
+      "bottom_contact_x_ranges": [
+        [
+          340,
+          378
+        ]
+      ],
+      "ground_anchor_delta": -10,
+      "airborne_anchor_delta": 26
+    },
+    {
+      "frame": 6,
+      "alpha_bounds": {
+        "left": 103,
+        "top": 14,
+        "right": 509,
+        "bottom": 344,
+        "width": 406,
+        "height": 330
+      },
+      "padding": {
+        "left": 103,
+        "top": 14,
+        "right": 3,
+        "bottom": 9
+      },
+      "charlie_color_bounds": {
+        "left": 103,
+        "top": 23,
+        "right": 508,
+        "bottom": 342,
+        "center_x": 344.2,
+        "center_y": 195.38
+      },
+      "lion_color_bounds": {
+        "left": 104,
+        "top": 23,
+        "right": 508,
+        "bottom": 342,
+        "center_x": 340.71,
+        "center_y": 207.79
+      },
+      "bottom_contact_x_ranges": [
+        [
+          290,
+          322
+        ]
+      ],
+      "ground_anchor_delta": -4,
+      "airborne_anchor_delta": 32
+    },
+    {
+      "frame": 7,
+      "alpha_bounds": {
+        "left": 68,
+        "top": 12,
+        "right": 506,
+        "bottom": 341,
+        "width": 438,
+        "height": 329
+      },
+      "padding": {
+        "left": 68,
+        "top": 12,
+        "right": 6,
+        "bottom": 12
+      },
+      "charlie_color_bounds": {
+        "left": 69,
+        "top": 21,
+        "right": 506,
+        "bottom": 341,
+        "center_x": 336.28,
+        "center_y": 198.0
+      },
+      "lion_color_bounds": {
+        "left": 70,
+        "top": 21,
+        "right": 506,
+        "bottom": 341,
+        "center_x": 331.62,
+        "center_y": 209.64
+      },
+      "bottom_contact_x_ranges": [
+        [
+          361,
+          400
+        ],
+        [
+          465,
+          500
+        ]
+      ],
+      "ground_anchor_delta": -7,
+      "airborne_anchor_delta": 29
+    },
+    {
+      "frame": 8,
+      "alpha_bounds": {
+        "left": 111,
+        "top": 21,
+        "right": 510,
+        "bottom": 346,
+        "width": 399,
+        "height": 325
+      },
+      "padding": {
+        "left": 111,
+        "top": 21,
+        "right": 2,
+        "bottom": 7
+      },
+      "charlie_color_bounds": {
+        "left": 111,
+        "top": 27,
+        "right": 506,
+        "bottom": 346,
+        "center_x": 343.1,
+        "center_y": 198.27
+      },
+      "lion_color_bounds": {
+        "left": 111,
+        "top": 27,
+        "right": 506,
+        "bottom": 346,
+        "center_x": 339.84,
+        "center_y": 210.32
+      },
+      "bottom_contact_x_ranges": [
+        [
+          275,
+          307
+        ]
+      ],
+      "ground_anchor_delta": -2,
+      "airborne_anchor_delta": 34
+    },
+    {
+      "frame": 9,
+      "alpha_bounds": {
+        "left": 60,
+        "top": 13,
+        "right": 512,
+        "bottom": 315,
+        "width": 452,
+        "height": 302
+      },
+      "padding": {
+        "left": 60,
+        "top": 13,
+        "right": 0,
+        "bottom": 38
+      },
+      "charlie_color_bounds": {
+        "left": 62,
+        "top": 21,
+        "right": 512,
+        "bottom": 315,
+        "center_x": 335.73,
+        "center_y": 196.78
+      },
+      "lion_color_bounds": {
+        "left": 62,
+        "top": 26,
+        "right": 512,
+        "bottom": 315,
+        "center_x": 330.98,
+        "center_y": 208.17
+      },
+      "bottom_contact_x_ranges": [
+        [
+          133,
+          142
+        ],
+        [
+          471,
+          503
+        ]
+      ],
+      "ground_anchor_delta": -33,
+      "airborne_anchor_delta": 3
+    },
+    {
+      "frame": 10,
+      "alpha_bounds": {
+        "left": 86,
+        "top": 12,
+        "right": 509,
+        "bottom": 342,
+        "width": 423,
+        "height": 330
+      },
+      "padding": {
+        "left": 86,
+        "top": 12,
+        "right": 3,
+        "bottom": 11
+      },
+      "charlie_color_bounds": {
+        "left": 87,
+        "top": 20,
+        "right": 506,
+        "bottom": 341,
+        "center_x": 340.26,
+        "center_y": 196.96
+      },
+      "lion_color_bounds": {
+        "left": 87,
+        "top": 20,
+        "right": 506,
+        "bottom": 341,
+        "center_x": 335.4,
+        "center_y": 209.51
+      },
+      "bottom_contact_x_ranges": [
+        [
+          319,
+          352
+        ],
+        [
+          372,
+          392
+        ]
+      ],
+      "ground_anchor_delta": -6,
+      "airborne_anchor_delta": 30
+    },
+    {
+      "frame": 11,
+      "alpha_bounds": {
+        "left": 72,
+        "top": 18,
+        "right": 500,
+        "bottom": 348,
+        "width": 428,
+        "height": 330
+      },
+      "padding": {
+        "left": 72,
+        "top": 18,
+        "right": 12,
+        "bottom": 5
+      },
+      "charlie_color_bounds": {
+        "left": 73,
+        "top": 26,
+        "right": 499,
+        "bottom": 347,
+        "center_x": 327.07,
+        "center_y": 200.91
+      },
+      "lion_color_bounds": {
+        "left": 73,
+        "top": 30,
+        "right": 499,
+        "bottom": 347,
+        "center_x": 322.48,
+        "center_y": 213.4
+      },
+      "bottom_contact_x_ranges": [
+        [
+          238,
+          257
+        ],
+        [
+          263,
+          298
+        ]
+      ],
+      "ground_anchor_delta": 0,
+      "airborne_anchor_delta": 36
+    },
+    {
+      "frame": 12,
+      "alpha_bounds": {
+        "left": 94,
+        "top": 17,
+        "right": 512,
+        "bottom": 341,
+        "width": 418,
+        "height": 324
+      },
+      "padding": {
+        "left": 94,
+        "top": 17,
+        "right": 0,
+        "bottom": 12
+      },
+      "charlie_color_bounds": {
+        "left": 94,
+        "top": 23,
+        "right": 512,
+        "bottom": 340,
+        "center_x": 329.19,
+        "center_y": 205.49
+      },
+      "lion_color_bounds": {
+        "left": 94,
+        "top": 23,
+        "right": 512,
+        "bottom": 340,
+        "center_x": 323.72,
+        "center_y": 217.32
+      },
+      "bottom_contact_x_ranges": [
+        [
+          156,
+          190
+        ],
+        [
+          486,
+          500
+        ]
+      ],
+      "ground_anchor_delta": -7,
+      "airborne_anchor_delta": 29
+    }
+  ]
+}
