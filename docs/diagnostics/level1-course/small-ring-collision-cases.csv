@@ -1,0 +1,7 @@
+case,object_pointer,hoop_x,rider_y_2644,horizontal_distance,adjusted_rider_y,vertical_distance,combined,instruction_path,result
+A_center_opening,2760,40,95,00,a5,ef,ef,714B +$10; 714D -$B6; 714F BMI; 7151==$2760; 7157 reward,safe_opening_reward
+B_upper_fire,2760,40,a6,00,b6,00,00,714B +$10; 714D -$B6; 718C add |X-$40|; 7190 <=$1C; 7192 $7C47,failure
+C_lower_fire,2760,40,c0,00,d0,1a,1a,714B +$10; 714D -$B6; 718C add |X-$40|; 7190 <=$1C; 7192 $7C47,failure
+D_leading_edge,2760,33,af,0d,bf,09,16,714B +$10; 714D -$B6; 718C add |X-$40|; 7190 <=$1C; 7192 $7C47,failure
+E_trailing_edge,2760,4d,af,0d,bf,09,16,714B +$10; 714D -$B6; 718C add |X-$40|; 7190 <=$1C; 7192 $7C47,failure
+F_grounded_under,2760,40,d0,00,e0,2a,2a,714B +$10; 714D -$B6; 718C add |X-$40|; 7190 BHI $71C8,safe_below_boundary

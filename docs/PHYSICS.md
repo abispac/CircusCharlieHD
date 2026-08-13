@@ -93,17 +93,18 @@ Current user-control model:
 - Releasing both directions decelerates quickly to a stop. Reversing uses a
   stronger response so the rider brakes in roughly one board frame instead of
   sliding forward after LEFT is pressed.
-- Large hoops and their associated small/prize rings continue moving along the
-  overhead rail even when the lion is stopped or reversing.
-- Four reusable large-hoop records are scheduled by the ROM reload table. Each
-  owns one small-ring record positioned from the large hoop's integer 8.8 X
-  byte minus 16 source pixels; there are no independently authored small-ring
-  world positions.
+- Large hoops and the independently scheduled reserved small/prize-ring object
+  continue moving along the overhead rail even when the lion is stopped or
+  reversing.
+- Three ordinary reusable slots (`$26d0/$2700/$2730`) and one reserved
+  small/prize slot (`$2760`) are driven by the ROM course stream. The component
+  cells at `$2400-$2490` are not child rings owned by ordinary hoops.
 - Passing through a small ring consumes its randomized prize once but never
   stops, hides, or removes the moving ring itself.
-- The original collision scan does not test associated small-ring records
-  `$2400-$24bf`. A centered airborne crossing can collect its randomized
-  prize, but the small ring is not treated as an independent fire hazard.
+- The original collision scan tests reserved object `$2760`. A centered upper
+  crossing reaches its reward branch; the remaining inclusive Manhattan
+  boundary is lethal. Native mirrors the instruction-level `$7130-$7192`
+  point test rather than an HD-art rectangle.
 - Stage 1 displays a short point popup at the object for every scored arcade
   action: `100` for a hoop crossing, `200` for a firepot, `500` or `1000` for
   a randomized moneybag, and `5000` for the hidden coin.

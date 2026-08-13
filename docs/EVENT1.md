@@ -29,12 +29,12 @@ requirements supplied through hands-on play knowledge.
   through removes the prize only; the ring itself remains visible and keeps
   moving on the overhead rail. A run must contain at least one prize ring and
   at least one empty ring.
-- The associated small ring is staged in sprite records `$2400-$24bf` by
-  `$75eb-$7606`. The Event 1 collision pass at `$70dc-$71c8` scans large-hoop
-  records `$26d0-$2760` and floor-object records `$24b0-$2570`, but not these
-  small-ring records. It is therefore a presentation/prize cell rather than a
-  separate flame hazard. Its tall, narrow rim is rendered after the rider,
-  making the rider visibly cross through the transparent center.
+- The real small/prize ring is the reserved logical object at `$2760`.
+  `$2400-$2490` are staged component cells, not independently scheduled rings.
+  The Event 1 collision pass at `$70dc-$71c8` includes `$2760`, and its
+  `$7130-$7192` branch supplies both the lethal rim test and safe-opening
+  reward path. See `docs/level1-remaining-rom-fidelity.md` for the verified
+  scheduler, collision formula, and complete course trace.
 - Exactly one fire pot is selected as the hidden-coin pot for each run.
 - The hidden coin can trigger only when Charlie returns to that pot and jumps
   over it while moving backward. A normal forward jump never reveals it.

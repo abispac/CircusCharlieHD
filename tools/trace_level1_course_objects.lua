@@ -6,7 +6,9 @@ local system = machine.ioport.ports[":SYSTEM"]
 local player = machine.ioport.ports[":P1"]
 
 local romset = os.getenv("CIRCUS_ROMSET") or "circusc4"
-local last_frame = tonumber(os.getenv("CIRCUS_TRACE_LAST") or "1750")
+local first_frame = tonumber(os.getenv("CIRCUS_TRACE_FIRST") or "900")
+local last_frame = tonumber(os.getenv("CIRCUS_TRACE_LAST") or "3300")
+local input_mode = os.getenv("CIRCUS_TRACE_INPUT_MODE") or "attract"
 local output = "/tmp/" .. romset .. "-level1-course-objects"
 local writes = assert(io.open(output .. "-writes.csv", "w"))
 local reads = assert(io.open(output .. "-reads.csv", "w"))
@@ -27,6 +29,7 @@ local function set_button(field, pressed)
 end
 
 local function apply_inputs()
+  if input_mode == "attract" then return end
   set_button(coin, active(1040, 1048))
   set_button(start, active(1110, 1118))
   set_button(left, false)
@@ -49,7 +52,7 @@ end
 
 writes:write(table.concat({
   "frame", "pc", "address", "value", "a", "b", "x", "y", "u",
-  "scroll_hi", "scroll_lo", "course_index", "active_count",
+  "scroll_hi", "scroll_lo", "course_index", "extra_charlie_state",
   "activation_hi", "activation_lo", "course_state"
 }, ","), "\n")
 reads:write(table.concat({
@@ -58,15 +61,22 @@ reads:write(table.concat({
 }, ","), "\n")
 frames:write(table.concat({
   "frame", "pc", "p1", "player_state", "airborne", "scroll_hi",
-  "scroll_lo", "course_index", "active_count", "activation_hi",
-  "activation_lo", "course_state", "small_2400_x", "small_2430_x",
+  "scroll_lo", "movement_hi", "movement_lo", "course_index", "extra_charlie_state", "activation_hi",
+  "activation_lo", "course_state", "course_offset", "small_2400_x", "small_2430_x",
   "small_2460_x", "small_2490_x", "hoop_26d0_status", "hoop_26d0_x",
   "hoop_2700_status", "hoop_2700_x", "hoop_2730_status",
-  "hoop_2730_x", "hoop_2760_status", "hoop_2760_x"
+  "hoop_2730_x", "hoop_2760_status", "hoop_2760_x", "board_frame"
+  , "pot_24b0_status", "pot_24b0_x", "pot_24b0_y", "pot_24b0_code",
+  "pot_24f0_status", "pot_24f0_x", "pot_24f0_y", "pot_24f0_code",
+  "pot_2530_status", "pot_2530_x", "pot_2530_y", "pot_2530_code",
+  "coin_2570_status", "coin_2570_x", "coin_2570_y", "coin_2570_code",
+  "hoop_26d0_codes", "hoop_26d0_attrs", "hoop_2700_codes",
+  "hoop_2700_attrs", "hoop_2730_codes", "hoop_2730_attrs",
+  "hoop_2760_codes", "hoop_2760_attrs", "prize_state", "tracked_object"
 }, ","), "\n")
 
 local function log_write(address, data)
-  if frame < 1100 then return data end
+  if frame < first_frame then return data end
   writes:write(string.format(
     "%d,%04x,%04x,%02x,%02x,%02x,%04x,%04x,%04x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n",
     frame, register("PC"), address, data, register("A"), register("B"),
@@ -92,7 +102,7 @@ local state_write_tap = program:install_write_tap(
 local table_read_tap = program:install_read_tap(
   0xf780, 0xf87f, "circusc_level1_course_table_reads",
   function(address, data, _)
-    if frame >= 1100 then
+    if frame >= first_frame then
       reads:write(string.format(
         "%d,%04x,%04x,%02x,%02x,%02x,%04x,%04x,%04x,%02x,%02x,%02x,%02x\n",
         frame, register("PC"), address, data, register("A"), register("B"),
@@ -107,14 +117,35 @@ local function x16(base)
   return h8(base + 6) .. h8(base + 7)
 end
 
+local function word(base)
+  return h8(base) .. h8(base + 1)
+end
+
+local function codes(base)
+  return h8(base + 0x0e) .. ":" .. h8(base + 0x1e) .. ":" ..
+         h8(base + 0x2e)
+end
+
+local function attrs(base)
+  return h8(base + 0x0f) .. ":" .. h8(base + 0x1f) .. ":" ..
+         h8(base + 0x2f)
+end
+
 local function trace_frame()
   frames:write(table.concat({
     frame, string.format("%04x", register("PC")),
     string.format("%02x", player:read()), h8(0x2800), h8(0x20b0),
-    h8(0x2203), h8(0x2204), h8(0x2208), h8(0x220a), h8(0x20c2),
-    h8(0x20c3), h8(0x20bc), x16(0x2400), x16(0x2430), x16(0x2460),
+    h8(0x2203), h8(0x2204), h8(0x20b1), h8(0x20b2), h8(0x2208), h8(0x220a), h8(0x20c2),
+    h8(0x20c3), h8(0x20bc), h8(0x20bb), x16(0x2400), x16(0x2430), x16(0x2460),
     x16(0x2490), h8(0x26d0), x16(0x26d0), h8(0x2700), x16(0x2700),
-    h8(0x2730), x16(0x2730), h8(0x2760), x16(0x2760)
+    h8(0x2730), x16(0x2730), h8(0x2760), x16(0x2760), h8(0x2014),
+    h8(0x24b0), x16(0x24b0), h8(0x24b4), h8(0x24be),
+    h8(0x24f0), x16(0x24f0), h8(0x24f4), h8(0x24fe),
+    h8(0x2530), x16(0x2530), h8(0x2534), h8(0x253e),
+    h8(0x2570), x16(0x2570), h8(0x2574), h8(0x257e),
+    codes(0x26d0), attrs(0x26d0), codes(0x2700), attrs(0x2700),
+    codes(0x2730), attrs(0x2730), codes(0x2760), attrs(0x2760),
+    h8(0x25e1), word(0x20bf)
   }, ","), "\n")
 end
 
@@ -137,6 +168,6 @@ end
 emu.register_frame_done(function()
   frame = frame + 1
   apply_inputs()
-  if frame >= 1100 then trace_frame() end
+  if frame >= first_frame then trace_frame() end
   if frame >= last_frame then finish() end
 end, "frame")

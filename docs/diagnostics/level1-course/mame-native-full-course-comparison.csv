@@ -1,0 +1,2099 @@
+frame,mame_signature,native_signature,course_index,course_state,course_offset,activation_8_8,match
+943,large[26d0 x=fd80],large[26d0 x=fd80],01,dc,5e,dc00,1
+944,large[26d0 x=fb80],large[26d0 x=fb80],01,dc,5e,da00,1
+945,large[26d0 x=f980],large[26d0 x=f980],01,dc,5e,d800,1
+946,large[26d0 x=f780],large[26d0 x=f780],01,dc,5e,d600,1
+947,large[26d0 x=f580],large[26d0 x=f580],01,dc,5e,d400,1
+948,large[26d0 x=f380],large[26d0 x=f380],01,dc,5e,d200,1
+949,large[26d0 x=f180],large[26d0 x=f180],01,dc,5e,d000,1
+950,large[26d0 x=ef80],large[26d0 x=ef80],01,dc,5e,ce00,1
+951,large[26d0 x=ed80],large[26d0 x=ed80],01,dc,5e,cc00,1
+952,large[26d0 x=eb80],large[26d0 x=eb80],01,dc,5e,ca00,1
+953,large[26d0 x=e980],large[26d0 x=e980],01,dc,5e,c800,1
+954,large[26d0 x=e780],large[26d0 x=e780],01,dc,5e,c600,1
+955,large[26d0 x=e580],large[26d0 x=e580],01,dc,5e,c400,1
+956,large[26d0 x=e380],large[26d0 x=e380],01,dc,5e,c200,1
+957,large[26d0 x=e180],large[26d0 x=e180],01,dc,5e,c000,1
+958,large[26d0 x=df80],large[26d0 x=df80],01,dc,5e,be00,1
+959,large[26d0 x=dd80],large[26d0 x=dd80],01,dc,5e,bc00,1
+960,large[26d0 x=db80],large[26d0 x=db80],01,dc,5e,ba00,1
+961,large[26d0 x=d980],large[26d0 x=d980],01,dc,5e,b800,1
+962,large[26d0 x=d780],large[26d0 x=d780],01,dc,5e,b600,1
+963,large[26d0 x=d580],large[26d0 x=d580],01,dc,5e,b400,1
+964,large[26d0 x=d380],large[26d0 x=d380],01,dc,5e,b200,1
+965,large[26d0 x=d180],large[26d0 x=d180],01,dc,5e,b000,1
+966,large[26d0 x=cf80],large[26d0 x=cf80],01,dc,5e,ae00,1
+967,large[26d0 x=cd80],large[26d0 x=cd80],01,dc,5e,ac00,1
+968,large[26d0 x=cb80],large[26d0 x=cb80],01,dc,5e,aa00,1
+969,large[26d0 x=c980],large[26d0 x=c980],01,dc,5e,a800,1
+970,large[26d0 x=c780],large[26d0 x=c780],01,dc,5e,a600,1
+971,large[26d0 x=c580],large[26d0 x=c580],01,dc,5e,a400,1
+972,large[26d0 x=c380],large[26d0 x=c380],01,dc,5e,a200,1
+973,large[26d0 x=c180],large[26d0 x=c180],01,dc,5e,a000,1
+974,large[26d0 x=bf80],large[26d0 x=bf80],01,dc,5e,9e00,1
+975,large[26d0 x=bd80],large[26d0 x=bd80],01,dc,5e,9c00,1
+976,large[26d0 x=bb80],large[26d0 x=bb80],01,dc,5e,9a00,1
+977,large[26d0 x=b980],large[26d0 x=b980],01,dc,5e,9800,1
+978,large[26d0 x=b780],large[26d0 x=b780],01,dc,5e,9600,1
+979,large[26d0 x=b580],large[26d0 x=b580],01,dc,5e,9400,1
+980,large[26d0 x=b380],large[26d0 x=b380],01,dc,5e,9200,1
+981,large[26d0 x=b180],large[26d0 x=b180],01,dc,5e,9000,1
+982,large[26d0 x=af80],large[26d0 x=af80],01,dc,5e,8e00,1
+983,large[26d0 x=ad80],large[26d0 x=ad80],01,dc,5e,8c00,1
+984,large[26d0 x=ab80],large[26d0 x=ab80],01,dc,5e,8a00,1
+985,large[26d0 x=a980],large[26d0 x=a980],01,dc,5e,8800,1
+986,large[26d0 x=a780],large[26d0 x=a780],01,dc,5e,8600,1
+987,large[26d0 x=a580],large[26d0 x=a580],01,dc,5e,8400,1
+988,large[26d0 x=a380],large[26d0 x=a380],01,dc,5e,8200,1
+989,large[26d0 x=a180],large[26d0 x=a180],01,dc,5e,8000,1
+990,large[26d0 x=9f80],large[26d0 x=9f80],01,dc,5e,7e00,1
+991,large[26d0 x=9d80],large[26d0 x=9d80],01,dc,5e,7c00,1
+992,large[26d0 x=9b80],large[26d0 x=9b80],01,dc,5e,7a00,1
+993,large[26d0 x=9980],large[26d0 x=9980],01,dc,5e,7800,1
+994,large[26d0 x=9780],large[26d0 x=9780],01,dc,5e,7600,1
+995,large[26d0 x=9580],large[26d0 x=9580],01,dc,5e,7400,1
+996,large[26d0 x=9380],large[26d0 x=9380],01,dc,5e,7200,1
+997,large[26d0 x=9180],large[26d0 x=9180],01,dc,5e,7000,1
+998,large[26d0 x=8f80],large[26d0 x=8f80],01,dc,5e,6e00,1
+999,large[26d0 x=8d80],large[26d0 x=8d80],01,dc,5e,6c00,1
+1000,large[26d0 x=8b80],large[26d0 x=8b80],01,dc,5e,6a00,1
+1001,large[26d0 x=8980],large[26d0 x=8980],01,dc,5e,6800,1
+1002,large[26d0 x=8780],large[26d0 x=8780],01,dc,5e,6600,1
+1003,large[26d0 x=8580],large[26d0 x=8580],01,dc,5e,6400,1
+1004,large[26d0 x=8380],large[26d0 x=8380],01,dc,5e,6200,1
+1005,large[26d0 x=8180],large[26d0 x=8180],01,dc,5e,6000,1
+1006,large[26d0 x=7f80],large[26d0 x=7f80],01,dc,5e,5e00,1
+1007,large[26d0 x=7d80],large[26d0 x=7d80],01,dc,5e,5c00,1
+1008,large[26d0 x=7b80],large[26d0 x=7b80],01,dc,5e,5a00,1
+1009,large[26d0 x=7980],large[26d0 x=7980],01,dc,5e,5800,1
+1010,large[26d0 x=7780],large[26d0 x=7780],01,dc,5e,5600,1
+1011,large[26d0 x=7580],large[26d0 x=7580],01,dc,5e,5400,1
+1012,large[26d0 x=7380],large[26d0 x=7380],01,dc,5e,5200,1
+1013,large[26d0 x=7180],large[26d0 x=7180],01,dc,5e,5000,1
+1014,large[26d0 x=6f80],large[26d0 x=6f80],01,dc,5e,4e00,1
+1015,large[26d0 x=6d80],large[26d0 x=6d80],01,dc,5e,4c00,1
+1016,large[26d0 x=6b80],large[26d0 x=6b80],01,dc,5e,4a00,1
+1017,large[26d0 x=6980],large[26d0 x=6980],01,dc,5e,4800,1
+1018,large[26d0 x=6780],large[26d0 x=6780],01,dc,5e,4600,1
+1019,large[26d0 x=6580],large[26d0 x=6580],01,dc,5e,4400,1
+1020,large[26d0 x=6380],large[26d0 x=6380],01,dc,5e,4200,1
+1021,large[26d0 x=6180],large[26d0 x=6180],01,dc,5e,4000,1
+1022,large[26d0 x=5f80],large[26d0 x=5f80],01,dc,5e,3e00,1
+1023,large[26d0 x=5d80],large[26d0 x=5d80],01,dc,5e,3c00,1
+1024,large[26d0 x=5b80],large[26d0 x=5b80],01,dc,5e,3a00,1
+1025,large[26d0 x=5980],large[26d0 x=5980],01,dc,5e,3800,1
+1026,large[26d0 x=5780],large[26d0 x=5780],01,dc,5e,3600,1
+1027,large[26d0 x=5580],large[26d0 x=5580],01,dc,5e,3400,1
+1028,large[26d0 x=5380],large[26d0 x=5380],01,dc,5e,3200,1
+1029,large[26d0 x=5180],large[26d0 x=5180],01,dc,5e,3000,1
+1030,large[26d0 x=4f80],large[26d0 x=4f80],01,dc,5e,2e00,1
+1031,large[26d0 x=4d80],large[26d0 x=4d80],01,dc,5e,2c00,1
+1032,large[26d0 x=4b80],large[26d0 x=4b80],01,dc,5e,2a00,1
+1033,large[26d0 x=4980],large[26d0 x=4980],01,dc,5e,2800,1
+1034,large[26d0 x=4780],large[26d0 x=4780],01,dc,5e,2600,1
+1035,large[26d0 x=4580],large[26d0 x=4580],01,dc,5e,2400,1
+1036,large[26d0 x=4380],large[26d0 x=4380],01,dc,5e,2200,1
+1037,large[26d0 x=4180],large[26d0 x=4180],01,dc,5e,2000,1
+1038,large[26d0 x=3f80],large[26d0 x=3f80],01,dc,5e,1e00,1
+1039,large[26d0 x=3d80],large[26d0 x=3d80],01,dc,5e,1c00,1
+1040,large[26d0 x=3b80],large[26d0 x=3b80],01,dc,5e,1a00,1
+1041,large[26d0 x=3980],large[26d0 x=3980],01,dc,5e,1800,1
+1042,large[26d0 x=3780],large[26d0 x=3780],01,dc,5e,1600,1
+1043,large[26d0 x=3580],large[26d0 x=3580],01,dc,5e,1400,1
+1044,large[26d0 x=3380],large[26d0 x=3380],01,dc,5e,1200,1
+1045,large[26d0 x=3180],large[26d0 x=3180],01,dc,5e,1000,1
+1046,large[26d0 x=2f80],large[26d0 x=2f80],01,dc,5e,0e00,1
+1047,large[26d0 x=2d80],large[26d0 x=2d80],01,dc,5e,0c00,1
+1048,large[26d0 x=2b80],large[26d0 x=2b80],01,dc,5e,0a00,1
+1049,large[26d0 x=2980],large[26d0 x=2980],01,dc,5e,0800,1
+1050,large[26d0 x=2780],large[26d0 x=2780],01,dc,5e,0600,1
+1051,large[26d0 x=2580],large[26d0 x=2580],01,dc,5e,0400,1
+1052,large[26d0 x=2380],large[26d0 x=2380],01,dc,5e,0200,1
+1053,large[26d0 x=2180],large[26d0 x=2180],01,dc,5e,0000,1
+1054,large[26d0 x=1f80] large[2700 x=fd80],large[26d0 x=1f80] large[2700 x=fd80],02,f4,5e,f400,1
+1055,large[26d0 x=1d80] large[2700 x=fb80],large[26d0 x=1d80] large[2700 x=fb80],02,f4,5e,f200,1
+1056,large[26d0 x=1b80] large[2700 x=f980],large[26d0 x=1b80] large[2700 x=f980],02,f4,5e,f000,1
+1057,large[26d0 x=1980] large[2700 x=f780],large[26d0 x=1980] large[2700 x=f780],02,f4,5e,ee00,1
+1058,large[26d0 x=1780] large[2700 x=f580],large[26d0 x=1780] large[2700 x=f580],02,f4,5e,ec00,1
+1059,large[26d0 x=1580] large[2700 x=f380],large[26d0 x=1580] large[2700 x=f380],02,f4,5e,ea00,1
+1060,large[26d0 x=1380] large[2700 x=f180],large[26d0 x=1380] large[2700 x=f180],02,f4,5e,e800,1
+1061,large[26d0 x=1180] large[2700 x=ef80],large[26d0 x=1180] large[2700 x=ef80],02,f4,5e,e600,1
+1062,large[26d0 x=0f80] large[2700 x=ed80],large[26d0 x=0f80] large[2700 x=ed80],02,f4,5e,e400,1
+1063,large[26d0 x=0d80] large[2700 x=eb80],large[26d0 x=0d80] large[2700 x=eb80],02,f4,5e,e200,1
+1064,large[26d0 x=0b80] large[2700 x=e980],large[26d0 x=0b80] large[2700 x=e980],02,f4,5e,e000,1
+1065,large[26d0 x=0980] large[2700 x=e780],large[26d0 x=0980] large[2700 x=e780],02,f4,5e,de00,1
+1066,large[26d0 x=0780] large[2700 x=e580],large[26d0 x=0780] large[2700 x=e580],02,f4,5e,dc00,1
+1067,large[26d0 x=0580] large[2700 x=e380],large[26d0 x=0580] large[2700 x=e380],02,f4,5e,da00,1
+1068,large[26d0 x=0380] large[2700 x=e180],large[26d0 x=0380] large[2700 x=e180],02,f4,5e,d800,1
+1069,large[26d0 x=0180] large[2700 x=df80],large[26d0 x=0180] large[2700 x=df80],02,f4,5e,d600,1
+1070,large[2700 x=dd80],large[2700 x=dd80],02,f4,5e,d400,1
+1071,large[2700 x=db80],large[2700 x=db80],02,f4,5e,d200,1
+1072,large[2700 x=d980],large[2700 x=d980],02,f4,5e,d000,1
+1073,large[2700 x=d780],large[2700 x=d780],02,f4,5e,ce00,1
+1074,large[2700 x=d580],large[2700 x=d580],02,f4,5e,cc00,1
+1075,large[2700 x=d380],large[2700 x=d380],02,f4,5e,ca00,1
+1076,large[2700 x=d180],large[2700 x=d180],02,f4,5e,c800,1
+1077,large[2700 x=cf80],large[2700 x=cf80],02,f4,5e,c600,1
+1078,large[2700 x=cd80],large[2700 x=cd80],02,f4,5e,c400,1
+1079,large[2700 x=cb80],large[2700 x=cb80],02,f4,5e,c200,1
+1080,large[2700 x=c980],large[2700 x=c980],02,f4,5e,c000,1
+1081,large[2700 x=c780],large[2700 x=c780],02,f4,5e,be00,1
+1082,large[2700 x=c580],large[2700 x=c580],02,f4,5e,bc00,1
+1083,large[2700 x=c380],large[2700 x=c380],02,f4,5e,ba00,1
+1084,large[2700 x=c180],large[2700 x=c180],02,f4,5e,b800,1
+1085,large[2700 x=bf80],large[2700 x=bf80],02,f4,5e,b600,1
+1086,large[2700 x=bd80],large[2700 x=bd80],02,f4,5e,b400,1
+1087,large[2700 x=bb80],large[2700 x=bb80],02,f4,5e,b200,1
+1088,large[2700 x=b980],large[2700 x=b980],02,f4,5e,b000,1
+1089,large[2700 x=b780],large[2700 x=b780],02,f4,5e,ae00,1
+1090,large[2700 x=b580],large[2700 x=b580],02,f4,5e,ac00,1
+1091,large[2700 x=b380],large[2700 x=b380],02,f4,5e,aa00,1
+1092,large[2700 x=b180],large[2700 x=b180],02,f4,5e,a800,1
+1093,large[2700 x=af80],large[2700 x=af80],02,f4,5e,a600,1
+1094,large[2700 x=ad80],large[2700 x=ad80],02,f4,5e,a400,1
+1095,large[2700 x=ab80],large[2700 x=ab80],02,f4,5e,a200,1
+1096,large[2700 x=a980],large[2700 x=a980],02,f4,5e,a000,1
+1097,large[2700 x=a780],large[2700 x=a780],02,f4,5e,9e00,1
+1098,large[2700 x=a580],large[2700 x=a580],02,f4,5e,9c00,1
+1099,large[2700 x=a380],large[2700 x=a380],02,f4,5e,9a00,1
+1100,large[2700 x=a180],large[2700 x=a180],02,f4,5e,9800,1
+1101,large[2700 x=9f80],large[2700 x=9f80],02,f4,5e,9600,1
+1102,large[2700 x=9d80],large[2700 x=9d80],02,f4,5e,9400,1
+1103,large[2700 x=9b80],large[2700 x=9b80],02,f4,5e,9200,1
+1104,large[2700 x=9980],large[2700 x=9980],02,f4,5e,9000,1
+1105,large[2700 x=9780],large[2700 x=9780],02,f4,5e,8e00,1
+1106,large[2700 x=9580],large[2700 x=9580],02,f4,5e,8c00,1
+1107,large[2700 x=9380],large[2700 x=9380],02,f4,5e,8a00,1
+1108,large[2700 x=9180],large[2700 x=9180],02,f4,5e,8800,1
+1109,large[2700 x=8f80],large[2700 x=8f80],02,f4,5e,8600,1
+1110,large[2700 x=8d80],large[2700 x=8d80],02,f4,5e,8400,1
+1111,large[2700 x=8b80],large[2700 x=8b80],02,f4,5e,8200,1
+1112,large[2700 x=8980],large[2700 x=8980],02,f4,5e,8000,1
+1113,large[2700 x=8780],large[2700 x=8780],02,f4,5e,7e00,1
+1114,large[2700 x=8580],large[2700 x=8580],02,f4,5e,7c00,1
+1115,large[2700 x=8380],large[2700 x=8380],02,f4,5e,7a00,1
+1116,large[2700 x=8180],large[2700 x=8180],02,f4,5e,7800,1
+1117,large[2700 x=7f80],large[2700 x=7f80],02,f4,5e,7600,1
+1118,large[2700 x=7d80],large[2700 x=7d80],02,f4,5e,7400,1
+1119,large[2700 x=7b80],large[2700 x=7b80],02,f4,5e,7200,1
+1120,large[2700 x=7980],large[2700 x=7980],02,f4,5e,7000,1
+1121,large[2700 x=7780],large[2700 x=7780],02,f4,5e,6e00,1
+1122,large[2700 x=7580],large[2700 x=7580],02,f4,5e,6c00,1
+1123,large[2700 x=7380],large[2700 x=7380],02,f4,5e,6a00,1
+1124,large[2700 x=7180],large[2700 x=7180],02,f4,5e,6800,1
+1125,large[2700 x=6f80],large[2700 x=6f80],02,f4,5e,6600,1
+1126,large[2700 x=6d80],large[2700 x=6d80],02,f4,5e,6400,1
+1127,large[2700 x=6b80],large[2700 x=6b80],02,f4,5e,6200,1
+1128,large[2700 x=6980],large[2700 x=6980],02,f4,5e,6000,1
+1129,large[2700 x=6780],large[2700 x=6780],02,f4,5e,5e00,1
+1130,large[2700 x=6580],large[2700 x=6580],02,f4,5e,5c00,1
+1131,large[2700 x=6380],large[2700 x=6380],02,f4,5e,5a00,1
+1132,large[2700 x=6180],large[2700 x=6180],02,f4,5e,5800,1
+1133,large[2700 x=5f80],large[2700 x=5f80],02,f4,5e,5600,1
+1134,large[2700 x=5d80],large[2700 x=5d80],02,f4,5e,5400,1
+1135,large[2700 x=5b80],large[2700 x=5b80],02,f4,5e,5200,1
+1136,large[2700 x=5980],large[2700 x=5980],02,f4,5e,5000,1
+1137,large[2700 x=5780],large[2700 x=5780],02,f4,5e,4e00,1
+1138,large[2700 x=5580],large[2700 x=5580],02,f4,5e,4c00,1
+1139,large[2700 x=5380],large[2700 x=5380],02,f4,5e,4a00,1
+1140,large[2700 x=5180],large[2700 x=5180],02,f4,5e,4800,1
+1141,large[2700 x=4f80],large[2700 x=4f80],02,f4,5e,4600,1
+1142,large[2700 x=4d80],large[2700 x=4d80],02,f4,5e,4400,1
+1143,large[2700 x=4b80],large[2700 x=4b80],02,f4,5e,4200,1
+1144,large[2700 x=4980],large[2700 x=4980],02,f4,5e,4000,1
+1145,large[2700 x=4780],large[2700 x=4780],02,f4,5e,3e00,1
+1146,large[2700 x=4580],large[2700 x=4580],02,f4,5e,3c00,1
+1147,large[2700 x=4380],large[2700 x=4380],02,f4,5e,3a00,1
+1148,large[2700 x=4180],large[2700 x=4180],02,f4,5e,3800,1
+1149,large[2700 x=3f80],large[2700 x=3f80],02,f4,5e,3600,1
+1150,large[2700 x=3d80],large[2700 x=3d80],02,f4,5e,3400,1
+1151,large[2700 x=3b80],large[2700 x=3b80],02,f4,5e,3200,1
+1152,large[2700 x=3980],large[2700 x=3980],02,f4,5e,3000,1
+1153,large[2700 x=3780],large[2700 x=3780],02,f4,5e,2e00,1
+1154,large[2700 x=3580],large[2700 x=3580],02,f4,5e,2c00,1
+1155,large[2700 x=3380],large[2700 x=3380],02,f4,5e,2a00,1
+1156,large[2700 x=3180],large[2700 x=3180],02,f4,5e,2800,1
+1157,large[2700 x=2f80],large[2700 x=2f80],02,f4,5e,2600,1
+1158,large[2700 x=2d80],large[2700 x=2d80],02,f4,5e,2400,1
+1159,large[2700 x=2b80],large[2700 x=2b80],02,f4,5e,2200,1
+1160,large[2700 x=2980],large[2700 x=2980],02,f4,5e,2000,1
+1161,large[2700 x=2780],large[2700 x=2780],02,f4,5e,1e00,1
+1162,large[2700 x=2580],large[2700 x=2580],02,f4,5e,1c00,1
+1163,large[2700 x=2380],large[2700 x=2380],02,f4,5e,1a00,1
+1164,large[2700 x=2180],large[2700 x=2180],02,f4,5e,1800,1
+1165,large[2700 x=1f80],large[2700 x=1f80],02,f4,5e,1600,1
+1166,large[2700 x=1d80],large[2700 x=1d80],02,f4,5e,1400,1
+1167,large[2700 x=1b80],large[2700 x=1b80],02,f4,5e,1200,1
+1168,large[2700 x=1980],large[2700 x=1980],02,f4,5e,1000,1
+1169,large[2700 x=1780],large[2700 x=1780],02,f4,5e,0e00,1
+1170,large[2700 x=1580],large[2700 x=1580],02,f4,5e,0c00,1
+1171,large[2700 x=1380],large[2700 x=1380],02,f4,5e,0a00,1
+1172,large[2700 x=1180],large[2700 x=1180],02,f4,5e,0800,1
+1173,large[2700 x=1230],large[2700 x=1230],02,f4,5e,08b0,1
+1174,large[2700 x=12e0],large[2700 x=12e0],02,f4,5e,0960,1
+1175,large[2700 x=1390],large[2700 x=1390],02,f4,5e,0a10,1
+1176,large[2700 x=1440],large[2700 x=1440],02,f4,5e,0ac0,1
+1177,large[2700 x=14f0],large[2700 x=14f0],02,f4,5e,0b70,1
+1178,large[2700 x=15a0],large[2700 x=15a0],02,f4,5e,0c20,1
+1179,large[2700 x=1650],large[2700 x=1650],02,f4,5e,0cd0,1
+1180,large[2700 x=1700],large[2700 x=1700],02,f4,5e,0d80,1
+1181,large[2700 x=17b0],large[2700 x=17b0],02,f4,5e,0e30,1
+1182,large[2700 x=1860],large[2700 x=1860],02,f4,5e,0ee0,1
+1183,large[2700 x=1910],large[2700 x=1910],02,f4,5e,0f90,1
+1184,large[2700 x=19c0],large[2700 x=19c0],02,f4,5e,1040,1
+1185,large[2700 x=1a70],large[2700 x=1a70],02,f4,5e,10f0,1
+1186,large[2700 x=1b20],large[2700 x=1b20],02,f4,5e,11a0,1
+1187,large[2700 x=1bd0],large[2700 x=1bd0],02,f4,5e,1250,1
+1188,large[2700 x=1c80],large[2700 x=1c80],02,f4,5e,1300,1
+1189,large[2700 x=1d30],large[2700 x=1d30],02,f4,5e,13b0,1
+1190,large[2700 x=1de0],large[2700 x=1de0],02,f4,5e,1460,1
+1191,large[2700 x=1e90],large[2700 x=1e90],02,f4,5e,1510,1
+1192,large[2700 x=1f40],large[2700 x=1f40],02,f4,5e,15c0,1
+1193,large[2700 x=1ff0],large[2700 x=1ff0],02,f4,5e,1670,1
+1194,large[2700 x=20a0],large[2700 x=20a0],02,f4,5e,1720,1
+1195,large[2700 x=2150],large[2700 x=2150],02,f4,5e,17d0,1
+1196,large[2700 x=2200],large[2700 x=2200],02,f4,5e,1880,1
+1197,large[2700 x=22b0],large[2700 x=22b0],02,f4,5e,1930,1
+1198,large[2700 x=2360],large[2700 x=2360],02,f4,5e,19e0,1
+1199,large[2700 x=2410],large[2700 x=2410],02,f4,5e,1a90,1
+1200,large[2700 x=24c0],large[2700 x=24c0],02,f4,5e,1b40,1
+1201,large[2700 x=2570],large[2700 x=2570],02,f4,5e,1bf0,1
+1202,large[2700 x=2620],large[2700 x=2620],02,f4,5e,1ca0,1
+1203,large[2700 x=26d0],large[2700 x=26d0],02,f4,5e,1d50,1
+1204,large[2700 x=2780],large[2700 x=2780],02,f4,5e,1e00,1
+1205,large[2700 x=2830],large[2700 x=2830],02,f4,5e,1eb0,1
+1206,large[2700 x=28e0],large[2700 x=28e0],02,f4,5e,1f60,1
+1207,large[2700 x=2990],large[2700 x=2990],02,f4,5e,2010,1
+1208,large[2700 x=2a40],large[2700 x=2a40],02,f4,5e,20c0,1
+1209,large[2700 x=2af0],large[2700 x=2af0],02,f4,5e,2170,1
+1210,large[2700 x=2ba0],large[2700 x=2ba0],02,f4,5e,2220,1
+1211,large[2700 x=2c50],large[2700 x=2c50],02,f4,5e,22d0,1
+1212,large[2700 x=2d00],large[2700 x=2d00],02,f4,5e,2380,1
+1213,large[2700 x=2db0],large[2700 x=2db0],02,f4,5e,2430,1
+1214,large[2700 x=2e60],large[2700 x=2e60],02,f4,5e,24e0,1
+1215,large[2700 x=2f10],large[2700 x=2f10],02,f4,5e,2590,1
+1216,large[2700 x=2fc0],large[2700 x=2fc0],02,f4,5e,2640,1
+1217,large[2700 x=3070],large[2700 x=3070],02,f4,5e,26f0,1
+1218,large[2700 x=3120],large[2700 x=3120],02,f4,5e,27a0,1
+1219,large[2700 x=31d0],large[2700 x=31d0],02,f4,5e,2850,1
+1220,large[2700 x=3280],large[2700 x=3280],02,f4,5e,2900,1
+1221,large[2700 x=3330],large[2700 x=3330],02,f4,5e,29b0,1
+1222,large[2700 x=33e0],large[2700 x=33e0],02,f4,5e,2a60,1
+1223,large[2700 x=3490],large[2700 x=3490],02,f4,5e,2b10,1
+1224,large[2700 x=3540],large[2700 x=3540],02,f4,5e,2bc0,1
+1225,large[2700 x=35f0],large[2700 x=35f0],02,f4,5e,2c70,1
+1226,large[2700 x=36a0],large[2700 x=36a0],02,f4,5e,2d20,1
+1227,large[2700 x=3750],large[2700 x=3750],02,f4,5e,2dd0,1
+1228,large[2700 x=3800],large[2700 x=3800],02,f4,5e,2e80,1
+1229,large[2700 x=38b0],large[2700 x=38b0],02,f4,5e,2f30,1
+1230,large[2700 x=3960],large[2700 x=3960],02,f4,5e,2fe0,1
+1231,large[2700 x=3a10],large[2700 x=3a10],02,f4,5e,3090,1
+1232,large[2700 x=3ac0],large[2700 x=3ac0],02,f4,5e,3140,1
+1233,large[2700 x=3b70],large[2700 x=3b70],02,f4,5e,31f0,1
+1234,large[2700 x=3c20],large[2700 x=3c20],02,f4,5e,32a0,1
+1235,large[2700 x=3cd0],large[2700 x=3cd0],02,f4,5e,3350,1
+1236,large[2700 x=3d80],large[2700 x=3d80],02,f4,5e,3400,1
+1237,large[2700 x=3e30],large[2700 x=3e30],02,f4,5e,34b0,1
+1238,large[2700 x=3ee0],large[2700 x=3ee0],02,f4,5e,3560,1
+1239,large[2700 x=3f90],large[2700 x=3f90],02,f4,5e,3610,1
+1240,large[2700 x=4040],large[2700 x=4040],02,f4,5e,36c0,1
+1241,large[2700 x=40f0],large[2700 x=40f0],02,f4,5e,3770,1
+1242,large[2700 x=41a0],large[2700 x=41a0],02,f4,5e,3820,1
+1243,large[2700 x=4250],large[2700 x=4250],02,f4,5e,38d0,1
+1244,large[2700 x=4300],large[2700 x=4300],02,f4,5e,3980,1
+1245,large[2700 x=43b0],large[2700 x=43b0],02,f4,5e,3a30,1
+1246,large[2700 x=4460],large[2700 x=4460],02,f4,5e,3ae0,1
+1247,large[2700 x=4510],large[2700 x=4510],02,f4,5e,3b90,1
+1248,large[2700 x=45c0],large[2700 x=45c0],02,f4,5e,3c40,1
+1249,large[2700 x=4670],large[2700 x=4670],02,f4,5e,3cf0,1
+1250,large[2700 x=4720],large[2700 x=4720],02,f4,5e,3da0,1
+1251,large[2700 x=47d0],large[2700 x=47d0],02,f4,5e,3e50,1
+1252,large[2700 x=4880],large[2700 x=4880],02,f4,5e,3f00,1
+1253,large[2700 x=4930],large[2700 x=4930],02,f4,5e,3fb0,1
+1254,large[2700 x=49e0],large[2700 x=49e0],02,f4,5e,4060,1
+1255,large[2700 x=4a90],large[2700 x=4a90],02,f4,5e,4110,1
+1256,large[2700 x=4b40],large[2700 x=4b40],02,f4,5e,41c0,1
+1257,large[2700 x=4bf0],large[2700 x=4bf0],02,f4,5e,4270,1
+1258,large[2700 x=4ca0],large[2700 x=4ca0],02,f4,5e,4320,1
+1259,large[2700 x=4d50],large[2700 x=4d50],02,f4,5e,43d0,1
+1260,large[2700 x=4e00],large[2700 x=4e00],02,f4,5e,4480,1
+1261,large[2700 x=4eb0],large[2700 x=4eb0],02,f4,5e,4530,1
+1262,large[2700 x=4f60],large[2700 x=4f60],02,f4,5e,45e0,1
+1263,large[2700 x=5010],large[2700 x=5010],02,f4,5e,4690,1
+1264,large[2700 x=50c0],large[2700 x=50c0],02,f4,5e,4740,1
+1265,large[2700 x=5170],large[2700 x=5170],02,f4,5e,47f0,1
+1266,large[2700 x=5220],large[2700 x=5220],02,f4,5e,48a0,1
+1267,large[2700 x=52d0],large[2700 x=52d0],02,f4,5e,4950,1
+1268,large[2700 x=5380],large[2700 x=5380],02,f4,5e,4a00,1
+1269,large[2700 x=5430],large[2700 x=5430],02,f4,5e,4ab0,1
+1270,large[2700 x=54e0],large[2700 x=54e0],02,f4,5e,4b60,1
+1271,large[2700 x=5590],large[2700 x=5590],02,f4,5e,4c10,1
+1272,large[2700 x=5640],large[2700 x=5640],02,f4,5e,4cc0,1
+1273,large[2700 x=56f0],large[2700 x=56f0],02,f4,5e,4d70,1
+1274,large[2700 x=57a0],large[2700 x=57a0],02,f4,5e,4e20,1
+1275,large[2700 x=5850],large[2700 x=5850],02,f4,5e,4ed0,1
+1276,large[2700 x=5900],large[2700 x=5900],02,f4,5e,4f80,1
+1277,large[2700 x=59b0],large[2700 x=59b0],02,f4,5e,5030,1
+1278,large[2700 x=5a60],large[2700 x=5a60],02,f4,5e,50e0,1
+1279,large[2700 x=5b10],large[2700 x=5b10],02,f4,5e,5190,1
+1280,large[2700 x=5bc0],large[2700 x=5bc0],02,f4,5e,5240,1
+1281,large[2700 x=5c70],large[2700 x=5c70],02,f4,5e,52f0,1
+1282,large[2700 x=5d20],large[2700 x=5d20],02,f4,5e,53a0,1
+1283,large[2700 x=5dd0],large[2700 x=5dd0],02,f4,5e,5450,1
+1284,large[2700 x=5e80],large[2700 x=5e80],02,f4,5e,5500,1
+1285,large[2700 x=5f30],large[2700 x=5f30],02,f4,5e,55b0,1
+1286,large[2700 x=5fe0],large[2700 x=5fe0],02,f4,5e,5660,1
+1287,large[2700 x=6090],large[2700 x=6090],02,f4,5e,5710,1
+1288,large[2700 x=6140],large[2700 x=6140],02,f4,5e,57c0,1
+1289,large[2700 x=61f0],large[2700 x=61f0],02,f4,5e,5870,1
+1290,large[2700 x=62a0],large[2700 x=62a0],02,f4,5e,5920,1
+1291,large[2700 x=6350],large[2700 x=6350],02,f4,5e,59d0,1
+1292,large[2700 x=6400],large[2700 x=6400],02,f4,5e,5a80,1
+1293,large[2700 x=64b0],large[2700 x=64b0],02,f4,5e,5b30,1
+1294,large[2700 x=6560],large[2700 x=6560],02,f4,5e,5be0,1
+1295,large[2700 x=6610],large[2700 x=6610],02,f4,5e,5c90,1
+1296,large[2700 x=66c0],large[2700 x=66c0],02,f4,5e,5d40,1
+1297,large[2700 x=6770],large[2700 x=6770],02,f4,5e,5df0,1
+1298,large[2700 x=6820],large[2700 x=6820],02,f4,5e,5ea0,1
+1299,large[2700 x=68d0],large[2700 x=68d0],02,f4,5e,5f50,1
+1300,large[2700 x=6980],large[2700 x=6980],02,f4,5e,6000,1
+1301,large[2700 x=6a30],large[2700 x=6a30],02,f4,5e,60b0,1
+1302,large[2700 x=6ae0],large[2700 x=6ae0],02,f4,5e,6160,1
+1303,large[2700 x=6b90],large[2700 x=6b90],02,f4,5e,6210,1
+1304,large[2700 x=6c40],large[2700 x=6c40],02,f4,5e,62c0,1
+1305,large[2700 x=6cf0],large[2700 x=6cf0],02,f4,5e,6370,1
+1306,large[2700 x=6da0],large[2700 x=6da0],02,f4,5e,6420,1
+1307,large[2700 x=6e50],large[2700 x=6e50],02,f4,5e,64d0,1
+1308,large[2700 x=6f00],large[2700 x=6f00],02,f4,5e,6580,1
+1309,large[2700 x=6fb0],large[2700 x=6fb0],02,f4,5e,6630,1
+1310,large[2700 x=7060],large[2700 x=7060],02,f4,5e,66e0,1
+1311,large[2700 x=7110],large[2700 x=7110],02,f4,5e,6790,1
+1312,large[2700 x=71c0],large[2700 x=71c0],02,f4,5e,6840,1
+1313,large[2700 x=7270],large[2700 x=7270],02,f4,5e,68f0,1
+1314,large[2700 x=7320],large[2700 x=7320],02,f4,5e,69a0,1
+1315,large[2700 x=73d0],large[2700 x=73d0],02,f4,5e,6a50,1
+1316,large[2700 x=7480],large[2700 x=7480],02,f4,5e,6b00,1
+1317,large[2700 x=7530],large[2700 x=7530],02,f4,5e,6bb0,1
+1318,large[2700 x=75e0],large[2700 x=75e0],02,f4,5e,6c60,1
+1319,large[2700 x=7690],large[2700 x=7690],02,f4,5e,6d10,1
+1320,large[2700 x=7740],large[2700 x=7740],02,f4,5e,6dc0,1
+1321,large[2700 x=77f0],large[2700 x=77f0],02,f4,5e,6e70,1
+1322,large[2700 x=7770],large[2700 x=7770],02,f4,5e,6df0,1
+1323,large[2700 x=76f0],large[2700 x=76f0],02,f4,5e,6d70,1
+1324,large[2700 x=74f0],large[2700 x=74f0],02,f4,5e,6b70,1
+1325,large[2700 x=72f0],large[2700 x=72f0],02,f4,5e,6970,1
+1326,large[2700 x=70f0],large[2700 x=70f0],02,f4,5e,6770,1
+1327,large[2700 x=6ef0],large[2700 x=6ef0],02,f4,5e,6570,1
+1328,large[2700 x=6cf0],large[2700 x=6cf0],02,f4,5e,6370,1
+1329,large[2700 x=6af0],large[2700 x=6af0],02,f4,5e,6170,1
+1330,large[2700 x=68f0],large[2700 x=68f0],02,f4,5e,5f70,1
+1331,large[2700 x=66f0],large[2700 x=66f0],02,f4,5e,5d70,1
+1332,large[2700 x=64f0],large[2700 x=64f0],02,f4,5e,5b70,1
+1333,large[2700 x=62f0],large[2700 x=62f0],02,f4,5e,5970,1
+1334,large[2700 x=60f0],large[2700 x=60f0],02,f4,5e,5770,1
+1335,large[2700 x=5ef0],large[2700 x=5ef0],02,f4,5e,5570,1
+1336,large[2700 x=5cf0],large[2700 x=5cf0],02,f4,5e,5370,1
+1337,large[2700 x=5af0],large[2700 x=5af0],02,f4,5e,5170,1
+1338,large[2700 x=58f0],large[2700 x=58f0],02,f4,5e,4f70,1
+1339,large[2700 x=56f0],large[2700 x=56f0],02,f4,5e,4d70,1
+1340,large[2700 x=54f0],large[2700 x=54f0],02,f4,5e,4b70,1
+1341,large[2700 x=52f0],large[2700 x=52f0],02,f4,5e,4970,1
+1342,large[2700 x=50f0],large[2700 x=50f0],02,f4,5e,4770,1
+1343,large[2700 x=4ef0],large[2700 x=4ef0],02,f4,5e,4570,1
+1344,large[2700 x=4cf0],large[2700 x=4cf0],02,f4,5e,4370,1
+1345,large[2700 x=4af0],large[2700 x=4af0],02,f4,5e,4170,1
+1346,large[2700 x=48f0],large[2700 x=48f0],02,f4,5e,3f70,1
+1347,large[2700 x=46f0],large[2700 x=46f0],02,f4,5e,3d70,1
+1348,large[2700 x=44f0],large[2700 x=44f0],02,f4,5e,3b70,1
+1349,large[2700 x=42f0],large[2700 x=42f0],02,f4,5e,3970,1
+1350,large[2700 x=40f0],large[2700 x=40f0],02,f4,5e,3770,1
+1351,large[2700 x=3ef0],large[2700 x=3ef0],02,f4,5e,3570,1
+1352,large[2700 x=3cf0],large[2700 x=3cf0],02,f4,5e,3370,1
+1353,large[2700 x=3af0],large[2700 x=3af0],02,f4,5e,3170,1
+1354,large[2700 x=38f0],large[2700 x=38f0],02,f4,5e,2f70,1
+1355,large[2700 x=36f0],large[2700 x=36f0],02,f4,5e,2d70,1
+1356,large[2700 x=34f0],large[2700 x=34f0],02,f4,5e,2b70,1
+1357,large[2700 x=32f0],large[2700 x=32f0],02,f4,5e,2970,1
+1358,large[2700 x=30f0],large[2700 x=30f0],02,f4,5e,2770,1
+1359,large[2700 x=2ef0],large[2700 x=2ef0],02,f4,5e,2570,1
+1360,large[2700 x=2cf0],large[2700 x=2cf0],02,f4,5e,2370,1
+1361,large[2700 x=2af0],large[2700 x=2af0],02,f4,5e,2170,1
+1362,large[2700 x=28f0],large[2700 x=28f0],02,f4,5e,1f70,1
+1363,large[2700 x=26f0],large[2700 x=26f0],02,f4,5e,1d70,1
+1364,large[2700 x=24f0],large[2700 x=24f0],02,f4,5e,1b70,1
+1365,large[2700 x=22f0],large[2700 x=22f0],02,f4,5e,1970,1
+1366,large[2700 x=20f0],large[2700 x=20f0],02,f4,5e,1770,1
+1367,large[2700 x=1ef0],large[2700 x=1ef0],02,f4,5e,1570,1
+1368,large[2700 x=1cf0],large[2700 x=1cf0],02,f4,5e,1370,1
+1369,large[2700 x=1af0],large[2700 x=1af0],02,f4,5e,1170,1
+1370,large[2700 x=18f0],large[2700 x=18f0],02,f4,5e,0f70,1
+1371,large[2700 x=16f0],large[2700 x=16f0],02,f4,5e,0d70,1
+1372,large[2700 x=14f0],large[2700 x=14f0],02,f4,5e,0b70,1
+1373,large[2700 x=12f0],large[2700 x=12f0],02,f4,5e,0970,1
+1374,large[2700 x=10f0],large[2700 x=10f0],02,f4,5e,0770,1
+1375,large[2700 x=0ef0],large[2700 x=0ef0],02,f4,5e,0570,1
+1376,large[2700 x=0cf0],large[2700 x=0cf0],02,f4,5e,0370,1
+1377,large[2700 x=0af0],large[2700 x=0af0],02,f4,5e,0170,1
+1378,large[2700 x=08f0] small[2760 x=fd80],large[2700 x=08f0] small[2760 x=fd80],03,9a,5e,9a00,1
+1379,large[2700 x=06f0] small[2760 x=fb80],large[2700 x=06f0] small[2760 x=fb80],03,9a,5e,9800,1
+1380,large[2700 x=04f0] small[2760 x=f980],large[2700 x=04f0] small[2760 x=f980],03,9a,5e,9600,1
+1381,large[2700 x=02f0] small[2760 x=f780],large[2700 x=02f0] small[2760 x=f780],03,9a,5e,9400,1
+1382,large[2700 x=00f0] small[2760 x=f580],large[2700 x=00f0] small[2760 x=f580],03,9a,5e,9200,1
+1383,small[2760 x=f380],small[2760 x=f380],03,9a,5e,9000,1
+1384,small[2760 x=f180],small[2760 x=f180],03,9a,5e,8e00,1
+1385,small[2760 x=ef80],small[2760 x=ef80],03,9a,5e,8c00,1
+1386,small[2760 x=ed80],small[2760 x=ed80],03,9a,5e,8a00,1
+1387,small[2760 x=eb80],small[2760 x=eb80],03,9a,5e,8800,1
+1388,small[2760 x=e980],small[2760 x=e980],03,9a,5e,8600,1
+1389,small[2760 x=e780],small[2760 x=e780],03,9a,5e,8400,1
+1390,small[2760 x=e580],small[2760 x=e580],03,9a,5e,8200,1
+1391,small[2760 x=e380],small[2760 x=e380],03,9a,5e,8000,1
+1392,small[2760 x=e180],small[2760 x=e180],03,9a,5e,7e00,1
+1393,small[2760 x=df80],small[2760 x=df80],03,9a,5e,7c00,1
+1394,small[2760 x=dd80],small[2760 x=dd80],03,9a,5e,7a00,1
+1395,small[2760 x=db80],small[2760 x=db80],03,9a,5e,7800,1
+1396,small[2760 x=d980],small[2760 x=d980],03,9a,5e,7600,1
+1397,small[2760 x=d780],small[2760 x=d780],03,9a,5e,7400,1
+1398,small[2760 x=d580],small[2760 x=d580],03,9a,5e,7200,1
+1399,small[2760 x=d380],small[2760 x=d380],03,9a,5e,7000,1
+1400,small[2760 x=d180],small[2760 x=d180],03,9a,5e,6e00,1
+1401,small[2760 x=cf80],small[2760 x=cf80],03,9a,5e,6c00,1
+1402,small[2760 x=cd80],small[2760 x=cd80],03,9a,5e,6a00,1
+1403,small[2760 x=cb80],small[2760 x=cb80],03,9a,5e,6800,1
+1404,small[2760 x=c980],small[2760 x=c980],03,9a,5e,6600,1
+1405,small[2760 x=c780],small[2760 x=c780],03,9a,5e,6400,1
+1406,small[2760 x=c580],small[2760 x=c580],03,9a,5e,6200,1
+1407,small[2760 x=c380],small[2760 x=c380],03,9a,5e,6000,1
+1408,small[2760 x=c180],small[2760 x=c180],03,9a,5e,5e00,1
+1409,small[2760 x=bf80],small[2760 x=bf80],03,9a,5e,5c00,1
+1410,small[2760 x=bd80],small[2760 x=bd80],03,9a,5e,5a00,1
+1411,small[2760 x=bb80],small[2760 x=bb80],03,9a,5e,5800,1
+1412,small[2760 x=b980],small[2760 x=b980],03,9a,5e,5600,1
+1413,small[2760 x=b780],small[2760 x=b780],03,9a,5e,5400,1
+1414,small[2760 x=b580],small[2760 x=b580],03,9a,5e,5200,1
+1415,small[2760 x=b380],small[2760 x=b380],03,9a,5e,5000,1
+1416,small[2760 x=b180],small[2760 x=b180],03,9a,5e,4e00,1
+1417,small[2760 x=af80],small[2760 x=af80],03,9a,5e,4c00,1
+1418,small[2760 x=ad80],small[2760 x=ad80],03,9a,5e,4a00,1
+1419,small[2760 x=ab80],small[2760 x=ab80],03,9a,5e,4800,1
+1420,small[2760 x=a980],small[2760 x=a980],03,9a,5e,4600,1
+1421,small[2760 x=a780],small[2760 x=a780],03,9a,5e,4400,1
+1422,small[2760 x=a580],small[2760 x=a580],03,9a,5e,4200,1
+1423,small[2760 x=a380],small[2760 x=a380],03,9a,5e,4000,1
+1424,small[2760 x=a180],small[2760 x=a180],03,9a,5e,3e00,1
+1425,small[2760 x=9f80],small[2760 x=9f80],03,9a,5e,3c00,1
+1426,small[2760 x=9d80],small[2760 x=9d80],03,9a,5e,3a00,1
+1427,small[2760 x=9b80],small[2760 x=9b80],03,9a,5e,3800,1
+1428,small[2760 x=9980],small[2760 x=9980],03,9a,5e,3600,1
+1429,small[2760 x=9780],small[2760 x=9780],03,9a,5e,3400,1
+1430,small[2760 x=9580],small[2760 x=9580],03,9a,5e,3200,1
+1431,small[2760 x=9380],small[2760 x=9380],03,9a,5e,3000,1
+1432,small[2760 x=9180],small[2760 x=9180],03,9a,5e,2e00,1
+1433,small[2760 x=8f80],small[2760 x=8f80],03,9a,5e,2c00,1
+1434,small[2760 x=8d80],small[2760 x=8d80],03,9a,5e,2a00,1
+1435,small[2760 x=8b80],small[2760 x=8b80],03,9a,5e,2800,1
+1436,small[2760 x=8980],small[2760 x=8980],03,9a,5e,2600,1
+1437,small[2760 x=8780],small[2760 x=8780],03,9a,5e,2400,1
+1438,small[2760 x=8580],small[2760 x=8580],03,9a,5e,2200,1
+1439,small[2760 x=8380],small[2760 x=8380],03,9a,5e,2000,1
+1440,small[2760 x=8180],small[2760 x=8180],03,9a,5e,1e00,1
+1441,small[2760 x=7f80],small[2760 x=7f80],03,9a,5e,1c00,1
+1442,small[2760 x=7d80],small[2760 x=7d80],03,9a,5e,1a00,1
+1443,small[2760 x=7b80],small[2760 x=7b80],03,9a,5e,1800,1
+1444,small[2760 x=7980],small[2760 x=7980],03,9a,5e,1600,1
+1445,small[2760 x=7780],small[2760 x=7780],03,9a,5e,1400,1
+1446,small[2760 x=7580],small[2760 x=7580],03,9a,5e,1200,1
+1447,small[2760 x=7380],small[2760 x=7380],03,9a,5e,1000,1
+1448,small[2760 x=7180],small[2760 x=7180],03,9a,5e,0e00,1
+1449,small[2760 x=6f80],small[2760 x=6f80],03,9a,5e,0c00,1
+1450,small[2760 x=6d80],small[2760 x=6d80],03,9a,5e,0a00,1
+1451,small[2760 x=6b80],small[2760 x=6b80],03,9a,5e,0800,1
+1452,small[2760 x=6980],small[2760 x=6980],03,9a,5e,0600,1
+1453,small[2760 x=6780],small[2760 x=6780],03,9a,5e,0400,1
+1454,small[2760 x=6580],small[2760 x=6580],03,9a,5e,0200,1
+1455,small[2760 x=6380],small[2760 x=6380],03,9a,5e,0000,1
+1456,extra-charlie[26d0 x=fd80] small[2760 x=6180],extra-charlie[26d0 x=fd80] small[2760 x=6180],04,ec,5e,ec00,1
+1457,extra-charlie[26d0 x=fb80] small[2760 x=5f80],extra-charlie[26d0 x=fb80] small[2760 x=5f80],04,ec,5e,ea00,1
+1458,extra-charlie[26d0 x=f980] small[2760 x=5d80],extra-charlie[26d0 x=f980] small[2760 x=5d80],04,ec,5e,e800,1
+1459,extra-charlie[26d0 x=f780] small[2760 x=5b80],extra-charlie[26d0 x=f780] small[2760 x=5b80],04,ec,5e,e600,1
+1460,extra-charlie[26d0 x=f580] small[2760 x=5980],extra-charlie[26d0 x=f580] small[2760 x=5980],04,ec,5e,e400,1
+1461,extra-charlie[26d0 x=f380] small[2760 x=5780],extra-charlie[26d0 x=f380] small[2760 x=5780],04,ec,5e,e200,1
+1462,extra-charlie[26d0 x=f180] small[2760 x=5580],extra-charlie[26d0 x=f180] small[2760 x=5580],04,ec,5e,e000,1
+1463,extra-charlie[26d0 x=ef80] small[2760 x=5380],extra-charlie[26d0 x=ef80] small[2760 x=5380],04,ec,5e,de00,1
+1464,extra-charlie[26d0 x=ed80] small[2760 x=5180],extra-charlie[26d0 x=ed80] small[2760 x=5180],04,ec,5e,dc00,1
+1465,extra-charlie[26d0 x=eb80] small[2760 x=4f80],extra-charlie[26d0 x=eb80] small[2760 x=4f80],04,ec,5e,da00,1
+1466,extra-charlie[26d0 x=e980] small[2760 x=4d80],extra-charlie[26d0 x=e980] small[2760 x=4d80],04,ec,5e,d800,1
+1467,extra-charlie[26d0 x=e780] small[2760 x=4b80],extra-charlie[26d0 x=e780] small[2760 x=4b80],04,ec,5e,d600,1
+1468,extra-charlie[26d0 x=e580] small[2760 x=4980],extra-charlie[26d0 x=e580] small[2760 x=4980],04,ec,5e,d400,1
+1469,extra-charlie[26d0 x=e380] small[2760 x=4780],extra-charlie[26d0 x=e380] small[2760 x=4780],04,ec,5e,d200,1
+1470,extra-charlie[26d0 x=e180] small[2760 x=4580],extra-charlie[26d0 x=e180] small[2760 x=4580],04,ec,5e,d000,1
+1471,extra-charlie[26d0 x=df80] small[2760 x=4380],extra-charlie[26d0 x=df80] small[2760 x=4380],04,ec,5e,ce00,1
+1472,extra-charlie[26d0 x=dd80] small[2760 x=4180],extra-charlie[26d0 x=dd80] small[2760 x=4180],04,ec,5e,cc00,1
+1473,extra-charlie[26d0 x=db80] small[2760 x=3f80],extra-charlie[26d0 x=db80] small[2760 x=3f80],04,ec,5e,ca00,1
+1474,extra-charlie[26d0 x=d980] small[2760 x=3d80],extra-charlie[26d0 x=d980] small[2760 x=3d80],04,ec,5e,c800,1
+1475,extra-charlie[26d0 x=d780] small[2760 x=3b80],extra-charlie[26d0 x=d780] small[2760 x=3b80],04,ec,5e,c600,1
+1476,extra-charlie[26d0 x=d580] small[2760 x=3980],extra-charlie[26d0 x=d580] small[2760 x=3980],04,ec,5e,c400,1
+1477,extra-charlie[26d0 x=d380] small[2760 x=3780],extra-charlie[26d0 x=d380] small[2760 x=3780],04,ec,5e,c200,1
+1478,extra-charlie[26d0 x=d180] small[2760 x=3580],extra-charlie[26d0 x=d180] small[2760 x=3580],04,ec,5e,c000,1
+1479,extra-charlie[26d0 x=cf80] small[2760 x=3380],extra-charlie[26d0 x=cf80] small[2760 x=3380],04,ec,5e,be00,1
+1480,extra-charlie[26d0 x=cd80] small[2760 x=3180],extra-charlie[26d0 x=cd80] small[2760 x=3180],04,ec,5e,bc00,1
+1481,extra-charlie[26d0 x=cb80] small[2760 x=2f80],extra-charlie[26d0 x=cb80] small[2760 x=2f80],04,ec,5e,ba00,1
+1482,extra-charlie[26d0 x=c980] small[2760 x=2d80],extra-charlie[26d0 x=c980] small[2760 x=2d80],04,ec,5e,b800,1
+1483,extra-charlie[26d0 x=c780] small[2760 x=2b80],extra-charlie[26d0 x=c780] small[2760 x=2b80],04,ec,5e,b600,1
+1484,extra-charlie[26d0 x=c580] small[2760 x=2980],extra-charlie[26d0 x=c580] small[2760 x=2980],04,ec,5e,b400,1
+1485,extra-charlie[26d0 x=c380] small[2760 x=2780],extra-charlie[26d0 x=c380] small[2760 x=2780],04,ec,5e,b200,1
+1486,extra-charlie[26d0 x=c180] small[2760 x=2580],extra-charlie[26d0 x=c180] small[2760 x=2580],04,ec,5e,b000,1
+1487,extra-charlie[26d0 x=bf80] small[2760 x=2380],extra-charlie[26d0 x=bf80] small[2760 x=2380],04,ec,5e,ae00,1
+1488,extra-charlie[26d0 x=bd80] small[2760 x=2180],extra-charlie[26d0 x=bd80] small[2760 x=2180],04,ec,5e,ac00,1
+1489,extra-charlie[26d0 x=bb80] small[2760 x=1f80],extra-charlie[26d0 x=bb80] small[2760 x=1f80],04,ec,5e,aa00,1
+1490,extra-charlie[26d0 x=b980] small[2760 x=1d80],extra-charlie[26d0 x=b980] small[2760 x=1d80],04,ec,5e,a800,1
+1491,extra-charlie[26d0 x=b780] small[2760 x=1b80],extra-charlie[26d0 x=b780] small[2760 x=1b80],04,ec,5e,a600,1
+1492,extra-charlie[26d0 x=b580] small[2760 x=1980],extra-charlie[26d0 x=b580] small[2760 x=1980],04,ec,5e,a400,1
+1493,extra-charlie[26d0 x=b380] small[2760 x=1780],extra-charlie[26d0 x=b380] small[2760 x=1780],04,ec,5e,a200,1
+1494,extra-charlie[26d0 x=b180] small[2760 x=1580],extra-charlie[26d0 x=b180] small[2760 x=1580],04,ec,5e,a000,1
+1495,extra-charlie[26d0 x=af80] small[2760 x=1380],extra-charlie[26d0 x=af80] small[2760 x=1380],04,ec,5e,9e00,1
+1496,extra-charlie[26d0 x=ad80] small[2760 x=1180],extra-charlie[26d0 x=ad80] small[2760 x=1180],04,ec,5e,9c00,1
+1497,extra-charlie[26d0 x=ab80] small[2760 x=0f80],extra-charlie[26d0 x=ab80] small[2760 x=0f80],04,ec,5e,9a00,1
+1498,extra-charlie[26d0 x=a980] small[2760 x=0d80],extra-charlie[26d0 x=a980] small[2760 x=0d80],04,ec,5e,9800,1
+1499,extra-charlie[26d0 x=a780] small[2760 x=0b80],extra-charlie[26d0 x=a780] small[2760 x=0b80],04,ec,5e,9600,1
+1500,extra-charlie[26d0 x=a580] small[2760 x=0980],extra-charlie[26d0 x=a580] small[2760 x=0980],04,ec,5e,9400,1
+1501,extra-charlie[26d0 x=a380] small[2760 x=0780],extra-charlie[26d0 x=a380] small[2760 x=0780],04,ec,5e,9200,1
+1502,extra-charlie[26d0 x=a180] small[2760 x=0580],extra-charlie[26d0 x=a180] small[2760 x=0580],04,ec,5e,9000,1
+1503,extra-charlie[26d0 x=9f80] small[2760 x=0380],extra-charlie[26d0 x=9f80] small[2760 x=0380],04,ec,5e,8e00,1
+1504,extra-charlie[26d0 x=9d80] small[2760 x=0180],extra-charlie[26d0 x=9d80] small[2760 x=0180],04,ec,5e,8c00,1
+1505,extra-charlie[26d0 x=9b80],extra-charlie[26d0 x=9b80],04,ec,5e,8a00,1
+1506,extra-charlie[26d0 x=9980],extra-charlie[26d0 x=9980],04,ec,5e,8800,1
+1507,extra-charlie[26d0 x=9780],extra-charlie[26d0 x=9780],04,ec,5e,8600,1
+1508,extra-charlie[26d0 x=9580],extra-charlie[26d0 x=9580],04,ec,5e,8400,1
+1509,extra-charlie[26d0 x=9380],extra-charlie[26d0 x=9380],04,ec,5e,8200,1
+1510,extra-charlie[26d0 x=9180],extra-charlie[26d0 x=9180],04,ec,5e,8000,1
+1511,extra-charlie[26d0 x=8f80],extra-charlie[26d0 x=8f80],04,ec,5e,7e00,1
+1512,extra-charlie[26d0 x=8d80],extra-charlie[26d0 x=8d80],04,ec,5e,7c00,1
+1513,extra-charlie[26d0 x=8b80],extra-charlie[26d0 x=8b80],04,ec,5e,7a00,1
+1514,extra-charlie[26d0 x=8980],extra-charlie[26d0 x=8980],04,ec,5e,7800,1
+1515,extra-charlie[26d0 x=8780],extra-charlie[26d0 x=8780],04,ec,5e,7600,1
+1516,extra-charlie[26d0 x=8580],extra-charlie[26d0 x=8580],04,ec,5e,7400,1
+1517,extra-charlie[26d0 x=8380],extra-charlie[26d0 x=8380],04,ec,5e,7200,1
+1518,extra-charlie[26d0 x=8180],extra-charlie[26d0 x=8180],04,ec,5e,7000,1
+1519,extra-charlie[26d0 x=7f80],extra-charlie[26d0 x=7f80],04,ec,5e,6e00,1
+1520,extra-charlie[26d0 x=7d80],extra-charlie[26d0 x=7d80],04,ec,5e,6c00,1
+1521,extra-charlie[26d0 x=7b80],extra-charlie[26d0 x=7b80],04,ec,5e,6a00,1
+1522,extra-charlie[26d0 x=7980],extra-charlie[26d0 x=7980],04,ec,5e,6800,1
+1523,extra-charlie[26d0 x=7780],extra-charlie[26d0 x=7780],04,ec,5e,6600,1
+1524,extra-charlie[26d0 x=7580],extra-charlie[26d0 x=7580],04,ec,5e,6400,1
+1525,extra-charlie[26d0 x=7380],extra-charlie[26d0 x=7380],04,ec,5e,6200,1
+1526,extra-charlie[26d0 x=7180],extra-charlie[26d0 x=7180],04,ec,5e,6000,1
+1527,extra-charlie[26d0 x=6f80],extra-charlie[26d0 x=6f80],04,ec,5e,5e00,1
+1528,extra-charlie[26d0 x=6d80],extra-charlie[26d0 x=6d80],04,ec,5e,5c00,1
+1529,extra-charlie[26d0 x=6b80],extra-charlie[26d0 x=6b80],04,ec,5e,5a00,1
+1530,extra-charlie[26d0 x=6980],extra-charlie[26d0 x=6980],04,ec,5e,5800,1
+1531,extra-charlie[26d0 x=6780],extra-charlie[26d0 x=6780],04,ec,5e,5600,1
+1532,extra-charlie[26d0 x=6580],extra-charlie[26d0 x=6580],04,ec,5e,5400,1
+1533,extra-charlie[26d0 x=6380],extra-charlie[26d0 x=6380],04,ec,5e,5200,1
+1534,extra-charlie[26d0 x=6180],extra-charlie[26d0 x=6180],04,ec,5e,5000,1
+1535,extra-charlie[26d0 x=5f80],extra-charlie[26d0 x=5f80],04,ec,5e,4e00,1
+1536,extra-charlie[26d0 x=5d80],extra-charlie[26d0 x=5d80],04,ec,5e,4c00,1
+1537,extra-charlie[26d0 x=5b80],extra-charlie[26d0 x=5b80],04,ec,5e,4a00,1
+1538,extra-charlie[26d0 x=5980],extra-charlie[26d0 x=5980],04,ec,5e,4800,1
+1539,extra-charlie[26d0 x=5780],extra-charlie[26d0 x=5780],04,ec,5e,4600,1
+1540,extra-charlie[26d0 x=5580],extra-charlie[26d0 x=5580],04,ec,5e,4400,1
+1541,extra-charlie[26d0 x=5380],extra-charlie[26d0 x=5380],04,ec,5e,4200,1
+1542,extra-charlie[26d0 x=5180],extra-charlie[26d0 x=5180],04,ec,5e,4000,1
+1543,extra-charlie[26d0 x=4f80],extra-charlie[26d0 x=4f80],04,ec,5e,3e00,1
+1544,extra-charlie[26d0 x=4d80],extra-charlie[26d0 x=4d80],04,ec,5e,3c00,1
+1545,extra-charlie[26d0 x=4b80],extra-charlie[26d0 x=4b80],04,ec,5e,3a00,1
+1546,extra-charlie[26d0 x=4980],extra-charlie[26d0 x=4980],04,ec,5e,3800,1
+1547,extra-charlie[26d0 x=4780],extra-charlie[26d0 x=4780],04,ec,5e,3600,1
+1548,extra-charlie[26d0 x=4580],extra-charlie[26d0 x=4580],04,ec,5e,3400,1
+1549,extra-charlie[26d0 x=4380],extra-charlie[26d0 x=4380],04,ec,5e,3200,1
+1550,extra-charlie[26d0 x=4180],extra-charlie[26d0 x=4180],04,ec,5e,3000,1
+1551,extra-charlie[26d0 x=3f80],extra-charlie[26d0 x=3f80],04,ec,5e,2e00,1
+1552,extra-charlie[26d0 x=3d80],extra-charlie[26d0 x=3d80],04,ec,5e,2c00,1
+1553,extra-charlie[26d0 x=3b80],extra-charlie[26d0 x=3b80],04,ec,5e,2a00,1
+1554,extra-charlie[26d0 x=3980],extra-charlie[26d0 x=3980],04,ec,5e,2800,1
+1555,extra-charlie[26d0 x=3780],extra-charlie[26d0 x=3780],04,ec,5e,2600,1
+1556,extra-charlie[26d0 x=3580],extra-charlie[26d0 x=3580],04,ec,5e,2400,1
+1557,extra-charlie[26d0 x=3380],extra-charlie[26d0 x=3380],04,ec,5e,2200,1
+1558,extra-charlie[26d0 x=3180],extra-charlie[26d0 x=3180],04,ec,5e,2000,1
+1559,extra-charlie[26d0 x=2f80],extra-charlie[26d0 x=2f80],04,ec,5e,1e00,1
+1560,extra-charlie[26d0 x=2d80],extra-charlie[26d0 x=2d80],04,ec,5e,1c00,1
+1561,extra-charlie[26d0 x=2b80],extra-charlie[26d0 x=2b80],04,ec,5e,1a00,1
+1562,extra-charlie[26d0 x=2980],extra-charlie[26d0 x=2980],04,ec,5e,1800,1
+1563,extra-charlie[26d0 x=2780],extra-charlie[26d0 x=2780],04,ec,5e,1600,1
+1564,extra-charlie[26d0 x=2580],extra-charlie[26d0 x=2580],04,ec,5e,1400,1
+1565,extra-charlie[26d0 x=2380],extra-charlie[26d0 x=2380],04,ec,5e,1200,1
+1566,extra-charlie[26d0 x=2180],extra-charlie[26d0 x=2180],04,ec,5e,1000,1
+1567,extra-charlie[26d0 x=1f80],extra-charlie[26d0 x=1f80],04,ec,5e,0e00,1
+1568,extra-charlie[26d0 x=1d80],extra-charlie[26d0 x=1d80],04,ec,5e,0c00,1
+1569,extra-charlie[26d0 x=1b80],extra-charlie[26d0 x=1b80],04,ec,5e,0a00,1
+1570,extra-charlie[26d0 x=1980],extra-charlie[26d0 x=1980],04,ec,5e,0800,1
+1571,extra-charlie[26d0 x=1780],extra-charlie[26d0 x=1780],04,ec,5e,0600,1
+1572,extra-charlie[26d0 x=1580],extra-charlie[26d0 x=1580],04,ec,5e,0400,1
+1573,extra-charlie[26d0 x=1380],extra-charlie[26d0 x=1380],04,ec,5e,0200,1
+1574,extra-charlie[26d0 x=1180],extra-charlie[26d0 x=1180],04,ec,5e,0000,1
+1575,extra-charlie[26d0 x=0f80] large[2700 x=fd80],extra-charlie[26d0 x=0f80] large[2700 x=fd80],05,dc,5e,dc00,1
+1576,extra-charlie[26d0 x=0d80] large[2700 x=fb80],extra-charlie[26d0 x=0d80] large[2700 x=fb80],05,dc,5e,da00,1
+1577,extra-charlie[26d0 x=0b80] large[2700 x=f980],extra-charlie[26d0 x=0b80] large[2700 x=f980],05,dc,5e,d800,1
+1578,extra-charlie[26d0 x=0980] large[2700 x=f780],extra-charlie[26d0 x=0980] large[2700 x=f780],05,dc,5e,d600,1
+1579,extra-charlie[26d0 x=0780] large[2700 x=f580],extra-charlie[26d0 x=0780] large[2700 x=f580],05,dc,5e,d400,1
+1580,extra-charlie[26d0 x=0580] large[2700 x=f380],extra-charlie[26d0 x=0580] large[2700 x=f380],05,dc,5e,d200,1
+1581,extra-charlie[26d0 x=0380] large[2700 x=f180],extra-charlie[26d0 x=0380] large[2700 x=f180],05,dc,5e,d000,1
+1582,extra-charlie[26d0 x=0180] large[2700 x=ef80],extra-charlie[26d0 x=0180] large[2700 x=ef80],05,dc,5e,ce00,1
+1583,large[2700 x=ed80],large[2700 x=ed80],05,dc,5e,cc00,1
+1584,large[2700 x=eb80],large[2700 x=eb80],05,dc,5e,ca00,1
+1585,large[2700 x=e980],large[2700 x=e980],05,dc,5e,c800,1
+1586,large[2700 x=e780],large[2700 x=e780],05,dc,5e,c600,1
+1587,large[2700 x=e580],large[2700 x=e580],05,dc,5e,c400,1
+1588,large[2700 x=e380],large[2700 x=e380],05,dc,5e,c200,1
+1589,large[2700 x=e180],large[2700 x=e180],05,dc,5e,c000,1
+1590,large[2700 x=df80],large[2700 x=df80],05,dc,5e,be00,1
+1591,large[2700 x=dd80],large[2700 x=dd80],05,dc,5e,bc00,1
+1592,large[2700 x=db80],large[2700 x=db80],05,dc,5e,ba00,1
+1593,large[2700 x=d980],large[2700 x=d980],05,dc,5e,b800,1
+1594,large[2700 x=d780],large[2700 x=d780],05,dc,5e,b600,1
+1595,large[2700 x=d580],large[2700 x=d580],05,dc,5e,b400,1
+1596,large[2700 x=d380],large[2700 x=d380],05,dc,5e,b200,1
+1597,large[2700 x=d180],large[2700 x=d180],05,dc,5e,b000,1
+1598,large[2700 x=cf80],large[2700 x=cf80],05,dc,5e,ae00,1
+1599,large[2700 x=cd80],large[2700 x=cd80],05,dc,5e,ac00,1
+1600,large[2700 x=cb80],large[2700 x=cb80],05,dc,5e,aa00,1
+1601,large[2700 x=c980],large[2700 x=c980],05,dc,5e,a800,1
+1602,large[2700 x=c780],large[2700 x=c780],05,dc,5e,a600,1
+1603,large[2700 x=c580],large[2700 x=c580],05,dc,5e,a400,1
+1604,large[2700 x=c380],large[2700 x=c380],05,dc,5e,a200,1
+1605,large[2700 x=c180],large[2700 x=c180],05,dc,5e,a000,1
+1606,large[2700 x=bf80],large[2700 x=bf80],05,dc,5e,9e00,1
+1607,large[2700 x=bd80],large[2700 x=bd80],05,dc,5e,9c00,1
+1608,large[2700 x=bb80],large[2700 x=bb80],05,dc,5e,9a00,1
+1609,large[2700 x=b980],large[2700 x=b980],05,dc,5e,9800,1
+1610,large[2700 x=b780],large[2700 x=b780],05,dc,5e,9600,1
+1611,large[2700 x=b580],large[2700 x=b580],05,dc,5e,9400,1
+1612,large[2700 x=b380],large[2700 x=b380],05,dc,5e,9200,1
+1613,large[2700 x=b180],large[2700 x=b180],05,dc,5e,9000,1
+1614,large[2700 x=af80],large[2700 x=af80],05,dc,5e,8e00,1
+1615,large[2700 x=ad80],large[2700 x=ad80],05,dc,5e,8c00,1
+1616,large[2700 x=ab80],large[2700 x=ab80],05,dc,5e,8a00,1
+1617,large[2700 x=a980],large[2700 x=a980],05,dc,5e,8800,1
+1618,large[2700 x=a780],large[2700 x=a780],05,dc,5e,8600,1
+1619,large[2700 x=a580],large[2700 x=a580],05,dc,5e,8400,1
+1620,large[2700 x=a380],large[2700 x=a380],05,dc,5e,8200,1
+1621,large[2700 x=a180],large[2700 x=a180],05,dc,5e,8000,1
+1622,large[2700 x=9f80],large[2700 x=9f80],05,dc,5e,7e00,1
+1623,large[2700 x=9f00],large[2700 x=9f00],05,dc,5e,7d80,1
+1624,large[2700 x=9e80],large[2700 x=9e80],05,dc,5e,7d00,1
+1625,large[2700 x=9f30],large[2700 x=9f30],05,dc,5e,7db0,1
+1626,large[2700 x=9fe0],large[2700 x=9fe0],05,dc,5e,7e60,1
+1627,large[2700 x=a090],large[2700 x=a090],05,dc,5e,7f10,1
+1628,large[2700 x=a140],large[2700 x=a140],05,dc,5e,7fc0,1
+1629,large[2700 x=a1f0],large[2700 x=a1f0],05,dc,5e,8070,1
+1630,large[2700 x=a2a0],large[2700 x=a2a0],05,dc,5e,8120,1
+1631,large[2700 x=a350],large[2700 x=a350],05,dc,5e,81d0,1
+1632,large[2700 x=a400],large[2700 x=a400],05,dc,5e,8280,1
+1633,large[2700 x=a4b0],large[2700 x=a4b0],05,dc,5e,8330,1
+1634,large[2700 x=a560],large[2700 x=a560],05,dc,5e,83e0,1
+1635,large[2700 x=a610],large[2700 x=a610],05,dc,5e,8490,1
+1636,large[2700 x=a6c0],large[2700 x=a6c0],05,dc,5e,8540,1
+1637,large[2700 x=a770],large[2700 x=a770],05,dc,5e,85f0,1
+1638,large[2700 x=a820],large[2700 x=a820],05,dc,5e,86a0,1
+1639,large[2700 x=a8d0],large[2700 x=a8d0],05,dc,5e,8750,1
+1640,large[2700 x=a980],large[2700 x=a980],05,dc,5e,8800,1
+1641,large[2700 x=aa30],large[2700 x=aa30],05,dc,5e,88b0,1
+1642,large[2700 x=aae0],large[2700 x=aae0],05,dc,5e,8960,1
+1643,large[2700 x=ab90],large[2700 x=ab90],05,dc,5e,8a10,1
+1644,large[2700 x=ac40],large[2700 x=ac40],05,dc,5e,8ac0,1
+1645,large[2700 x=abc0],large[2700 x=abc0],05,dc,5e,8a40,1
+1646,large[2700 x=ab40],large[2700 x=ab40],05,dc,5e,89c0,1
+1647,large[2700 x=aac0],large[2700 x=aac0],05,dc,5e,8940,1
+1648,large[2700 x=a8c0],large[2700 x=a8c0],05,dc,5e,8740,1
+1649,large[2700 x=a6c0],large[2700 x=a6c0],05,dc,5e,8540,1
+1650,large[2700 x=a4c0],large[2700 x=a4c0],05,dc,5e,8340,1
+1651,large[2700 x=a2c0],large[2700 x=a2c0],05,dc,5e,8140,1
+1652,large[2700 x=a0c0],large[2700 x=a0c0],05,dc,5e,7f40,1
+1653,large[2700 x=9ec0],large[2700 x=9ec0],05,dc,5e,7d40,1
+1654,large[2700 x=9cc0],large[2700 x=9cc0],05,dc,5e,7b40,1
+1655,large[2700 x=9ac0],large[2700 x=9ac0],05,dc,5e,7940,1
+1656,large[2700 x=98c0],large[2700 x=98c0],05,dc,5e,7740,1
+1657,large[2700 x=96c0],large[2700 x=96c0],05,dc,5e,7540,1
+1658,large[2700 x=94c0],large[2700 x=94c0],05,dc,5e,7340,1
+1659,large[2700 x=92c0],large[2700 x=92c0],05,dc,5e,7140,1
+1660,large[2700 x=90c0],large[2700 x=90c0],05,dc,5e,6f40,1
+1661,large[2700 x=8ec0],large[2700 x=8ec0],05,dc,5e,6d40,1
+1662,large[2700 x=8cc0],large[2700 x=8cc0],05,dc,5e,6b40,1
+1663,large[2700 x=8ac0],large[2700 x=8ac0],05,dc,5e,6940,1
+1664,large[2700 x=88c0],large[2700 x=88c0],05,dc,5e,6740,1
+1665,large[2700 x=86c0],large[2700 x=86c0],05,dc,5e,6540,1
+1666,large[2700 x=84c0],large[2700 x=84c0],05,dc,5e,6340,1
+1667,large[2700 x=82c0],large[2700 x=82c0],05,dc,5e,6140,1
+1668,large[2700 x=80c0],large[2700 x=80c0],05,dc,5e,5f40,1
+1669,large[2700 x=7ec0],large[2700 x=7ec0],05,dc,5e,5d40,1
+1670,large[2700 x=7cc0],large[2700 x=7cc0],05,dc,5e,5b40,1
+1671,large[2700 x=7ac0],large[2700 x=7ac0],05,dc,5e,5940,1
+1672,large[2700 x=78c0],large[2700 x=78c0],05,dc,5e,5740,1
+1673,large[2700 x=76c0],large[2700 x=76c0],05,dc,5e,5540,1
+1674,large[2700 x=74c0],large[2700 x=74c0],05,dc,5e,5340,1
+1675,large[2700 x=72c0],large[2700 x=72c0],05,dc,5e,5140,1
+1676,large[2700 x=70c0],large[2700 x=70c0],05,dc,5e,4f40,1
+1677,large[2700 x=6ec0],large[2700 x=6ec0],05,dc,5e,4d40,1
+1678,large[2700 x=6cc0],large[2700 x=6cc0],05,dc,5e,4b40,1
+1679,large[2700 x=6ac0],large[2700 x=6ac0],05,dc,5e,4940,1
+1680,large[2700 x=68c0],large[2700 x=68c0],05,dc,5e,4740,1
+1681,large[2700 x=66c0],large[2700 x=66c0],05,dc,5e,4540,1
+1682,large[2700 x=64c0],large[2700 x=64c0],05,dc,5e,4340,1
+1683,large[2700 x=62c0],large[2700 x=62c0],05,dc,5e,4140,1
+1684,large[2700 x=60c0],large[2700 x=60c0],05,dc,5e,3f40,1
+1685,large[2700 x=5ec0],large[2700 x=5ec0],05,dc,5e,3d40,1
+1686,large[2700 x=5cc0],large[2700 x=5cc0],05,dc,5e,3b40,1
+1687,large[2700 x=5ac0],large[2700 x=5ac0],05,dc,5e,3940,1
+1688,large[2700 x=58c0],large[2700 x=58c0],05,dc,5e,3740,1
+1689,large[2700 x=56c0],large[2700 x=56c0],05,dc,5e,3540,1
+1690,large[2700 x=54c0],large[2700 x=54c0],05,dc,5e,3340,1
+1691,large[2700 x=52c0],large[2700 x=52c0],05,dc,5e,3140,1
+1692,large[2700 x=50c0],large[2700 x=50c0],05,dc,5e,2f40,1
+1693,large[2700 x=4ec0],large[2700 x=4ec0],05,dc,5e,2d40,1
+1694,large[2700 x=4cc0],large[2700 x=4cc0],05,dc,5e,2b40,1
+1695,large[2700 x=4ac0],large[2700 x=4ac0],05,dc,5e,2940,1
+1696,large[2700 x=48c0],large[2700 x=48c0],05,dc,5e,2740,1
+1697,large[2700 x=46c0],large[2700 x=46c0],05,dc,5e,2540,1
+1698,large[2700 x=44c0],large[2700 x=44c0],05,dc,5e,2340,1
+1699,large[2700 x=42c0],large[2700 x=42c0],05,dc,5e,2140,1
+1700,large[2700 x=40c0],large[2700 x=40c0],05,dc,5e,1f40,1
+1701,large[2700 x=3ec0],large[2700 x=3ec0],05,dc,5e,1d40,1
+1702,large[2700 x=3cc0],large[2700 x=3cc0],05,dc,5e,1b40,1
+1703,large[2700 x=3ac0],large[2700 x=3ac0],05,dc,5e,1940,1
+1704,large[2700 x=38c0],large[2700 x=38c0],05,dc,5e,1740,1
+1705,large[2700 x=36c0],large[2700 x=36c0],05,dc,5e,1540,1
+1706,large[2700 x=34c0],large[2700 x=34c0],05,dc,5e,1340,1
+1707,large[2700 x=32c0],large[2700 x=32c0],05,dc,5e,1140,1
+1708,large[2700 x=30c0],large[2700 x=30c0],05,dc,5e,0f40,1
+1709,large[2700 x=2ec0],large[2700 x=2ec0],05,dc,5e,0d40,1
+1710,large[2700 x=2cc0],large[2700 x=2cc0],05,dc,5e,0b40,1
+1711,large[2700 x=2ac0],large[2700 x=2ac0],05,dc,5e,0940,1
+1712,large[2700 x=28c0],large[2700 x=28c0],05,dc,5e,0740,1
+1713,large[2700 x=26c0],large[2700 x=26c0],05,dc,5e,0540,1
+1714,large[2700 x=24c0],large[2700 x=24c0],05,dc,5e,0340,1
+1715,large[2700 x=22c0],large[2700 x=22c0],05,dc,5e,0140,1
+1716,large[26d0 x=fd80] large[2700 x=20c0],large[26d0 x=fd80] large[2700 x=20c0],06,e4,5e,e400,1
+1717,large[26d0 x=fb80] large[2700 x=1ec0],large[26d0 x=fb80] large[2700 x=1ec0],06,e4,5e,e200,1
+1718,large[26d0 x=f980] large[2700 x=1cc0],large[26d0 x=f980] large[2700 x=1cc0],06,e4,5e,e000,1
+1719,large[26d0 x=f780] large[2700 x=1ac0],large[26d0 x=f780] large[2700 x=1ac0],06,e4,5e,de00,1
+1720,large[26d0 x=f580] large[2700 x=18c0],large[26d0 x=f580] large[2700 x=18c0],06,e4,5e,dc00,1
+1721,large[26d0 x=f380] large[2700 x=16c0],large[26d0 x=f380] large[2700 x=16c0],06,e4,5e,da00,1
+1722,large[26d0 x=f180] large[2700 x=14c0],large[26d0 x=f180] large[2700 x=14c0],06,e4,5e,d800,1
+1723,large[26d0 x=ef80] large[2700 x=12c0],large[26d0 x=ef80] large[2700 x=12c0],06,e4,5e,d600,1
+1724,large[26d0 x=ed80] large[2700 x=10c0],large[26d0 x=ed80] large[2700 x=10c0],06,e4,5e,d400,1
+1725,large[26d0 x=eb80] large[2700 x=0ec0],large[26d0 x=eb80] large[2700 x=0ec0],06,e4,5e,d200,1
+1726,large[26d0 x=e980] large[2700 x=0cc0],large[26d0 x=e980] large[2700 x=0cc0],06,e4,5e,d000,1
+1727,large[26d0 x=e780] large[2700 x=0ac0],large[26d0 x=e780] large[2700 x=0ac0],06,e4,5e,ce00,1
+1728,large[26d0 x=e580] large[2700 x=08c0],large[26d0 x=e580] large[2700 x=08c0],06,e4,5e,cc00,1
+1729,large[26d0 x=e380] large[2700 x=06c0],large[26d0 x=e380] large[2700 x=06c0],06,e4,5e,ca00,1
+1730,large[26d0 x=e180] large[2700 x=04c0],large[26d0 x=e180] large[2700 x=04c0],06,e4,5e,c800,1
+1731,large[26d0 x=df80] large[2700 x=02c0],large[26d0 x=df80] large[2700 x=02c0],06,e4,5e,c600,1
+1732,large[26d0 x=dd80] large[2700 x=00c0],large[26d0 x=dd80] large[2700 x=00c0],06,e4,5e,c400,1
+1733,large[26d0 x=db80],large[26d0 x=db80],06,e4,5e,c200,1
+1734,large[26d0 x=d980],large[26d0 x=d980],06,e4,5e,c000,1
+1735,large[26d0 x=d780],large[26d0 x=d780],06,e4,5e,be00,1
+1736,large[26d0 x=d580],large[26d0 x=d580],06,e4,5e,bc00,1
+1737,large[26d0 x=d380],large[26d0 x=d380],06,e4,5e,ba00,1
+1738,large[26d0 x=d180],large[26d0 x=d180],06,e4,5e,b800,1
+1739,large[26d0 x=cf80],large[26d0 x=cf80],06,e4,5e,b600,1
+1740,large[26d0 x=cd80],large[26d0 x=cd80],06,e4,5e,b400,1
+1741,large[26d0 x=cb80],large[26d0 x=cb80],06,e4,5e,b200,1
+1742,large[26d0 x=c980],large[26d0 x=c980],06,e4,5e,b000,1
+1743,large[26d0 x=c780],large[26d0 x=c780],06,e4,5e,ae00,1
+1744,large[26d0 x=c580],large[26d0 x=c580],06,e4,5e,ac00,1
+1745,large[26d0 x=c380],large[26d0 x=c380],06,e4,5e,aa00,1
+1746,large[26d0 x=c180],large[26d0 x=c180],06,e4,5e,a800,1
+1747,large[26d0 x=bf80],large[26d0 x=bf80],06,e4,5e,a600,1
+1748,large[26d0 x=bd80],large[26d0 x=bd80],06,e4,5e,a400,1
+1749,large[26d0 x=bb80],large[26d0 x=bb80],06,e4,5e,a200,1
+1750,large[26d0 x=b980],large[26d0 x=b980],06,e4,5e,a000,1
+1751,large[26d0 x=b780],large[26d0 x=b780],06,e4,5e,9e00,1
+1752,large[26d0 x=b580],large[26d0 x=b580],06,e4,5e,9c00,1
+1753,large[26d0 x=b380],large[26d0 x=b380],06,e4,5e,9a00,1
+1754,large[26d0 x=b180],large[26d0 x=b180],06,e4,5e,9800,1
+1755,large[26d0 x=af80],large[26d0 x=af80],06,e4,5e,9600,1
+1756,large[26d0 x=ad80],large[26d0 x=ad80],06,e4,5e,9400,1
+1757,large[26d0 x=ab80],large[26d0 x=ab80],06,e4,5e,9200,1
+1758,large[26d0 x=a980],large[26d0 x=a980],06,e4,5e,9000,1
+1759,large[26d0 x=a780],large[26d0 x=a780],06,e4,5e,8e00,1
+1760,large[26d0 x=a580],large[26d0 x=a580],06,e4,5e,8c00,1
+1761,large[26d0 x=a380],large[26d0 x=a380],06,e4,5e,8a00,1
+1762,large[26d0 x=a180],large[26d0 x=a180],06,e4,5e,8800,1
+1763,large[26d0 x=9f80],large[26d0 x=9f80],06,e4,5e,8600,1
+1764,large[26d0 x=9d80],large[26d0 x=9d80],06,e4,5e,8400,1
+1765,large[26d0 x=9b80],large[26d0 x=9b80],06,e4,5e,8200,1
+1766,large[26d0 x=9980],large[26d0 x=9980],06,e4,5e,8000,1
+1767,large[26d0 x=9780],large[26d0 x=9780],06,e4,5e,7e00,1
+1768,large[26d0 x=9580],large[26d0 x=9580],06,e4,5e,7c00,1
+1769,large[26d0 x=9380],large[26d0 x=9380],06,e4,5e,7a00,1
+1770,large[26d0 x=9180],large[26d0 x=9180],06,e4,5e,7800,1
+1771,large[26d0 x=8f80],large[26d0 x=8f80],06,e4,5e,7600,1
+1772,large[26d0 x=8d80],large[26d0 x=8d80],06,e4,5e,7400,1
+1773,large[26d0 x=8b80],large[26d0 x=8b80],06,e4,5e,7200,1
+1774,large[26d0 x=8980],large[26d0 x=8980],06,e4,5e,7000,1
+1775,large[26d0 x=8780],large[26d0 x=8780],06,e4,5e,6e00,1
+1776,large[26d0 x=8580],large[26d0 x=8580],06,e4,5e,6c00,1
+1777,large[26d0 x=8380],large[26d0 x=8380],06,e4,5e,6a00,1
+1778,large[26d0 x=8180],large[26d0 x=8180],06,e4,5e,6800,1
+1779,large[26d0 x=7f80],large[26d0 x=7f80],06,e4,5e,6600,1
+1780,large[26d0 x=7d80],large[26d0 x=7d80],06,e4,5e,6400,1
+1781,large[26d0 x=7b80],large[26d0 x=7b80],06,e4,5e,6200,1
+1782,large[26d0 x=7980],large[26d0 x=7980],06,e4,5e,6000,1
+1783,large[26d0 x=7780],large[26d0 x=7780],06,e4,5e,5e00,1
+1784,large[26d0 x=7580],large[26d0 x=7580],06,e4,5e,5c00,1
+1785,large[26d0 x=7380],large[26d0 x=7380],06,e4,5e,5a00,1
+1786,large[26d0 x=7180],large[26d0 x=7180],06,e4,5e,5800,1
+1787,large[26d0 x=6f80],large[26d0 x=6f80],06,e4,5e,5600,1
+1788,large[26d0 x=7030],large[26d0 x=7030],06,e4,5e,56b0,1
+1789,large[26d0 x=70e0],large[26d0 x=70e0],06,e4,5e,5760,1
+1790,large[26d0 x=7190],large[26d0 x=7190],06,e4,5e,5810,1
+1791,large[26d0 x=7240],large[26d0 x=7240],06,e4,5e,58c0,1
+1792,large[26d0 x=72f0],large[26d0 x=72f0],06,e4,5e,5970,1
+1793,large[26d0 x=73a0],large[26d0 x=73a0],06,e4,5e,5a20,1
+1794,large[26d0 x=7450],large[26d0 x=7450],06,e4,5e,5ad0,1
+1795,large[26d0 x=7500],large[26d0 x=7500],06,e4,5e,5b80,1
+1796,large[26d0 x=75b0],large[26d0 x=75b0],06,e4,5e,5c30,1
+1797,large[26d0 x=7530],large[26d0 x=7530],06,e4,5e,5bb0,1
+1798,large[26d0 x=74b0],large[26d0 x=74b0],06,e4,5e,5b30,1
+1799,large[26d0 x=7430],large[26d0 x=7430],06,e4,5e,5ab0,1
+1800,large[26d0 x=73b0],large[26d0 x=73b0],06,e4,5e,5a30,1
+1801,large[26d0 x=7330],large[26d0 x=7330],06,e4,5e,59b0,1
+1802,large[26d0 x=72b0],large[26d0 x=72b0],06,e4,5e,5930,1
+1803,large[26d0 x=7230],large[26d0 x=7230],06,e4,5e,58b0,1
+1804,large[26d0 x=71b0],large[26d0 x=71b0],06,e4,5e,5830,1
+1805,large[26d0 x=7130],large[26d0 x=7130],06,e4,5e,57b0,1
+1806,large[26d0 x=70b0],large[26d0 x=70b0],06,e4,5e,5730,1
+1807,large[26d0 x=7030],large[26d0 x=7030],06,e4,5e,56b0,1
+1808,large[26d0 x=6fb0],large[26d0 x=6fb0],06,e4,5e,5630,1
+1809,large[26d0 x=6f30],large[26d0 x=6f30],06,e4,5e,55b0,1
+1810,large[26d0 x=6eb0],large[26d0 x=6eb0],06,e4,5e,5530,1
+1811,large[26d0 x=6e30],large[26d0 x=6e30],06,e4,5e,54b0,1
+1812,large[26d0 x=6db0],large[26d0 x=6db0],06,e4,5e,5430,1
+1813,large[26d0 x=6d30],large[26d0 x=6d30],06,e4,5e,53b0,1
+1814,large[26d0 x=6cb0],large[26d0 x=6cb0],06,e4,5e,5330,1
+1815,large[26d0 x=6c30],large[26d0 x=6c30],06,e4,5e,52b0,1
+1816,large[26d0 x=6bb0],large[26d0 x=6bb0],06,e4,5e,5230,1
+1817,large[26d0 x=6b30],large[26d0 x=6b30],06,e4,5e,51b0,1
+1818,large[26d0 x=6be0],large[26d0 x=6be0],06,e4,5e,5260,1
+1819,large[26d0 x=6c90],large[26d0 x=6c90],06,e4,5e,5310,1
+1820,large[26d0 x=6d40],large[26d0 x=6d40],06,e4,5e,53c0,1
+1821,large[26d0 x=6df0],large[26d0 x=6df0],06,e4,5e,5470,1
+1822,large[26d0 x=6ea0],large[26d0 x=6ea0],06,e4,5e,5520,1
+1823,large[26d0 x=6f50],large[26d0 x=6f50],06,e4,5e,55d0,1
+1824,large[26d0 x=7000],large[26d0 x=7000],06,e4,5e,5680,1
+1825,large[26d0 x=70b0],large[26d0 x=70b0],06,e4,5e,5730,1
+1826,large[26d0 x=7160],large[26d0 x=7160],06,e4,5e,57e0,1
+1827,large[26d0 x=7210],large[26d0 x=7210],06,e4,5e,5890,1
+1828,large[26d0 x=72c0],large[26d0 x=72c0],06,e4,5e,5940,1
+1829,large[26d0 x=7370],large[26d0 x=7370],06,e4,5e,59f0,1
+1830,large[26d0 x=7420],large[26d0 x=7420],06,e4,5e,5aa0,1
+1831,large[26d0 x=74d0],large[26d0 x=74d0],06,e4,5e,5b50,1
+1832,large[26d0 x=7580],large[26d0 x=7580],06,e4,5e,5c00,1
+1833,large[26d0 x=7630],large[26d0 x=7630],06,e4,5e,5cb0,1
+1834,large[26d0 x=76e0],large[26d0 x=76e0],06,e4,5e,5d60,1
+1835,large[26d0 x=7790],large[26d0 x=7790],06,e4,5e,5e10,1
+1836,large[26d0 x=7840],large[26d0 x=7840],06,e4,5e,5ec0,1
+1837,large[26d0 x=78f0],large[26d0 x=78f0],06,e4,5e,5f70,1
+1838,large[26d0 x=79a0],large[26d0 x=79a0],06,e4,5e,6020,1
+1839,large[26d0 x=7a50],large[26d0 x=7a50],06,e4,5e,60d0,1
+1840,large[26d0 x=7b00],large[26d0 x=7b00],06,e4,5e,6180,1
+1841,large[26d0 x=7bb0],large[26d0 x=7bb0],06,e4,5e,6230,1
+1842,large[26d0 x=7c60],large[26d0 x=7c60],06,e4,5e,62e0,1
+1843,large[26d0 x=7d10],large[26d0 x=7d10],06,e4,5e,6390,1
+1844,large[26d0 x=7dc0],large[26d0 x=7dc0],06,e4,5e,6440,1
+1845,large[26d0 x=7e70],large[26d0 x=7e70],06,e4,5e,64f0,1
+1846,large[26d0 x=7f20],large[26d0 x=7f20],06,e4,5e,65a0,1
+1847,large[26d0 x=7fd0],large[26d0 x=7fd0],06,e4,5e,6650,1
+1848,large[26d0 x=8080],large[26d0 x=8080],06,e4,5e,6700,1
+1849,large[26d0 x=8130],large[26d0 x=8130],06,e4,5e,67b0,1
+1850,large[26d0 x=81e0],large[26d0 x=81e0],06,e4,5e,6860,1
+1851,large[26d0 x=8290],large[26d0 x=8290],06,e4,5e,6910,1
+1852,large[26d0 x=8340],large[26d0 x=8340],06,e4,5e,69c0,1
+1853,large[26d0 x=83f0],large[26d0 x=83f0],06,e4,5e,6a70,1
+1854,large[26d0 x=84a0],large[26d0 x=84a0],06,e4,5e,6b20,1
+1855,large[26d0 x=8550],large[26d0 x=8550],06,e4,5e,6bd0,1
+1856,large[26d0 x=8600],large[26d0 x=8600],06,e4,5e,6c80,1
+1857,large[26d0 x=86b0],large[26d0 x=86b0],06,e4,5e,6d30,1
+1858,large[26d0 x=8760],large[26d0 x=8760],06,e4,5e,6de0,1
+1859,large[26d0 x=8810],large[26d0 x=8810],06,e4,5e,6e90,1
+1860,large[26d0 x=88c0],large[26d0 x=88c0],06,e4,5e,6f40,1
+1861,large[26d0 x=8970],large[26d0 x=8970],06,e4,5e,6ff0,1
+1862,large[26d0 x=8a20],large[26d0 x=8a20],06,e4,5e,70a0,1
+1863,large[26d0 x=8ad0],large[26d0 x=8ad0],06,e4,5e,7150,1
+1864,large[26d0 x=8b80],large[26d0 x=8b80],06,e4,5e,7200,1
+1865,large[26d0 x=8c30],large[26d0 x=8c30],06,e4,5e,72b0,1
+1866,large[26d0 x=8ce0],large[26d0 x=8ce0],06,e4,5e,7360,1
+1867,large[26d0 x=8d90],large[26d0 x=8d90],06,e4,5e,7410,1
+1868,large[26d0 x=8e40],large[26d0 x=8e40],06,e4,5e,74c0,1
+1869,large[26d0 x=8ef0],large[26d0 x=8ef0],06,e4,5e,7570,1
+1870,large[26d0 x=8fa0],large[26d0 x=8fa0],06,e4,5e,7620,1
+1871,large[26d0 x=9050],large[26d0 x=9050],06,e4,5e,76d0,1
+1872,large[26d0 x=9100],large[26d0 x=9100],06,e4,5e,7780,1
+1873,large[26d0 x=91b0],large[26d0 x=91b0],06,e4,5e,7830,1
+1874,large[26d0 x=9260],large[26d0 x=9260],06,e4,5e,78e0,1
+1875,large[26d0 x=9310],large[26d0 x=9310],06,e4,5e,7990,1
+1876,large[26d0 x=93c0],large[26d0 x=93c0],06,e4,5e,7a40,1
+1877,large[26d0 x=9470],large[26d0 x=9470],06,e4,5e,7af0,1
+1878,large[26d0 x=9520],large[26d0 x=9520],06,e4,5e,7ba0,1
+1879,large[26d0 x=95d0],large[26d0 x=95d0],06,e4,5e,7c50,1
+1880,large[26d0 x=9680],large[26d0 x=9680],06,e4,5e,7d00,1
+1881,large[26d0 x=9730],large[26d0 x=9730],06,e4,5e,7db0,1
+1882,large[26d0 x=97e0],large[26d0 x=97e0],06,e4,5e,7e60,1
+1883,large[26d0 x=9890],large[26d0 x=9890],06,e4,5e,7f10,1
+1884,large[26d0 x=9940],large[26d0 x=9940],06,e4,5e,7fc0,1
+1885,large[26d0 x=99f0],large[26d0 x=99f0],06,e4,5e,8070,1
+1886,large[26d0 x=9aa0],large[26d0 x=9aa0],06,e4,5e,8120,1
+1887,large[26d0 x=9b50],large[26d0 x=9b50],06,e4,5e,81d0,1
+1888,large[26d0 x=9c00],large[26d0 x=9c00],06,e4,5e,8280,1
+1889,large[26d0 x=9cb0],large[26d0 x=9cb0],06,e4,5e,8330,1
+1890,large[26d0 x=9d60],large[26d0 x=9d60],06,e4,5e,83e0,1
+1891,large[26d0 x=9e10],large[26d0 x=9e10],06,e4,5e,8490,1
+1892,large[26d0 x=9ec0],large[26d0 x=9ec0],06,e4,5e,8540,1
+1893,large[26d0 x=9f70],large[26d0 x=9f70],06,e4,5e,85f0,1
+1894,large[26d0 x=a020],large[26d0 x=a020],06,e4,5e,86a0,1
+1895,large[26d0 x=a0d0],large[26d0 x=a0d0],06,e4,5e,8750,1
+1896,large[26d0 x=a180],large[26d0 x=a180],06,e4,5e,8800,1
+1897,large[26d0 x=a100],large[26d0 x=a100],06,e4,5e,8780,1
+1898,large[26d0 x=a080],large[26d0 x=a080],06,e4,5e,8700,1
+1899,large[26d0 x=9e80],large[26d0 x=9e80],06,e4,5e,8500,1
+1900,large[26d0 x=9c80],large[26d0 x=9c80],06,e4,5e,8300,1
+1901,large[26d0 x=9a80],large[26d0 x=9a80],06,e4,5e,8100,1
+1902,large[26d0 x=9880],large[26d0 x=9880],06,e4,5e,7f00,1
+1903,large[26d0 x=9680],large[26d0 x=9680],06,e4,5e,7d00,1
+1904,large[26d0 x=9480],large[26d0 x=9480],06,e4,5e,7b00,1
+1905,large[26d0 x=9280],large[26d0 x=9280],06,e4,5e,7900,1
+1906,large[26d0 x=9080],large[26d0 x=9080],06,e4,5e,7700,1
+1907,large[26d0 x=8e80],large[26d0 x=8e80],06,e4,5e,7500,1
+1908,large[26d0 x=8c80],large[26d0 x=8c80],06,e4,5e,7300,1
+1909,large[26d0 x=8a80],large[26d0 x=8a80],06,e4,5e,7100,1
+1910,large[26d0 x=8880],large[26d0 x=8880],06,e4,5e,6f00,1
+1911,large[26d0 x=8680],large[26d0 x=8680],06,e4,5e,6d00,1
+1912,large[26d0 x=8480],large[26d0 x=8480],06,e4,5e,6b00,1
+1913,large[26d0 x=8280],large[26d0 x=8280],06,e4,5e,6900,1
+1914,large[26d0 x=8080],large[26d0 x=8080],06,e4,5e,6700,1
+1915,large[26d0 x=7e80],large[26d0 x=7e80],06,e4,5e,6500,1
+1916,large[26d0 x=7c80],large[26d0 x=7c80],06,e4,5e,6300,1
+1917,large[26d0 x=7a80],large[26d0 x=7a80],06,e4,5e,6100,1
+1918,large[26d0 x=7880],large[26d0 x=7880],06,e4,5e,5f00,1
+1919,large[26d0 x=7680],large[26d0 x=7680],06,e4,5e,5d00,1
+1920,large[26d0 x=7480],large[26d0 x=7480],06,e4,5e,5b00,1
+1921,large[26d0 x=7280],large[26d0 x=7280],06,e4,5e,5900,1
+1922,large[26d0 x=7080],large[26d0 x=7080],06,e4,5e,5700,1
+1923,large[26d0 x=6e80],large[26d0 x=6e80],06,e4,5e,5500,1
+1924,large[26d0 x=6c80],large[26d0 x=6c80],06,e4,5e,5300,1
+1925,large[26d0 x=6a80],large[26d0 x=6a80],06,e4,5e,5100,1
+1926,large[26d0 x=6880],large[26d0 x=6880],06,e4,5e,4f00,1
+1927,large[26d0 x=6680],large[26d0 x=6680],06,e4,5e,4d00,1
+1928,large[26d0 x=6480],large[26d0 x=6480],06,e4,5e,4b00,1
+1929,large[26d0 x=6280],large[26d0 x=6280],06,e4,5e,4900,1
+1930,large[26d0 x=6080],large[26d0 x=6080],06,e4,5e,4700,1
+1931,large[26d0 x=5e80],large[26d0 x=5e80],06,e4,5e,4500,1
+1932,large[26d0 x=5c80],large[26d0 x=5c80],06,e4,5e,4300,1
+1933,large[26d0 x=5a80],large[26d0 x=5a80],06,e4,5e,4100,1
+1934,large[26d0 x=5880],large[26d0 x=5880],06,e4,5e,3f00,1
+1935,large[26d0 x=5680],large[26d0 x=5680],06,e4,5e,3d00,1
+1936,large[26d0 x=5480],large[26d0 x=5480],06,e4,5e,3b00,1
+1937,large[26d0 x=5280],large[26d0 x=5280],06,e4,5e,3900,1
+1938,large[26d0 x=5080],large[26d0 x=5080],06,e4,5e,3700,1
+1939,large[26d0 x=4e80],large[26d0 x=4e80],06,e4,5e,3500,1
+1940,large[26d0 x=4c80],large[26d0 x=4c80],06,e4,5e,3300,1
+1941,large[26d0 x=4a80],large[26d0 x=4a80],06,e4,5e,3100,1
+1942,large[26d0 x=4880],large[26d0 x=4880],06,e4,5e,2f00,1
+1943,large[26d0 x=4680],large[26d0 x=4680],06,e4,5e,2d00,1
+1944,large[26d0 x=4480],large[26d0 x=4480],06,e4,5e,2b00,1
+1945,large[26d0 x=4280],large[26d0 x=4280],06,e4,5e,2900,1
+1946,large[26d0 x=4080],large[26d0 x=4080],06,e4,5e,2700,1
+1947,large[26d0 x=3e80],large[26d0 x=3e80],06,e4,5e,2500,1
+1948,large[26d0 x=3c80],large[26d0 x=3c80],06,e4,5e,2300,1
+1949,large[26d0 x=3a80],large[26d0 x=3a80],06,e4,5e,2100,1
+1950,large[26d0 x=3880],large[26d0 x=3880],06,e4,5e,1f00,1
+1951,large[26d0 x=3680],large[26d0 x=3680],06,e4,5e,1d00,1
+1952,large[26d0 x=3480],large[26d0 x=3480],06,e4,5e,1b00,1
+1953,large[26d0 x=3280],large[26d0 x=3280],06,e4,5e,1900,1
+1954,large[26d0 x=3080],large[26d0 x=3080],06,e4,5e,1700,1
+1955,large[26d0 x=2e80],large[26d0 x=2e80],06,e4,5e,1500,1
+1956,large[26d0 x=2c80],large[26d0 x=2c80],06,e4,5e,1300,1
+1957,large[26d0 x=2a80],large[26d0 x=2a80],06,e4,5e,1100,1
+1958,large[26d0 x=2880],large[26d0 x=2880],06,e4,5e,0f00,1
+1959,large[26d0 x=2680],large[26d0 x=2680],06,e4,5e,0d00,1
+1960,large[26d0 x=2480],large[26d0 x=2480],06,e4,5e,0b00,1
+1961,large[26d0 x=2280],large[26d0 x=2280],06,e4,5e,0900,1
+1962,large[26d0 x=2080],large[26d0 x=2080],06,e4,5e,0700,1
+1963,large[26d0 x=1e80],large[26d0 x=1e80],06,e4,5e,0500,1
+1964,large[26d0 x=1c80],large[26d0 x=1c80],06,e4,5e,0300,1
+1965,large[26d0 x=1a80],large[26d0 x=1a80],06,e4,5e,0100,1
+1966,large[26d0 x=1880] small[2760 x=fd80],large[26d0 x=1880] small[2760 x=fd80],07,e6,5e,e600,1
+1967,large[26d0 x=1680] small[2760 x=fb80],large[26d0 x=1680] small[2760 x=fb80],07,e6,5e,e400,1
+1968,large[26d0 x=1480] small[2760 x=f980],large[26d0 x=1480] small[2760 x=f980],07,e6,5e,e200,1
+1969,large[26d0 x=1280] small[2760 x=f780],large[26d0 x=1280] small[2760 x=f780],07,e6,5e,e000,1
+1970,large[26d0 x=1080] small[2760 x=f580],large[26d0 x=1080] small[2760 x=f580],07,e6,5e,de00,1
+1971,large[26d0 x=0e80] small[2760 x=f380],large[26d0 x=0e80] small[2760 x=f380],07,e6,5e,dc00,1
+1972,large[26d0 x=0c80] small[2760 x=f180],large[26d0 x=0c80] small[2760 x=f180],07,e6,5e,da00,1
+1973,large[26d0 x=0a80] small[2760 x=ef80],large[26d0 x=0a80] small[2760 x=ef80],07,e6,5e,d800,1
+1974,large[26d0 x=0880] small[2760 x=ed80],large[26d0 x=0880] small[2760 x=ed80],07,e6,5e,d600,1
+1975,large[26d0 x=0680] small[2760 x=eb80],large[26d0 x=0680] small[2760 x=eb80],07,e6,5e,d400,1
+1976,large[26d0 x=0480] small[2760 x=e980],large[26d0 x=0480] small[2760 x=e980],07,e6,5e,d200,1
+1977,large[26d0 x=0280] small[2760 x=e780],large[26d0 x=0280] small[2760 x=e780],07,e6,5e,d000,1
+1978,large[26d0 x=0080] small[2760 x=e580],large[26d0 x=0080] small[2760 x=e580],07,e6,5e,ce00,1
+1979,small[2760 x=e380],small[2760 x=e380],07,e6,5e,cc00,1
+1980,small[2760 x=e180],small[2760 x=e180],07,e6,5e,ca00,1
+1981,small[2760 x=df80],small[2760 x=df80],07,e6,5e,c800,1
+1982,small[2760 x=dd80],small[2760 x=dd80],07,e6,5e,c600,1
+1983,small[2760 x=db80],small[2760 x=db80],07,e6,5e,c400,1
+1984,small[2760 x=d980],small[2760 x=d980],07,e6,5e,c200,1
+1985,small[2760 x=d780],small[2760 x=d780],07,e6,5e,c000,1
+1986,small[2760 x=d580],small[2760 x=d580],07,e6,5e,be00,1
+1987,small[2760 x=d380],small[2760 x=d380],07,e6,5e,bc00,1
+1988,small[2760 x=d180],small[2760 x=d180],07,e6,5e,ba00,1
+1989,small[2760 x=cf80],small[2760 x=cf80],07,e6,5e,b800,1
+1990,small[2760 x=cd80],small[2760 x=cd80],07,e6,5e,b600,1
+1991,small[2760 x=cb80],small[2760 x=cb80],07,e6,5e,b400,1
+1992,small[2760 x=c980],small[2760 x=c980],07,e6,5e,b200,1
+1993,small[2760 x=c780],small[2760 x=c780],07,e6,5e,b000,1
+1994,small[2760 x=c580],small[2760 x=c580],07,e6,5e,ae00,1
+1995,small[2760 x=c380],small[2760 x=c380],07,e6,5e,ac00,1
+1996,small[2760 x=c180],small[2760 x=c180],07,e6,5e,aa00,1
+1997,small[2760 x=bf80],small[2760 x=bf80],07,e6,5e,a800,1
+1998,small[2760 x=bd80],small[2760 x=bd80],07,e6,5e,a600,1
+1999,small[2760 x=bb80],small[2760 x=bb80],07,e6,5e,a400,1
+2000,small[2760 x=b980],small[2760 x=b980],07,e6,5e,a200,1
+2001,small[2760 x=b780],small[2760 x=b780],07,e6,5e,a000,1
+2002,small[2760 x=b580],small[2760 x=b580],07,e6,5e,9e00,1
+2003,small[2760 x=b380],small[2760 x=b380],07,e6,5e,9c00,1
+2004,small[2760 x=b180],small[2760 x=b180],07,e6,5e,9a00,1
+2005,small[2760 x=af80],small[2760 x=af80],07,e6,5e,9800,1
+2006,small[2760 x=ad80],small[2760 x=ad80],07,e6,5e,9600,1
+2007,small[2760 x=ab80],small[2760 x=ab80],07,e6,5e,9400,1
+2008,small[2760 x=a980],small[2760 x=a980],07,e6,5e,9200,1
+2009,small[2760 x=a780],small[2760 x=a780],07,e6,5e,9000,1
+2010,small[2760 x=a580],small[2760 x=a580],07,e6,5e,8e00,1
+2011,small[2760 x=a380],small[2760 x=a380],07,e6,5e,8c00,1
+2012,small[2760 x=a180],small[2760 x=a180],07,e6,5e,8a00,1
+2013,small[2760 x=9f80],small[2760 x=9f80],07,e6,5e,8800,1
+2014,small[2760 x=9d80],small[2760 x=9d80],07,e6,5e,8600,1
+2015,small[2760 x=9b80],small[2760 x=9b80],07,e6,5e,8400,1
+2016,small[2760 x=9980],small[2760 x=9980],07,e6,5e,8200,1
+2017,small[2760 x=9780],small[2760 x=9780],07,e6,5e,8000,1
+2018,small[2760 x=9580],small[2760 x=9580],07,e6,5e,7e00,1
+2019,small[2760 x=9380],small[2760 x=9380],07,e6,5e,7c00,1
+2020,small[2760 x=9180],small[2760 x=9180],07,e6,5e,7a00,1
+2021,small[2760 x=8f80],small[2760 x=8f80],07,e6,5e,7800,1
+2022,small[2760 x=8d80],small[2760 x=8d80],07,e6,5e,7600,1
+2023,small[2760 x=8b80],small[2760 x=8b80],07,e6,5e,7400,1
+2024,small[2760 x=8980],small[2760 x=8980],07,e6,5e,7200,1
+2025,small[2760 x=8780],small[2760 x=8780],07,e6,5e,7000,1
+2026,small[2760 x=8580],small[2760 x=8580],07,e6,5e,6e00,1
+2027,small[2760 x=8380],small[2760 x=8380],07,e6,5e,6c00,1
+2028,small[2760 x=8180],small[2760 x=8180],07,e6,5e,6a00,1
+2029,small[2760 x=7f80],small[2760 x=7f80],07,e6,5e,6800,1
+2030,small[2760 x=7d80],small[2760 x=7d80],07,e6,5e,6600,1
+2031,small[2760 x=7b80],small[2760 x=7b80],07,e6,5e,6400,1
+2032,small[2760 x=7980],small[2760 x=7980],07,e6,5e,6200,1
+2033,small[2760 x=7900],small[2760 x=7900],07,e6,5e,6180,1
+2034,small[2760 x=7880],small[2760 x=7880],07,e6,5e,6100,1
+2035,small[2760 x=7800],small[2760 x=7800],07,e6,5e,6080,1
+2036,small[2760 x=78b0],small[2760 x=78b0],07,e6,5e,6130,1
+2037,small[2760 x=7960],small[2760 x=7960],07,e6,5e,61e0,1
+2038,small[2760 x=7a10],small[2760 x=7a10],07,e6,5e,6290,1
+2039,small[2760 x=7ac0],small[2760 x=7ac0],07,e6,5e,6340,1
+2040,small[2760 x=7b70],small[2760 x=7b70],07,e6,5e,63f0,1
+2041,small[2760 x=7c20],small[2760 x=7c20],07,e6,5e,64a0,1
+2042,small[2760 x=7cd0],small[2760 x=7cd0],07,e6,5e,6550,1
+2043,small[2760 x=7d80],small[2760 x=7d80],07,e6,5e,6600,1
+2044,small[2760 x=7e30],small[2760 x=7e30],07,e6,5e,66b0,1
+2045,small[2760 x=7ee0],small[2760 x=7ee0],07,e6,5e,6760,1
+2046,small[2760 x=7f90],small[2760 x=7f90],07,e6,5e,6810,1
+2047,small[2760 x=8040],small[2760 x=8040],07,e6,5e,68c0,1
+2048,small[2760 x=80f0],small[2760 x=80f0],07,e6,5e,6970,1
+2049,small[2760 x=81a0],small[2760 x=81a0],07,e6,5e,6a20,1
+2050,small[2760 x=8250],small[2760 x=8250],07,e6,5e,6ad0,1
+2051,small[2760 x=8300],small[2760 x=8300],07,e6,5e,6b80,1
+2052,small[2760 x=83b0],small[2760 x=83b0],07,e6,5e,6c30,1
+2053,small[2760 x=8460],small[2760 x=8460],07,e6,5e,6ce0,1
+2054,small[2760 x=8510],small[2760 x=8510],07,e6,5e,6d90,1
+2055,small[2760 x=85c0],small[2760 x=85c0],07,e6,5e,6e40,1
+2056,small[2760 x=8670],small[2760 x=8670],07,e6,5e,6ef0,1
+2057,small[2760 x=8720],small[2760 x=8720],07,e6,5e,6fa0,1
+2058,small[2760 x=87d0],small[2760 x=87d0],07,e6,5e,7050,1
+2059,small[2760 x=8880],small[2760 x=8880],07,e6,5e,7100,1
+2060,small[2760 x=8800],small[2760 x=8800],07,e6,5e,7080,1
+2061,small[2760 x=8780],small[2760 x=8780],07,e6,5e,7000,1
+2062,small[2760 x=8700],small[2760 x=8700],07,e6,5e,6f80,1
+2063,small[2760 x=8680],small[2760 x=8680],07,e6,5e,6f00,1
+2064,small[2760 x=8480],small[2760 x=8480],07,e6,5e,6d00,1
+2065,small[2760 x=8280],small[2760 x=8280],07,e6,5e,6b00,1
+2066,small[2760 x=8080],small[2760 x=8080],07,e6,5e,6900,1
+2067,small[2760 x=7e80],small[2760 x=7e80],07,e6,5e,6700,1
+2068,small[2760 x=7c80],small[2760 x=7c80],07,e6,5e,6500,1
+2069,small[2760 x=7a80],small[2760 x=7a80],07,e6,5e,6300,1
+2070,small[2760 x=7880],small[2760 x=7880],07,e6,5e,6100,1
+2071,small[2760 x=7680],small[2760 x=7680],07,e6,5e,5f00,1
+2072,small[2760 x=7480],small[2760 x=7480],07,e6,5e,5d00,1
+2073,small[2760 x=7280],small[2760 x=7280],07,e6,5e,5b00,1
+2074,small[2760 x=7080],small[2760 x=7080],07,e6,5e,5900,1
+2075,small[2760 x=6e80],small[2760 x=6e80],07,e6,5e,5700,1
+2076,small[2760 x=6c80],small[2760 x=6c80],07,e6,5e,5500,1
+2077,small[2760 x=6a80],small[2760 x=6a80],07,e6,5e,5300,1
+2078,small[2760 x=6880],small[2760 x=6880],07,e6,5e,5100,1
+2079,small[2760 x=6680],small[2760 x=6680],07,e6,5e,4f00,1
+2080,small[2760 x=6480],small[2760 x=6480],07,e6,5e,4d00,1
+2081,small[2760 x=6280],small[2760 x=6280],07,e6,5e,4b00,1
+2082,small[2760 x=6080],small[2760 x=6080],07,e6,5e,4900,1
+2083,small[2760 x=5e80],small[2760 x=5e80],07,e6,5e,4700,1
+2084,small[2760 x=5c80],small[2760 x=5c80],07,e6,5e,4500,1
+2085,small[2760 x=5a80],small[2760 x=5a80],07,e6,5e,4300,1
+2086,small[2760 x=5880],small[2760 x=5880],07,e6,5e,4100,1
+2087,small[2760 x=5680],small[2760 x=5680],07,e6,5e,3f00,1
+2088,small[2760 x=5480],small[2760 x=5480],07,e6,5e,3d00,1
+2089,small[2760 x=5280],small[2760 x=5280],07,e6,5e,3b00,1
+2090,small[2760 x=5080],small[2760 x=5080],07,e6,5e,3900,1
+2091,small[2760 x=4e80],small[2760 x=4e80],07,e6,5e,3700,1
+2092,small[2760 x=4c80],small[2760 x=4c80],07,e6,5e,3500,1
+2093,small[2760 x=4a80],small[2760 x=4a80],07,e6,5e,3300,1
+2094,small[2760 x=4880],small[2760 x=4880],07,e6,5e,3100,1
+2095,small[2760 x=4680],small[2760 x=4680],07,e6,5e,2f00,1
+2096,small[2760 x=4480],small[2760 x=4480],07,e6,5e,2d00,1
+2097,small[2760 x=4280],small[2760 x=4280],07,e6,5e,2b00,1
+2098,small[2760 x=4080],small[2760 x=4080],07,e6,5e,2900,1
+2099,small[2760 x=3e80],small[2760 x=3e80],07,e6,5e,2700,1
+2100,small[2760 x=3c80],small[2760 x=3c80],07,e6,5e,2500,1
+2101,small[2760 x=3a80],small[2760 x=3a80],07,e6,5e,2300,1
+2102,small[2760 x=3880],small[2760 x=3880],07,e6,5e,2100,1
+2103,small[2760 x=3680],small[2760 x=3680],07,e6,5e,1f00,1
+2104,small[2760 x=3480],small[2760 x=3480],07,e6,5e,1d00,1
+2105,small[2760 x=3280],small[2760 x=3280],07,e6,5e,1b00,1
+2106,small[2760 x=3080],small[2760 x=3080],07,e6,5e,1900,1
+2107,small[2760 x=2e80],small[2760 x=2e80],07,e6,5e,1700,1
+2108,small[2760 x=2c80],small[2760 x=2c80],07,e6,5e,1500,1
+2109,small[2760 x=2a80],small[2760 x=2a80],07,e6,5e,1300,1
+2110,small[2760 x=2880],small[2760 x=2880],07,e6,5e,1100,1
+2111,small[2760 x=2680],small[2760 x=2680],07,e6,5e,0f00,1
+2112,small[2760 x=2480],small[2760 x=2480],07,e6,5e,0d00,1
+2113,small[2760 x=2280],small[2760 x=2280],07,e6,5e,0b00,1
+2114,small[2760 x=2080],small[2760 x=2080],07,e6,5e,0900,1
+2115,small[2760 x=1e80],small[2760 x=1e80],07,e6,5e,0700,1
+2116,small[2760 x=1c80],small[2760 x=1c80],07,e6,5e,0500,1
+2117,small[2760 x=1a80],small[2760 x=1a80],07,e6,5e,0300,1
+2118,small[2760 x=1880],small[2760 x=1880],07,e6,5e,0100,1
+2119,large[26d0 x=fd80] small[2760 x=1680],large[26d0 x=fd80] small[2760 x=1680],08,1b,5e,1b00,1
+2120,large[26d0 x=fb80] small[2760 x=1480],large[26d0 x=fb80] small[2760 x=1480],08,1b,5e,1900,1
+2121,large[26d0 x=f980] small[2760 x=1280],large[26d0 x=f980] small[2760 x=1280],08,1b,5e,1700,1
+2122,large[26d0 x=f780] small[2760 x=1080],large[26d0 x=f780] small[2760 x=1080],08,1b,5e,1500,1
+2123,large[26d0 x=f580] small[2760 x=0e80],large[26d0 x=f580] small[2760 x=0e80],08,1b,5e,1300,1
+2124,large[26d0 x=f380] small[2760 x=0c80],large[26d0 x=f380] small[2760 x=0c80],08,1b,5e,1100,1
+2125,large[26d0 x=f180] small[2760 x=0a80],large[26d0 x=f180] small[2760 x=0a80],08,1b,5e,0f00,1
+2126,large[26d0 x=ef80] small[2760 x=0880],large[26d0 x=ef80] small[2760 x=0880],08,1b,5e,0d00,1
+2127,large[26d0 x=ed80] small[2760 x=0680],large[26d0 x=ed80] small[2760 x=0680],08,1b,5e,0b00,1
+2128,large[26d0 x=eb80] small[2760 x=0480],large[26d0 x=eb80] small[2760 x=0480],08,1b,5e,0900,1
+2129,large[26d0 x=e980] small[2760 x=0280],large[26d0 x=e980] small[2760 x=0280],08,1b,5e,0700,1
+2130,large[26d0 x=e780] small[2760 x=0080],large[26d0 x=e780] small[2760 x=0080],08,1b,5e,0500,1
+2131,large[26d0 x=e580],large[26d0 x=e580],08,1b,5e,0300,1
+2132,large[26d0 x=e380],large[26d0 x=e380],08,1b,5e,0100,1
+2133,large[26d0 x=e180] large[2700 x=fd80],large[26d0 x=e180] large[2700 x=fd80],09,ee,5e,ee00,1
+2134,large[26d0 x=df80] large[2700 x=fb80],large[26d0 x=df80] large[2700 x=fb80],09,ee,5e,ec00,1
+2135,large[26d0 x=dd80] large[2700 x=f980],large[26d0 x=dd80] large[2700 x=f980],09,ee,5e,ea00,1
+2136,large[26d0 x=db80] large[2700 x=f780],large[26d0 x=db80] large[2700 x=f780],09,ee,5e,e800,1
+2137,large[26d0 x=d980] large[2700 x=f580],large[26d0 x=d980] large[2700 x=f580],09,ee,5e,e600,1
+2138,large[26d0 x=d780] large[2700 x=f380],large[26d0 x=d780] large[2700 x=f380],09,ee,5e,e400,1
+2139,large[26d0 x=d580] large[2700 x=f180],large[26d0 x=d580] large[2700 x=f180],09,ee,5e,e200,1
+2140,large[26d0 x=d380] large[2700 x=ef80],large[26d0 x=d380] large[2700 x=ef80],09,ee,5e,e000,1
+2141,large[26d0 x=d180] large[2700 x=ed80],large[26d0 x=d180] large[2700 x=ed80],09,ee,5e,de00,1
+2142,large[26d0 x=cf80] large[2700 x=eb80],large[26d0 x=cf80] large[2700 x=eb80],09,ee,5e,dc00,1
+2143,large[26d0 x=cd80] large[2700 x=e980],large[26d0 x=cd80] large[2700 x=e980],09,ee,5e,da00,1
+2144,large[26d0 x=cb80] large[2700 x=e780],large[26d0 x=cb80] large[2700 x=e780],09,ee,5e,d800,1
+2145,large[26d0 x=c980] large[2700 x=e580],large[26d0 x=c980] large[2700 x=e580],09,ee,5e,d600,1
+2146,large[26d0 x=c780] large[2700 x=e380],large[26d0 x=c780] large[2700 x=e380],09,ee,5e,d400,1
+2147,large[26d0 x=c580] large[2700 x=e180],large[26d0 x=c580] large[2700 x=e180],09,ee,5e,d200,1
+2148,large[26d0 x=c380] large[2700 x=df80],large[26d0 x=c380] large[2700 x=df80],09,ee,5e,d000,1
+2149,large[26d0 x=c180] large[2700 x=dd80],large[26d0 x=c180] large[2700 x=dd80],09,ee,5e,ce00,1
+2150,large[26d0 x=bf80] large[2700 x=db80],large[26d0 x=bf80] large[2700 x=db80],09,ee,5e,cc00,1
+2151,large[26d0 x=bd80] large[2700 x=d980],large[26d0 x=bd80] large[2700 x=d980],09,ee,5e,ca00,1
+2152,large[26d0 x=bb80] large[2700 x=d780],large[26d0 x=bb80] large[2700 x=d780],09,ee,5e,c800,1
+2153,large[26d0 x=b980] large[2700 x=d580],large[26d0 x=b980] large[2700 x=d580],09,ee,5e,c600,1
+2154,large[26d0 x=b780] large[2700 x=d380],large[26d0 x=b780] large[2700 x=d380],09,ee,5e,c400,1
+2155,large[26d0 x=b580] large[2700 x=d180],large[26d0 x=b580] large[2700 x=d180],09,ee,5e,c200,1
+2156,large[26d0 x=b380] large[2700 x=cf80],large[26d0 x=b380] large[2700 x=cf80],09,ee,5e,c000,1
+2157,large[26d0 x=b180] large[2700 x=cd80],large[26d0 x=b180] large[2700 x=cd80],09,ee,5e,be00,1
+2158,large[26d0 x=af80] large[2700 x=cb80],large[26d0 x=af80] large[2700 x=cb80],09,ee,5e,bc00,1
+2159,large[26d0 x=ad80] large[2700 x=c980],large[26d0 x=ad80] large[2700 x=c980],09,ee,5e,ba00,1
+2160,large[26d0 x=ab80] large[2700 x=c780],large[26d0 x=ab80] large[2700 x=c780],09,ee,5e,b800,1
+2161,large[26d0 x=a980] large[2700 x=c580],large[26d0 x=a980] large[2700 x=c580],09,ee,5e,b600,1
+2162,large[26d0 x=a780] large[2700 x=c380],large[26d0 x=a780] large[2700 x=c380],09,ee,5e,b400,1
+2163,large[26d0 x=a580] large[2700 x=c180],large[26d0 x=a580] large[2700 x=c180],09,ee,5e,b200,1
+2164,large[26d0 x=a380] large[2700 x=bf80],large[26d0 x=a380] large[2700 x=bf80],09,ee,5e,b000,1
+2165,large[26d0 x=a180] large[2700 x=bd80],large[26d0 x=a180] large[2700 x=bd80],09,ee,5e,ae00,1
+2166,large[26d0 x=9f80] large[2700 x=bb80],large[26d0 x=9f80] large[2700 x=bb80],09,ee,5e,ac00,1
+2167,large[26d0 x=9d80] large[2700 x=b980],large[26d0 x=9d80] large[2700 x=b980],09,ee,5e,aa00,1
+2168,large[26d0 x=9b80] large[2700 x=b780],large[26d0 x=9b80] large[2700 x=b780],09,ee,5e,a800,1
+2169,large[26d0 x=9980] large[2700 x=b580],large[26d0 x=9980] large[2700 x=b580],09,ee,5e,a600,1
+2170,large[26d0 x=9780] large[2700 x=b380],large[26d0 x=9780] large[2700 x=b380],09,ee,5e,a400,1
+2171,large[26d0 x=9580] large[2700 x=b180],large[26d0 x=9580] large[2700 x=b180],09,ee,5e,a200,1
+2172,large[26d0 x=9380] large[2700 x=af80],large[26d0 x=9380] large[2700 x=af80],09,ee,5e,a000,1
+2173,large[26d0 x=9180] large[2700 x=ad80],large[26d0 x=9180] large[2700 x=ad80],09,ee,5e,9e00,1
+2174,large[26d0 x=8f80] large[2700 x=ab80],large[26d0 x=8f80] large[2700 x=ab80],09,ee,5e,9c00,1
+2175,large[26d0 x=8d80] large[2700 x=a980],large[26d0 x=8d80] large[2700 x=a980],09,ee,5e,9a00,1
+2176,large[26d0 x=8d00] large[2700 x=a900],large[26d0 x=8d00] large[2700 x=a900],09,ee,5e,9980,1
+2177,large[26d0 x=8c80] large[2700 x=a880],large[26d0 x=8c80] large[2700 x=a880],09,ee,5e,9900,1
+2178,large[26d0 x=8c00] large[2700 x=a800],large[26d0 x=8c00] large[2700 x=a800],09,ee,5e,9880,1
+2179,large[26d0 x=8b80] large[2700 x=a780],large[26d0 x=8b80] large[2700 x=a780],09,ee,5e,9800,1
+2180,large[26d0 x=8b00] large[2700 x=a700],large[26d0 x=8b00] large[2700 x=a700],09,ee,5e,9780,1
+2181,large[26d0 x=8a80] large[2700 x=a680],large[26d0 x=8a80] large[2700 x=a680],09,ee,5e,9700,1
+2182,large[26d0 x=8a00] large[2700 x=a600],large[26d0 x=8a00] large[2700 x=a600],09,ee,5e,9680,1
+2183,large[26d0 x=8980] large[2700 x=a580],large[26d0 x=8980] large[2700 x=a580],09,ee,5e,9600,1
+2184,large[26d0 x=8900] large[2700 x=a500],large[26d0 x=8900] large[2700 x=a500],09,ee,5e,9580,1
+2185,large[26d0 x=8880] large[2700 x=a480],large[26d0 x=8880] large[2700 x=a480],09,ee,5e,9500,1
+2186,large[26d0 x=8800] large[2700 x=a400],large[26d0 x=8800] large[2700 x=a400],09,ee,5e,9480,1
+2187,large[26d0 x=8780] large[2700 x=a380],large[26d0 x=8780] large[2700 x=a380],09,ee,5e,9400,1
+2188,large[26d0 x=8700] large[2700 x=a300],large[26d0 x=8700] large[2700 x=a300],09,ee,5e,9380,1
+2189,large[26d0 x=8680] large[2700 x=a280],large[26d0 x=8680] large[2700 x=a280],09,ee,5e,9300,1
+2190,large[26d0 x=8600] large[2700 x=a200],large[26d0 x=8600] large[2700 x=a200],09,ee,5e,9280,1
+2191,large[26d0 x=8580] large[2700 x=a180],large[26d0 x=8580] large[2700 x=a180],09,ee,5e,9200,1
+2192,large[26d0 x=8500] large[2700 x=a100],large[26d0 x=8500] large[2700 x=a100],09,ee,5e,9180,1
+2193,large[26d0 x=8480] large[2700 x=a080],large[26d0 x=8480] large[2700 x=a080],09,ee,5e,9100,1
+2194,large[26d0 x=8400] large[2700 x=a000],large[26d0 x=8400] large[2700 x=a000],09,ee,5e,9080,1
+2195,large[26d0 x=8380] large[2700 x=9f80],large[26d0 x=8380] large[2700 x=9f80],09,ee,5e,9000,1
+2196,large[26d0 x=8300] large[2700 x=9f00],large[26d0 x=8300] large[2700 x=9f00],09,ee,5e,8f80,1
+2197,large[26d0 x=8280] large[2700 x=9e80],large[26d0 x=8280] large[2700 x=9e80],09,ee,5e,8f00,1
+2198,large[26d0 x=8200] large[2700 x=9e00],large[26d0 x=8200] large[2700 x=9e00],09,ee,5e,8e80,1
+2199,large[26d0 x=8180] large[2700 x=9d80],large[26d0 x=8180] large[2700 x=9d80],09,ee,5e,8e00,1
+2200,large[26d0 x=8100] large[2700 x=9d00],large[26d0 x=8100] large[2700 x=9d00],09,ee,5e,8d80,1
+2201,large[26d0 x=8080] large[2700 x=9c80],large[26d0 x=8080] large[2700 x=9c80],09,ee,5e,8d00,1
+2202,large[26d0 x=8000] large[2700 x=9c00],large[26d0 x=8000] large[2700 x=9c00],09,ee,5e,8c80,1
+2203,large[26d0 x=7f80] large[2700 x=9b80],large[26d0 x=7f80] large[2700 x=9b80],09,ee,5e,8c00,1
+2204,large[26d0 x=7f00] large[2700 x=9b00],large[26d0 x=7f00] large[2700 x=9b00],09,ee,5e,8b80,1
+2205,large[26d0 x=7e80] large[2700 x=9a80],large[26d0 x=7e80] large[2700 x=9a80],09,ee,5e,8b00,1
+2206,large[26d0 x=7e00] large[2700 x=9a00],large[26d0 x=7e00] large[2700 x=9a00],09,ee,5e,8a80,1
+2207,large[26d0 x=7d80] large[2700 x=9980],large[26d0 x=7d80] large[2700 x=9980],09,ee,5e,8a00,1
+2208,large[26d0 x=7d00] large[2700 x=9900],large[26d0 x=7d00] large[2700 x=9900],09,ee,5e,8980,1
+2209,large[26d0 x=7c80] large[2700 x=9880],large[26d0 x=7c80] large[2700 x=9880],09,ee,5e,8900,1
+2210,large[26d0 x=7c00] large[2700 x=9800],large[26d0 x=7c00] large[2700 x=9800],09,ee,5e,8880,1
+2211,large[26d0 x=7b80] large[2700 x=9780],large[26d0 x=7b80] large[2700 x=9780],09,ee,5e,8800,1
+2212,large[26d0 x=7b00] large[2700 x=9700],large[26d0 x=7b00] large[2700 x=9700],09,ee,5e,8780,1
+2213,large[26d0 x=7a80] large[2700 x=9680],large[26d0 x=7a80] large[2700 x=9680],09,ee,5e,8700,1
+2214,large[26d0 x=7a00] large[2700 x=9600],large[26d0 x=7a00] large[2700 x=9600],09,ee,5e,8680,1
+2215,large[26d0 x=7980] large[2700 x=9580],large[26d0 x=7980] large[2700 x=9580],09,ee,5e,8600,1
+2216,large[26d0 x=7900] large[2700 x=9500],large[26d0 x=7900] large[2700 x=9500],09,ee,5e,8580,1
+2217,large[26d0 x=7880] large[2700 x=9480],large[26d0 x=7880] large[2700 x=9480],09,ee,5e,8500,1
+2218,large[26d0 x=7800] large[2700 x=9400],large[26d0 x=7800] large[2700 x=9400],09,ee,5e,8480,1
+2219,large[26d0 x=7780] large[2700 x=9380],large[26d0 x=7780] large[2700 x=9380],09,ee,5e,8400,1
+2220,large[26d0 x=7700] large[2700 x=9300],large[26d0 x=7700] large[2700 x=9300],09,ee,5e,8380,1
+2221,large[26d0 x=7680] large[2700 x=9280],large[26d0 x=7680] large[2700 x=9280],09,ee,5e,8300,1
+2222,large[26d0 x=7600] large[2700 x=9200],large[26d0 x=7600] large[2700 x=9200],09,ee,5e,8280,1
+2223,large[26d0 x=7580] large[2700 x=9180],large[26d0 x=7580] large[2700 x=9180],09,ee,5e,8200,1
+2224,large[26d0 x=7500] large[2700 x=9100],large[26d0 x=7500] large[2700 x=9100],09,ee,5e,8180,1
+2225,large[26d0 x=7480] large[2700 x=9080],large[26d0 x=7480] large[2700 x=9080],09,ee,5e,8100,1
+2226,large[26d0 x=7400] large[2700 x=9000],large[26d0 x=7400] large[2700 x=9000],09,ee,5e,8080,1
+2227,large[26d0 x=7380] large[2700 x=8f80],large[26d0 x=7380] large[2700 x=8f80],09,ee,5e,8000,1
+2228,large[26d0 x=7300] large[2700 x=8f00],large[26d0 x=7300] large[2700 x=8f00],09,ee,5e,7f80,1
+2229,large[26d0 x=7280] large[2700 x=8e80],large[26d0 x=7280] large[2700 x=8e80],09,ee,5e,7f00,1
+2230,large[26d0 x=7200] large[2700 x=8e00],large[26d0 x=7200] large[2700 x=8e00],09,ee,5e,7e80,1
+2231,large[26d0 x=7180] large[2700 x=8d80],large[26d0 x=7180] large[2700 x=8d80],09,ee,5e,7e00,1
+2232,large[26d0 x=7100] large[2700 x=8d00],large[26d0 x=7100] large[2700 x=8d00],09,ee,5e,7d80,1
+2233,large[26d0 x=7080] large[2700 x=8c80],large[26d0 x=7080] large[2700 x=8c80],09,ee,5e,7d00,1
+2234,large[26d0 x=7000] large[2700 x=8c00],large[26d0 x=7000] large[2700 x=8c00],09,ee,5e,7c80,1
+2235,large[26d0 x=70b0] large[2700 x=8cb0],large[26d0 x=70b0] large[2700 x=8cb0],09,ee,5e,7d30,1
+2236,large[26d0 x=7160] large[2700 x=8d60],large[26d0 x=7160] large[2700 x=8d60],09,ee,5e,7de0,1
+2237,large[26d0 x=7210] large[2700 x=8e10],large[26d0 x=7210] large[2700 x=8e10],09,ee,5e,7e90,1
+2238,large[26d0 x=72c0] large[2700 x=8ec0],large[26d0 x=72c0] large[2700 x=8ec0],09,ee,5e,7f40,1
+2239,large[26d0 x=7370] large[2700 x=8f70],large[26d0 x=7370] large[2700 x=8f70],09,ee,5e,7ff0,1
+2240,large[26d0 x=7420] large[2700 x=9020],large[26d0 x=7420] large[2700 x=9020],09,ee,5e,80a0,1
+2241,large[26d0 x=74d0] large[2700 x=90d0],large[26d0 x=74d0] large[2700 x=90d0],09,ee,5e,8150,1
+2242,large[26d0 x=7580] large[2700 x=9180],large[26d0 x=7580] large[2700 x=9180],09,ee,5e,8200,1
+2243,large[26d0 x=7630] large[2700 x=9230],large[26d0 x=7630] large[2700 x=9230],09,ee,5e,82b0,1
+2244,large[26d0 x=76e0] large[2700 x=92e0],large[26d0 x=76e0] large[2700 x=92e0],09,ee,5e,8360,1
+2245,large[26d0 x=7790] large[2700 x=9390],large[26d0 x=7790] large[2700 x=9390],09,ee,5e,8410,1
+2246,large[26d0 x=7840] large[2700 x=9440],large[26d0 x=7840] large[2700 x=9440],09,ee,5e,84c0,1
+2247,large[26d0 x=78f0] large[2700 x=94f0],large[26d0 x=78f0] large[2700 x=94f0],09,ee,5e,8570,1
+2248,large[26d0 x=79a0] large[2700 x=95a0],large[26d0 x=79a0] large[2700 x=95a0],09,ee,5e,8620,1
+2249,large[26d0 x=7a50] large[2700 x=9650],large[26d0 x=7a50] large[2700 x=9650],09,ee,5e,86d0,1
+2250,large[26d0 x=7b00] large[2700 x=9700],large[26d0 x=7b00] large[2700 x=9700],09,ee,5e,8780,1
+2251,large[26d0 x=7bb0] large[2700 x=97b0],large[26d0 x=7bb0] large[2700 x=97b0],09,ee,5e,8830,1
+2252,large[26d0 x=7c60] large[2700 x=9860],large[26d0 x=7c60] large[2700 x=9860],09,ee,5e,88e0,1
+2253,large[26d0 x=7d10] large[2700 x=9910],large[26d0 x=7d10] large[2700 x=9910],09,ee,5e,8990,1
+2254,large[26d0 x=7dc0] large[2700 x=99c0],large[26d0 x=7dc0] large[2700 x=99c0],09,ee,5e,8a40,1
+2255,large[26d0 x=7e70] large[2700 x=9a70],large[26d0 x=7e70] large[2700 x=9a70],09,ee,5e,8af0,1
+2256,large[26d0 x=7f20] large[2700 x=9b20],large[26d0 x=7f20] large[2700 x=9b20],09,ee,5e,8ba0,1
+2257,large[26d0 x=7fd0] large[2700 x=9bd0],large[26d0 x=7fd0] large[2700 x=9bd0],09,ee,5e,8c50,1
+2258,large[26d0 x=8080] large[2700 x=9c80],large[26d0 x=8080] large[2700 x=9c80],09,ee,5e,8d00,1
+2259,large[26d0 x=8130] large[2700 x=9d30],large[26d0 x=8130] large[2700 x=9d30],09,ee,5e,8db0,1
+2260,large[26d0 x=81e0] large[2700 x=9de0],large[26d0 x=81e0] large[2700 x=9de0],09,ee,5e,8e60,1
+2261,large[26d0 x=8290] large[2700 x=9e90],large[26d0 x=8290] large[2700 x=9e90],09,ee,5e,8f10,1
+2262,large[26d0 x=8340] large[2700 x=9f40],large[26d0 x=8340] large[2700 x=9f40],09,ee,5e,8fc0,1
+2263,large[26d0 x=83f0] large[2700 x=9ff0],large[26d0 x=83f0] large[2700 x=9ff0],09,ee,5e,9070,1
+2264,large[26d0 x=84a0] large[2700 x=a0a0],large[26d0 x=84a0] large[2700 x=a0a0],09,ee,5e,9120,1
+2265,large[26d0 x=8550] large[2700 x=a150],large[26d0 x=8550] large[2700 x=a150],09,ee,5e,91d0,1
+2266,large[26d0 x=8600] large[2700 x=a200],large[26d0 x=8600] large[2700 x=a200],09,ee,5e,9280,1
+2267,large[26d0 x=86b0] large[2700 x=a2b0],large[26d0 x=86b0] large[2700 x=a2b0],09,ee,5e,9330,1
+2268,large[26d0 x=8760] large[2700 x=a360],large[26d0 x=8760] large[2700 x=a360],09,ee,5e,93e0,1
+2269,large[26d0 x=8810] large[2700 x=a410],large[26d0 x=8810] large[2700 x=a410],09,ee,5e,9490,1
+2270,large[26d0 x=88c0] large[2700 x=a4c0],large[26d0 x=88c0] large[2700 x=a4c0],09,ee,5e,9540,1
+2271,large[26d0 x=8970] large[2700 x=a570],large[26d0 x=8970] large[2700 x=a570],09,ee,5e,95f0,1
+2272,large[26d0 x=8a20] large[2700 x=a620],large[26d0 x=8a20] large[2700 x=a620],09,ee,5e,96a0,1
+2273,large[26d0 x=8ad0] large[2700 x=a6d0],large[26d0 x=8ad0] large[2700 x=a6d0],09,ee,5e,9750,1
+2274,large[26d0 x=8b80] large[2700 x=a780],large[26d0 x=8b80] large[2700 x=a780],09,ee,5e,9800,1
+2275,large[26d0 x=8c30] large[2700 x=a830],large[26d0 x=8c30] large[2700 x=a830],09,ee,5e,98b0,1
+2276,large[26d0 x=8ce0] large[2700 x=a8e0],large[26d0 x=8ce0] large[2700 x=a8e0],09,ee,5e,9960,1
+2277,large[26d0 x=8d90] large[2700 x=a990],large[26d0 x=8d90] large[2700 x=a990],09,ee,5e,9a10,1
+2278,large[26d0 x=8e40] large[2700 x=aa40],large[26d0 x=8e40] large[2700 x=aa40],09,ee,5e,9ac0,1
+2279,large[26d0 x=8ef0] large[2700 x=aaf0],large[26d0 x=8ef0] large[2700 x=aaf0],09,ee,5e,9b70,1
+2280,large[26d0 x=8fa0] large[2700 x=aba0],large[26d0 x=8fa0] large[2700 x=aba0],09,ee,5e,9c20,1
+2281,large[26d0 x=9050] large[2700 x=ac50],large[26d0 x=9050] large[2700 x=ac50],09,ee,5e,9cd0,1
+2282,large[26d0 x=9100] large[2700 x=ad00],large[26d0 x=9100] large[2700 x=ad00],09,ee,5e,9d80,1
+2283,large[26d0 x=91b0] large[2700 x=adb0],large[26d0 x=91b0] large[2700 x=adb0],09,ee,5e,9e30,1
+2284,large[26d0 x=9260] large[2700 x=ae60],large[26d0 x=9260] large[2700 x=ae60],09,ee,5e,9ee0,1
+2285,large[26d0 x=9310] large[2700 x=af10],large[26d0 x=9310] large[2700 x=af10],09,ee,5e,9f90,1
+2286,large[26d0 x=93c0] large[2700 x=afc0],large[26d0 x=93c0] large[2700 x=afc0],09,ee,5e,a040,1
+2287,large[26d0 x=9470] large[2700 x=b070],large[26d0 x=9470] large[2700 x=b070],09,ee,5e,a0f0,1
+2288,large[26d0 x=9520] large[2700 x=b120],large[26d0 x=9520] large[2700 x=b120],09,ee,5e,a1a0,1
+2289,large[26d0 x=95d0] large[2700 x=b1d0],large[26d0 x=95d0] large[2700 x=b1d0],09,ee,5e,a250,1
+2290,large[26d0 x=9680] large[2700 x=b280],large[26d0 x=9680] large[2700 x=b280],09,ee,5e,a300,1
+2291,large[26d0 x=9730] large[2700 x=b330],large[26d0 x=9730] large[2700 x=b330],09,ee,5e,a3b0,1
+2292,large[26d0 x=97e0] large[2700 x=b3e0],large[26d0 x=97e0] large[2700 x=b3e0],09,ee,5e,a460,1
+2293,large[26d0 x=9890] large[2700 x=b490],large[26d0 x=9890] large[2700 x=b490],09,ee,5e,a510,1
+2294,large[26d0 x=9940] large[2700 x=b540],large[26d0 x=9940] large[2700 x=b540],09,ee,5e,a5c0,1
+2295,large[26d0 x=99f0] large[2700 x=b5f0],large[26d0 x=99f0] large[2700 x=b5f0],09,ee,5e,a670,1
+2296,large[26d0 x=9aa0] large[2700 x=b6a0],large[26d0 x=9aa0] large[2700 x=b6a0],09,ee,5e,a720,1
+2297,large[26d0 x=9b50] large[2700 x=b750],large[26d0 x=9b50] large[2700 x=b750],09,ee,5e,a7d0,1
+2298,large[26d0 x=9c00] large[2700 x=b800],large[26d0 x=9c00] large[2700 x=b800],09,ee,5e,a880,1
+2299,large[26d0 x=9cb0] large[2700 x=b8b0],large[26d0 x=9cb0] large[2700 x=b8b0],09,ee,5e,a930,1
+2300,large[26d0 x=9d60] large[2700 x=b960],large[26d0 x=9d60] large[2700 x=b960],09,ee,5e,a9e0,1
+2301,large[26d0 x=9e10] large[2700 x=ba10],large[26d0 x=9e10] large[2700 x=ba10],09,ee,5e,aa90,1
+2302,large[26d0 x=9ec0] large[2700 x=bac0],large[26d0 x=9ec0] large[2700 x=bac0],09,ee,5e,ab40,1
+2303,large[26d0 x=9f70] large[2700 x=bb70],large[26d0 x=9f70] large[2700 x=bb70],09,ee,5e,abf0,1
+2304,large[26d0 x=a020] large[2700 x=bc20],large[26d0 x=a020] large[2700 x=bc20],09,ee,5e,aca0,1
+2305,large[26d0 x=a0d0] large[2700 x=bcd0],large[26d0 x=a0d0] large[2700 x=bcd0],09,ee,5e,ad50,1
+2306,large[26d0 x=a180] large[2700 x=bd80],large[26d0 x=a180] large[2700 x=bd80],09,ee,5e,ae00,1
+2307,large[26d0 x=a230] large[2700 x=be30],large[26d0 x=a230] large[2700 x=be30],09,ee,5e,aeb0,1
+2308,large[26d0 x=a2e0] large[2700 x=bee0],large[26d0 x=a2e0] large[2700 x=bee0],09,ee,5e,af60,1
+2309,large[26d0 x=a390] large[2700 x=bf90],large[26d0 x=a390] large[2700 x=bf90],09,ee,5e,b010,1
+2310,large[26d0 x=a440] large[2700 x=c040],large[26d0 x=a440] large[2700 x=c040],09,ee,5e,b0c0,1
+2311,large[26d0 x=a4f0] large[2700 x=c0f0],large[26d0 x=a4f0] large[2700 x=c0f0],09,ee,5e,b170,1
+2312,large[26d0 x=a5a0] large[2700 x=c1a0],large[26d0 x=a5a0] large[2700 x=c1a0],09,ee,5e,b220,1
+2313,large[26d0 x=a650] large[2700 x=c250],large[26d0 x=a650] large[2700 x=c250],09,ee,5e,b2d0,1
+2314,large[26d0 x=a700] large[2700 x=c300],large[26d0 x=a700] large[2700 x=c300],09,ee,5e,b380,1
+2315,large[26d0 x=a7b0] large[2700 x=c3b0],large[26d0 x=a7b0] large[2700 x=c3b0],09,ee,5e,b430,1
+2316,large[26d0 x=a860] large[2700 x=c460],large[26d0 x=a860] large[2700 x=c460],09,ee,5e,b4e0,1
+2317,large[26d0 x=a910] large[2700 x=c510],large[26d0 x=a910] large[2700 x=c510],09,ee,5e,b590,1
+2318,large[26d0 x=a9c0] large[2700 x=c5c0],large[26d0 x=a9c0] large[2700 x=c5c0],09,ee,5e,b640,1
+2319,large[26d0 x=aa70] large[2700 x=c670],large[26d0 x=aa70] large[2700 x=c670],09,ee,5e,b6f0,1
+2320,large[26d0 x=ab20] large[2700 x=c720],large[26d0 x=ab20] large[2700 x=c720],09,ee,5e,b7a0,1
+2321,large[26d0 x=abd0] large[2700 x=c7d0],large[26d0 x=abd0] large[2700 x=c7d0],09,ee,5e,b850,1
+2322,large[26d0 x=ac80] large[2700 x=c880],large[26d0 x=ac80] large[2700 x=c880],09,ee,5e,b900,1
+2323,large[26d0 x=ad30] large[2700 x=c930],large[26d0 x=ad30] large[2700 x=c930],09,ee,5e,b9b0,1
+2324,large[26d0 x=ade0] large[2700 x=c9e0],large[26d0 x=ade0] large[2700 x=c9e0],09,ee,5e,ba60,1
+2325,large[26d0 x=ae90] large[2700 x=ca90],large[26d0 x=ae90] large[2700 x=ca90],09,ee,5e,bb10,1
+2326,large[26d0 x=af40] large[2700 x=cb40],large[26d0 x=af40] large[2700 x=cb40],09,ee,5e,bbc0,1
+2327,large[26d0 x=aff0] large[2700 x=cbf0],large[26d0 x=aff0] large[2700 x=cbf0],09,ee,5e,bc70,1
+2328,large[26d0 x=b0a0] large[2700 x=cca0],large[26d0 x=b0a0] large[2700 x=cca0],09,ee,5e,bd20,1
+2329,large[26d0 x=b150] large[2700 x=cd50],large[26d0 x=b150] large[2700 x=cd50],09,ee,5e,bdd0,1
+2330,large[26d0 x=b200] large[2700 x=ce00],large[26d0 x=b200] large[2700 x=ce00],09,ee,5e,be80,1
+2331,large[26d0 x=b2b0] large[2700 x=ceb0],large[26d0 x=b2b0] large[2700 x=ceb0],09,ee,5e,bf30,1
+2332,large[26d0 x=b360] large[2700 x=cf60],large[26d0 x=b360] large[2700 x=cf60],09,ee,5e,bfe0,1
+2333,large[26d0 x=b410] large[2700 x=d010],large[26d0 x=b410] large[2700 x=d010],09,ee,5e,c090,1
+2334,large[26d0 x=b4c0] large[2700 x=d0c0],large[26d0 x=b4c0] large[2700 x=d0c0],09,ee,5e,c140,1
+2335,large[26d0 x=b570] large[2700 x=d170],large[26d0 x=b570] large[2700 x=d170],09,ee,5e,c1f0,1
+2336,large[26d0 x=b620] large[2700 x=d220],large[26d0 x=b620] large[2700 x=d220],09,ee,5e,c2a0,1
+2337,large[26d0 x=b6d0] large[2700 x=d2d0],large[26d0 x=b6d0] large[2700 x=d2d0],09,ee,5e,c350,1
+2338,large[26d0 x=b780] large[2700 x=d380],large[26d0 x=b780] large[2700 x=d380],09,ee,5e,c400,1
+2339,large[26d0 x=b830] large[2700 x=d430],large[26d0 x=b830] large[2700 x=d430],09,ee,5e,c4b0,1
+2340,large[26d0 x=b8e0] large[2700 x=d4e0],large[26d0 x=b8e0] large[2700 x=d4e0],09,ee,5e,c560,1
+2341,large[26d0 x=b990] large[2700 x=d590],large[26d0 x=b990] large[2700 x=d590],09,ee,5e,c610,1
+2342,large[26d0 x=ba40] large[2700 x=d640],large[26d0 x=ba40] large[2700 x=d640],09,ee,5e,c6c0,1
+2343,large[26d0 x=baf0] large[2700 x=d6f0],large[26d0 x=baf0] large[2700 x=d6f0],09,ee,5e,c770,1
+2344,large[26d0 x=bba0] large[2700 x=d7a0],large[26d0 x=bba0] large[2700 x=d7a0],09,ee,5e,c820,1
+2345,large[26d0 x=bc50] large[2700 x=d850],large[26d0 x=bc50] large[2700 x=d850],09,ee,5e,c8d0,1
+2346,large[26d0 x=bd00] large[2700 x=d900],large[26d0 x=bd00] large[2700 x=d900],09,ee,5e,c980,1
+2347,large[26d0 x=bdb0] large[2700 x=d9b0],large[26d0 x=bdb0] large[2700 x=d9b0],09,ee,5e,ca30,1
+2348,large[26d0 x=be60] large[2700 x=da60],large[26d0 x=be60] large[2700 x=da60],09,ee,5e,cae0,1
+2349,large[26d0 x=bf10] large[2700 x=db10],large[26d0 x=bf10] large[2700 x=db10],09,ee,5e,cb90,1
+2350,large[26d0 x=bfc0] large[2700 x=dbc0],large[26d0 x=bfc0] large[2700 x=dbc0],09,ee,5e,cc40,1
+2351,large[26d0 x=c070] large[2700 x=dc70],large[26d0 x=c070] large[2700 x=dc70],09,ee,5e,ccf0,1
+2352,large[26d0 x=c120] large[2700 x=dd20],large[26d0 x=c120] large[2700 x=dd20],09,ee,5e,cda0,1
+2353,large[26d0 x=c1d0] large[2700 x=ddd0],large[26d0 x=c1d0] large[2700 x=ddd0],09,ee,5e,ce50,1
+2354,large[26d0 x=c280] large[2700 x=de80],large[26d0 x=c280] large[2700 x=de80],09,ee,5e,cf00,1
+2355,large[26d0 x=c330] large[2700 x=df30],large[26d0 x=c330] large[2700 x=df30],09,ee,5e,cfb0,1
+2356,large[26d0 x=c3e0] large[2700 x=dfe0],large[26d0 x=c3e0] large[2700 x=dfe0],09,ee,5e,d060,1
+2357,large[26d0 x=c490] large[2700 x=e090],large[26d0 x=c490] large[2700 x=e090],09,ee,5e,d110,1
+2358,large[26d0 x=c540] large[2700 x=e140],large[26d0 x=c540] large[2700 x=e140],09,ee,5e,d1c0,1
+2359,large[26d0 x=c5f0] large[2700 x=e1f0],large[26d0 x=c5f0] large[2700 x=e1f0],09,ee,5e,d270,1
+2360,large[26d0 x=c6a0] large[2700 x=e2a0],large[26d0 x=c6a0] large[2700 x=e2a0],09,ee,5e,d320,1
+2361,large[26d0 x=c750] large[2700 x=e350],large[26d0 x=c750] large[2700 x=e350],09,ee,5e,d3d0,1
+2362,large[26d0 x=c800] large[2700 x=e400],large[26d0 x=c800] large[2700 x=e400],09,ee,5e,d480,1
+2363,large[26d0 x=c8b0] large[2700 x=e4b0],large[26d0 x=c8b0] large[2700 x=e4b0],09,ee,5e,d530,1
+2364,large[26d0 x=c830] large[2700 x=e430],large[26d0 x=c830] large[2700 x=e430],09,ee,5e,d4b0,1
+2365,large[26d0 x=c7b0] large[2700 x=e3b0],large[26d0 x=c7b0] large[2700 x=e3b0],09,ee,5e,d430,1
+2366,large[26d0 x=c730] large[2700 x=e330],large[26d0 x=c730] large[2700 x=e330],09,ee,5e,d3b0,1
+2367,large[26d0 x=c6b0] large[2700 x=e2b0],large[26d0 x=c6b0] large[2700 x=e2b0],09,ee,5e,d330,1
+2368,large[26d0 x=c4b0] large[2700 x=e0b0],large[26d0 x=c4b0] large[2700 x=e0b0],09,ee,5e,d130,1
+2369,large[26d0 x=c2b0] large[2700 x=deb0],large[26d0 x=c2b0] large[2700 x=deb0],09,ee,5e,cf30,1
+2370,large[26d0 x=c0b0] large[2700 x=dcb0],large[26d0 x=c0b0] large[2700 x=dcb0],09,ee,5e,cd30,1
+2371,large[26d0 x=beb0] large[2700 x=dab0],large[26d0 x=beb0] large[2700 x=dab0],09,ee,5e,cb30,1
+2372,large[26d0 x=bcb0] large[2700 x=d8b0],large[26d0 x=bcb0] large[2700 x=d8b0],09,ee,5e,c930,1
+2373,large[26d0 x=bab0] large[2700 x=d6b0],large[26d0 x=bab0] large[2700 x=d6b0],09,ee,5e,c730,1
+2374,large[26d0 x=b8b0] large[2700 x=d4b0],large[26d0 x=b8b0] large[2700 x=d4b0],09,ee,5e,c530,1
+2375,large[26d0 x=b6b0] large[2700 x=d2b0],large[26d0 x=b6b0] large[2700 x=d2b0],09,ee,5e,c330,1
+2376,large[26d0 x=b4b0] large[2700 x=d0b0],large[26d0 x=b4b0] large[2700 x=d0b0],09,ee,5e,c130,1
+2377,large[26d0 x=b2b0] large[2700 x=ceb0],large[26d0 x=b2b0] large[2700 x=ceb0],09,ee,5e,bf30,1
+2378,large[26d0 x=b0b0] large[2700 x=ccb0],large[26d0 x=b0b0] large[2700 x=ccb0],09,ee,5e,bd30,1
+2379,large[26d0 x=aeb0] large[2700 x=cab0],large[26d0 x=aeb0] large[2700 x=cab0],09,ee,5e,bb30,1
+2380,large[26d0 x=acb0] large[2700 x=c8b0],large[26d0 x=acb0] large[2700 x=c8b0],09,ee,5e,b930,1
+2381,large[26d0 x=aab0] large[2700 x=c6b0],large[26d0 x=aab0] large[2700 x=c6b0],09,ee,5e,b730,1
+2382,large[26d0 x=a8b0] large[2700 x=c4b0],large[26d0 x=a8b0] large[2700 x=c4b0],09,ee,5e,b530,1
+2383,large[26d0 x=a6b0] large[2700 x=c2b0],large[26d0 x=a6b0] large[2700 x=c2b0],09,ee,5e,b330,1
+2384,large[26d0 x=a4b0] large[2700 x=c0b0],large[26d0 x=a4b0] large[2700 x=c0b0],09,ee,5e,b130,1
+2385,large[26d0 x=a2b0] large[2700 x=beb0],large[26d0 x=a2b0] large[2700 x=beb0],09,ee,5e,af30,1
+2386,large[26d0 x=a0b0] large[2700 x=bcb0],large[26d0 x=a0b0] large[2700 x=bcb0],09,ee,5e,ad30,1
+2387,large[26d0 x=9eb0] large[2700 x=bab0],large[26d0 x=9eb0] large[2700 x=bab0],09,ee,5e,ab30,1
+2388,large[26d0 x=9cb0] large[2700 x=b8b0],large[26d0 x=9cb0] large[2700 x=b8b0],09,ee,5e,a930,1
+2389,large[26d0 x=9ab0] large[2700 x=b6b0],large[26d0 x=9ab0] large[2700 x=b6b0],09,ee,5e,a730,1
+2390,large[26d0 x=98b0] large[2700 x=b4b0],large[26d0 x=98b0] large[2700 x=b4b0],09,ee,5e,a530,1
+2391,large[26d0 x=96b0] large[2700 x=b2b0],large[26d0 x=96b0] large[2700 x=b2b0],09,ee,5e,a330,1
+2392,large[26d0 x=94b0] large[2700 x=b0b0],large[26d0 x=94b0] large[2700 x=b0b0],09,ee,5e,a130,1
+2393,large[26d0 x=92b0] large[2700 x=aeb0],large[26d0 x=92b0] large[2700 x=aeb0],09,ee,5e,9f30,1
+2394,large[26d0 x=90b0] large[2700 x=acb0],large[26d0 x=90b0] large[2700 x=acb0],09,ee,5e,9d30,1
+2395,large[26d0 x=8eb0] large[2700 x=aab0],large[26d0 x=8eb0] large[2700 x=aab0],09,ee,5e,9b30,1
+2396,large[26d0 x=8e30] large[2700 x=aa30],large[26d0 x=8e30] large[2700 x=aa30],09,ee,5e,9ab0,1
+2397,large[26d0 x=8db0] large[2700 x=a9b0],large[26d0 x=8db0] large[2700 x=a9b0],09,ee,5e,9a30,1
+2398,large[26d0 x=8d30] large[2700 x=a930],large[26d0 x=8d30] large[2700 x=a930],09,ee,5e,99b0,1
+2399,large[26d0 x=8cb0] large[2700 x=a8b0],large[26d0 x=8cb0] large[2700 x=a8b0],09,ee,5e,9930,1
+2400,large[26d0 x=8c30] large[2700 x=a830],large[26d0 x=8c30] large[2700 x=a830],09,ee,5e,98b0,1
+2401,large[26d0 x=8bb0] large[2700 x=a7b0],large[26d0 x=8bb0] large[2700 x=a7b0],09,ee,5e,9830,1
+2402,large[26d0 x=8b30] large[2700 x=a730],large[26d0 x=8b30] large[2700 x=a730],09,ee,5e,97b0,1
+2403,large[26d0 x=8ab0] large[2700 x=a6b0],large[26d0 x=8ab0] large[2700 x=a6b0],09,ee,5e,9730,1
+2404,large[26d0 x=8a30] large[2700 x=a630],large[26d0 x=8a30] large[2700 x=a630],09,ee,5e,96b0,1
+2405,large[26d0 x=89b0] large[2700 x=a5b0],large[26d0 x=89b0] large[2700 x=a5b0],09,ee,5e,9630,1
+2406,large[26d0 x=8930] large[2700 x=a530],large[26d0 x=8930] large[2700 x=a530],09,ee,5e,95b0,1
+2407,large[26d0 x=88b0] large[2700 x=a4b0],large[26d0 x=88b0] large[2700 x=a4b0],09,ee,5e,9530,1
+2408,large[26d0 x=8830] large[2700 x=a430],large[26d0 x=8830] large[2700 x=a430],09,ee,5e,94b0,1
+2409,large[26d0 x=87b0] large[2700 x=a3b0],large[26d0 x=87b0] large[2700 x=a3b0],09,ee,5e,9430,1
+2410,large[26d0 x=8730] large[2700 x=a330],large[26d0 x=8730] large[2700 x=a330],09,ee,5e,93b0,1
+2411,large[26d0 x=87e0] large[2700 x=a3e0],large[26d0 x=87e0] large[2700 x=a3e0],09,ee,5e,9460,1
+2412,large[26d0 x=8890] large[2700 x=a490],large[26d0 x=8890] large[2700 x=a490],09,ee,5e,9510,1
+2413,large[26d0 x=8940] large[2700 x=a540],large[26d0 x=8940] large[2700 x=a540],09,ee,5e,95c0,1
+2414,large[26d0 x=89f0] large[2700 x=a5f0],large[26d0 x=89f0] large[2700 x=a5f0],09,ee,5e,9670,1
+2415,large[26d0 x=8aa0] large[2700 x=a6a0],large[26d0 x=8aa0] large[2700 x=a6a0],09,ee,5e,9720,1
+2416,large[26d0 x=8b50] large[2700 x=a750],large[26d0 x=8b50] large[2700 x=a750],09,ee,5e,97d0,1
+2417,large[26d0 x=8c00] large[2700 x=a800],large[26d0 x=8c00] large[2700 x=a800],09,ee,5e,9880,1
+2418,large[26d0 x=8cb0] large[2700 x=a8b0],large[26d0 x=8cb0] large[2700 x=a8b0],09,ee,5e,9930,1
+2419,large[26d0 x=8d60] large[2700 x=a960],large[26d0 x=8d60] large[2700 x=a960],09,ee,5e,99e0,1
+2420,large[26d0 x=8ce0] large[2700 x=a8e0],large[26d0 x=8ce0] large[2700 x=a8e0],09,ee,5e,9960,1
+2421,large[26d0 x=8c60] large[2700 x=a860],large[26d0 x=8c60] large[2700 x=a860],09,ee,5e,98e0,1
+2422,large[26d0 x=8be0] large[2700 x=a7e0],large[26d0 x=8be0] large[2700 x=a7e0],09,ee,5e,9860,1
+2423,large[26d0 x=8b60] large[2700 x=a760],large[26d0 x=8b60] large[2700 x=a760],09,ee,5e,97e0,1
+2424,large[26d0 x=8960] large[2700 x=a560],large[26d0 x=8960] large[2700 x=a560],09,ee,5e,95e0,1
+2425,large[26d0 x=8760] large[2700 x=a360],large[26d0 x=8760] large[2700 x=a360],09,ee,5e,93e0,1
+2426,large[26d0 x=8560] large[2700 x=a160],large[26d0 x=8560] large[2700 x=a160],09,ee,5e,91e0,1
+2427,large[26d0 x=8360] large[2700 x=9f60],large[26d0 x=8360] large[2700 x=9f60],09,ee,5e,8fe0,1
+2428,large[26d0 x=8160] large[2700 x=9d60],large[26d0 x=8160] large[2700 x=9d60],09,ee,5e,8de0,1
+2429,large[26d0 x=7f60] large[2700 x=9b60],large[26d0 x=7f60] large[2700 x=9b60],09,ee,5e,8be0,1
+2430,large[26d0 x=7d60] large[2700 x=9960],large[26d0 x=7d60] large[2700 x=9960],09,ee,5e,89e0,1
+2431,large[26d0 x=7b60] large[2700 x=9760],large[26d0 x=7b60] large[2700 x=9760],09,ee,5e,87e0,1
+2432,large[26d0 x=7960] large[2700 x=9560],large[26d0 x=7960] large[2700 x=9560],09,ee,5e,85e0,1
+2433,large[26d0 x=7760] large[2700 x=9360],large[26d0 x=7760] large[2700 x=9360],09,ee,5e,83e0,1
+2434,large[26d0 x=7560] large[2700 x=9160],large[26d0 x=7560] large[2700 x=9160],09,ee,5e,81e0,1
+2435,large[26d0 x=7360] large[2700 x=8f60],large[26d0 x=7360] large[2700 x=8f60],09,ee,5e,7fe0,1
+2436,large[26d0 x=7160] large[2700 x=8d60],large[26d0 x=7160] large[2700 x=8d60],09,ee,5e,7de0,1
+2437,large[26d0 x=6f60] large[2700 x=8b60],large[26d0 x=6f60] large[2700 x=8b60],09,ee,5e,7be0,1
+2438,large[26d0 x=6d60] large[2700 x=8960],large[26d0 x=6d60] large[2700 x=8960],09,ee,5e,79e0,1
+2439,large[26d0 x=6b60] large[2700 x=8760],large[26d0 x=6b60] large[2700 x=8760],09,ee,5e,77e0,1
+2440,large[26d0 x=6960] large[2700 x=8560],large[26d0 x=6960] large[2700 x=8560],09,ee,5e,75e0,1
+2441,large[26d0 x=6760] large[2700 x=8360],large[26d0 x=6760] large[2700 x=8360],09,ee,5e,73e0,1
+2442,large[26d0 x=6560] large[2700 x=8160],large[26d0 x=6560] large[2700 x=8160],09,ee,5e,71e0,1
+2443,large[26d0 x=6360] large[2700 x=7f60],large[26d0 x=6360] large[2700 x=7f60],09,ee,5e,6fe0,1
+2444,large[26d0 x=6160] large[2700 x=7d60],large[26d0 x=6160] large[2700 x=7d60],09,ee,5e,6de0,1
+2445,large[26d0 x=5f60] large[2700 x=7b60],large[26d0 x=5f60] large[2700 x=7b60],09,ee,5e,6be0,1
+2446,large[26d0 x=5d60] large[2700 x=7960],large[26d0 x=5d60] large[2700 x=7960],09,ee,5e,69e0,1
+2447,large[26d0 x=5b60] large[2700 x=7760],large[26d0 x=5b60] large[2700 x=7760],09,ee,5e,67e0,1
+2448,large[26d0 x=5960] large[2700 x=7560],large[26d0 x=5960] large[2700 x=7560],09,ee,5e,65e0,1
+2449,large[26d0 x=5760] large[2700 x=7360],large[26d0 x=5760] large[2700 x=7360],09,ee,5e,63e0,1
+2450,large[26d0 x=5560] large[2700 x=7160],large[26d0 x=5560] large[2700 x=7160],09,ee,5e,61e0,1
+2451,large[26d0 x=5360] large[2700 x=6f60],large[26d0 x=5360] large[2700 x=6f60],09,ee,5e,5fe0,1
+2452,large[26d0 x=5160] large[2700 x=6d60],large[26d0 x=5160] large[2700 x=6d60],09,ee,5e,5de0,1
+2453,large[26d0 x=4f60] large[2700 x=6b60],large[26d0 x=4f60] large[2700 x=6b60],09,ee,5e,5be0,1
+2454,large[26d0 x=4d60] large[2700 x=6960],large[26d0 x=4d60] large[2700 x=6960],09,ee,5e,59e0,1
+2455,large[26d0 x=4b60] large[2700 x=6760],large[26d0 x=4b60] large[2700 x=6760],09,ee,5e,57e0,1
+2456,large[26d0 x=4960] large[2700 x=6560],large[26d0 x=4960] large[2700 x=6560],09,ee,5e,55e0,1
+2457,large[26d0 x=4760] large[2700 x=6360],large[26d0 x=4760] large[2700 x=6360],09,ee,5e,53e0,1
+2458,large[26d0 x=4560] large[2700 x=6160],large[26d0 x=4560] large[2700 x=6160],09,ee,5e,51e0,1
+2459,large[26d0 x=4360] large[2700 x=5f60],large[26d0 x=4360] large[2700 x=5f60],09,ee,5e,4fe0,1
+2460,large[26d0 x=4160] large[2700 x=5d60],large[26d0 x=4160] large[2700 x=5d60],09,ee,5e,4de0,1
+2461,large[26d0 x=3f60] large[2700 x=5b60],large[26d0 x=3f60] large[2700 x=5b60],09,ee,5e,4be0,1
+2462,large[26d0 x=3d60] large[2700 x=5960],large[26d0 x=3d60] large[2700 x=5960],09,ee,5e,49e0,1
+2463,large[26d0 x=3b60] large[2700 x=5760],large[26d0 x=3b60] large[2700 x=5760],09,ee,5e,47e0,1
+2464,large[26d0 x=3960] large[2700 x=5560],large[26d0 x=3960] large[2700 x=5560],09,ee,5e,45e0,1
+2465,large[26d0 x=3760] large[2700 x=5360],large[26d0 x=3760] large[2700 x=5360],09,ee,5e,43e0,1
+2466,large[26d0 x=3560] large[2700 x=5160],large[26d0 x=3560] large[2700 x=5160],09,ee,5e,41e0,1
+2467,large[26d0 x=3360] large[2700 x=4f60],large[26d0 x=3360] large[2700 x=4f60],09,ee,5e,3fe0,1
+2468,large[26d0 x=3160] large[2700 x=4d60],large[26d0 x=3160] large[2700 x=4d60],09,ee,5e,3de0,1
+2469,large[26d0 x=2f60] large[2700 x=4b60],large[26d0 x=2f60] large[2700 x=4b60],09,ee,5e,3be0,1
+2470,large[26d0 x=2d60] large[2700 x=4960],large[26d0 x=2d60] large[2700 x=4960],09,ee,5e,39e0,1
+2471,large[26d0 x=2b60] large[2700 x=4760],large[26d0 x=2b60] large[2700 x=4760],09,ee,5e,37e0,1
+2472,large[26d0 x=2960] large[2700 x=4560],large[26d0 x=2960] large[2700 x=4560],09,ee,5e,35e0,1
+2473,large[26d0 x=2760] large[2700 x=4360],large[26d0 x=2760] large[2700 x=4360],09,ee,5e,33e0,1
+2474,large[26d0 x=2560] large[2700 x=4160],large[26d0 x=2560] large[2700 x=4160],09,ee,5e,31e0,1
+2475,large[26d0 x=2360] large[2700 x=3f60],large[26d0 x=2360] large[2700 x=3f60],09,ee,5e,2fe0,1
+2476,large[26d0 x=2160] large[2700 x=3d60],large[26d0 x=2160] large[2700 x=3d60],09,ee,5e,2de0,1
+2477,large[26d0 x=1f60] large[2700 x=3b60],large[26d0 x=1f60] large[2700 x=3b60],09,ee,5e,2be0,1
+2478,large[26d0 x=1d60] large[2700 x=3960],large[26d0 x=1d60] large[2700 x=3960],09,ee,5e,29e0,1
+2479,large[26d0 x=1b60] large[2700 x=3760],large[26d0 x=1b60] large[2700 x=3760],09,ee,5e,27e0,1
+2480,large[26d0 x=1960] large[2700 x=3560],large[26d0 x=1960] large[2700 x=3560],09,ee,5e,25e0,1
+2481,large[26d0 x=1760] large[2700 x=3360],large[26d0 x=1760] large[2700 x=3360],09,ee,5e,23e0,1
+2482,large[26d0 x=1560] large[2700 x=3160],large[26d0 x=1560] large[2700 x=3160],09,ee,5e,21e0,1
+2483,large[26d0 x=1360] large[2700 x=2f60],large[26d0 x=1360] large[2700 x=2f60],09,ee,5e,1fe0,1
+2484,large[26d0 x=1160] large[2700 x=2d60],large[26d0 x=1160] large[2700 x=2d60],09,ee,5e,1de0,1
+2485,large[26d0 x=0f60] large[2700 x=2b60],large[26d0 x=0f60] large[2700 x=2b60],09,ee,5e,1be0,1
+2486,large[26d0 x=0d60] large[2700 x=2960],large[26d0 x=0d60] large[2700 x=2960],09,ee,5e,19e0,1
+2487,large[26d0 x=0b60] large[2700 x=2760],large[26d0 x=0b60] large[2700 x=2760],09,ee,5e,17e0,1
+2488,large[26d0 x=0960] large[2700 x=2560],large[26d0 x=0960] large[2700 x=2560],09,ee,5e,15e0,1
+2489,large[26d0 x=0760] large[2700 x=2360],large[26d0 x=0760] large[2700 x=2360],09,ee,5e,13e0,1
+2490,large[26d0 x=0560] large[2700 x=2160],large[26d0 x=0560] large[2700 x=2160],09,ee,5e,11e0,1
+2491,large[26d0 x=0360] large[2700 x=1f60],large[26d0 x=0360] large[2700 x=1f60],09,ee,5e,0fe0,1
+2492,large[26d0 x=0160] large[2700 x=1d60],large[26d0 x=0160] large[2700 x=1d60],09,ee,5e,0de0,1
+2493,large[2700 x=1b60],large[2700 x=1b60],09,ee,5e,0be0,1
+2494,large[2700 x=1960],large[2700 x=1960],09,ee,5e,09e0,1
+2495,large[2700 x=1760],large[2700 x=1760],09,ee,5e,07e0,1
+2496,large[2700 x=1560],large[2700 x=1560],09,ee,5e,05e0,1
+2497,large[2700 x=1360],large[2700 x=1360],09,ee,5e,03e0,1
+2498,large[2700 x=1160],large[2700 x=1160],09,ee,5e,01e0,1
+2499,large[26d0 x=fd80] large[2700 x=0f60],large[26d0 x=fd80] large[2700 x=0f60],0a,f6,5e,f600,1
+2500,large[26d0 x=fb80] large[2700 x=0d60],large[26d0 x=fb80] large[2700 x=0d60],0a,f6,5e,f400,1
+2501,large[26d0 x=f980] large[2700 x=0b60],large[26d0 x=f980] large[2700 x=0b60],0a,f6,5e,f200,1
+2502,large[26d0 x=f780] large[2700 x=0960],large[26d0 x=f780] large[2700 x=0960],0a,f6,5e,f000,1
+2503,large[26d0 x=f580] large[2700 x=0760],large[26d0 x=f580] large[2700 x=0760],0a,f6,5e,ee00,1
+2504,large[26d0 x=f380] large[2700 x=0560],large[26d0 x=f380] large[2700 x=0560],0a,f6,5e,ec00,1
+2505,large[26d0 x=f180] large[2700 x=0360],large[26d0 x=f180] large[2700 x=0360],0a,f6,5e,ea00,1
+2506,large[26d0 x=ef80] large[2700 x=0160],large[26d0 x=ef80] large[2700 x=0160],0a,f6,5e,e800,1
+2507,large[26d0 x=ed80],large[26d0 x=ed80],0a,f6,5e,e600,1
+2508,large[26d0 x=eb80],large[26d0 x=eb80],0a,f6,5e,e400,1
+2509,large[26d0 x=e980],large[26d0 x=e980],0a,f6,5e,e200,1
+2510,large[26d0 x=e780],large[26d0 x=e780],0a,f6,5e,e000,1
+2511,large[26d0 x=e580],large[26d0 x=e580],0a,f6,5e,de00,1
+2512,large[26d0 x=e380],large[26d0 x=e380],0a,f6,5e,dc00,1
+2513,large[26d0 x=e180],large[26d0 x=e180],0a,f6,5e,da00,1
+2514,large[26d0 x=df80],large[26d0 x=df80],0a,f6,5e,d800,1
+2515,large[26d0 x=dd80],large[26d0 x=dd80],0a,f6,5e,d600,1
+2516,large[26d0 x=db80],large[26d0 x=db80],0a,f6,5e,d400,1
+2517,large[26d0 x=d980],large[26d0 x=d980],0a,f6,5e,d200,1
+2518,large[26d0 x=d780],large[26d0 x=d780],0a,f6,5e,d000,1
+2519,large[26d0 x=d580],large[26d0 x=d580],0a,f6,5e,ce00,1
+2520,large[26d0 x=d380],large[26d0 x=d380],0a,f6,5e,cc00,1
+2521,large[26d0 x=d180],large[26d0 x=d180],0a,f6,5e,ca00,1
+2522,large[26d0 x=cf80],large[26d0 x=cf80],0a,f6,5e,c800,1
+2523,large[26d0 x=cd80],large[26d0 x=cd80],0a,f6,5e,c600,1
+2524,large[26d0 x=cb80],large[26d0 x=cb80],0a,f6,5e,c400,1
+2525,large[26d0 x=c980],large[26d0 x=c980],0a,f6,5e,c200,1
+2526,large[26d0 x=c780],large[26d0 x=c780],0a,f6,5e,c000,1
+2527,large[26d0 x=c580],large[26d0 x=c580],0a,f6,5e,be00,1
+2528,large[26d0 x=c380],large[26d0 x=c380],0a,f6,5e,bc00,1
+2529,large[26d0 x=c180],large[26d0 x=c180],0a,f6,5e,ba00,1
+2530,large[26d0 x=bf80],large[26d0 x=bf80],0a,f6,5e,b800,1
+2531,large[26d0 x=bd80],large[26d0 x=bd80],0a,f6,5e,b600,1
+2532,large[26d0 x=bb80],large[26d0 x=bb80],0a,f6,5e,b400,1
+2533,large[26d0 x=b980],large[26d0 x=b980],0a,f6,5e,b200,1
+2534,large[26d0 x=b780],large[26d0 x=b780],0a,f6,5e,b000,1
+2535,large[26d0 x=b580],large[26d0 x=b580],0a,f6,5e,ae00,1
+2536,large[26d0 x=b380],large[26d0 x=b380],0a,f6,5e,ac00,1
+2537,large[26d0 x=b180],large[26d0 x=b180],0a,f6,5e,aa00,1
+2538,large[26d0 x=af80],large[26d0 x=af80],0a,f6,5e,a800,1
+2539,large[26d0 x=ad80],large[26d0 x=ad80],0a,f6,5e,a600,1
+2540,large[26d0 x=ab80],large[26d0 x=ab80],0a,f6,5e,a400,1
+2541,large[26d0 x=a980],large[26d0 x=a980],0a,f6,5e,a200,1
+2542,large[26d0 x=a900],large[26d0 x=a900],0a,f6,5e,a180,1
+2543,large[26d0 x=a880],large[26d0 x=a880],0a,f6,5e,a100,1
+2544,large[26d0 x=a800],large[26d0 x=a800],0a,f6,5e,a080,1
+2545,large[26d0 x=a780],large[26d0 x=a780],0a,f6,5e,a000,1
+2546,large[26d0 x=a830],large[26d0 x=a830],0a,f6,5e,a0b0,1
+2547,large[26d0 x=a8e0],large[26d0 x=a8e0],0a,f6,5e,a160,1
+2548,large[26d0 x=a990],large[26d0 x=a990],0a,f6,5e,a210,1
+2549,large[26d0 x=aa40],large[26d0 x=aa40],0a,f6,5e,a2c0,1
+2550,large[26d0 x=aaf0],large[26d0 x=aaf0],0a,f6,5e,a370,1
+2551,large[26d0 x=aba0],large[26d0 x=aba0],0a,f6,5e,a420,1
+2552,large[26d0 x=ac50],large[26d0 x=ac50],0a,f6,5e,a4d0,1
+2553,large[26d0 x=ad00],large[26d0 x=ad00],0a,f6,5e,a580,1
+2554,large[26d0 x=adb0],large[26d0 x=adb0],0a,f6,5e,a630,1
+2555,large[26d0 x=ae60],large[26d0 x=ae60],0a,f6,5e,a6e0,1
+2556,large[26d0 x=af10],large[26d0 x=af10],0a,f6,5e,a790,1
+2557,large[26d0 x=afc0],large[26d0 x=afc0],0a,f6,5e,a840,1
+2558,large[26d0 x=b070],large[26d0 x=b070],0a,f6,5e,a8f0,1
+2559,large[26d0 x=b120],large[26d0 x=b120],0a,f6,5e,a9a0,1
+2560,large[26d0 x=b1d0],large[26d0 x=b1d0],0a,f6,5e,aa50,1
+2561,large[26d0 x=b280],large[26d0 x=b280],0a,f6,5e,ab00,1
+2562,large[26d0 x=b330],large[26d0 x=b330],0a,f6,5e,abb0,1
+2563,large[26d0 x=b3e0],large[26d0 x=b3e0],0a,f6,5e,ac60,1
+2564,large[26d0 x=b490],large[26d0 x=b490],0a,f6,5e,ad10,1
+2565,large[26d0 x=b540],large[26d0 x=b540],0a,f6,5e,adc0,1
+2566,large[26d0 x=b5f0],large[26d0 x=b5f0],0a,f6,5e,ae70,1
+2567,large[26d0 x=b6a0],large[26d0 x=b6a0],0a,f6,5e,af20,1
+2568,large[26d0 x=b750],large[26d0 x=b750],0a,f6,5e,afd0,1
+2569,large[26d0 x=b6d0],large[26d0 x=b6d0],0a,f6,5e,af50,1
+2570,large[26d0 x=b650],large[26d0 x=b650],0a,f6,5e,aed0,1
+2571,large[26d0 x=b5d0],large[26d0 x=b5d0],0a,f6,5e,ae50,1
+2572,large[26d0 x=b3d0],large[26d0 x=b3d0],0a,f6,5e,ac50,1
+2573,large[26d0 x=b1d0],large[26d0 x=b1d0],0a,f6,5e,aa50,1
+2574,large[26d0 x=afd0],large[26d0 x=afd0],0a,f6,5e,a850,1
+2575,large[26d0 x=add0],large[26d0 x=add0],0a,f6,5e,a650,1
+2576,large[26d0 x=abd0],large[26d0 x=abd0],0a,f6,5e,a450,1
+2577,large[26d0 x=a9d0],large[26d0 x=a9d0],0a,f6,5e,a250,1
+2578,large[26d0 x=a7d0],large[26d0 x=a7d0],0a,f6,5e,a050,1
+2579,large[26d0 x=a5d0],large[26d0 x=a5d0],0a,f6,5e,9e50,1
+2580,large[26d0 x=a3d0],large[26d0 x=a3d0],0a,f6,5e,9c50,1
+2581,large[26d0 x=a1d0],large[26d0 x=a1d0],0a,f6,5e,9a50,1
+2582,large[26d0 x=9fd0],large[26d0 x=9fd0],0a,f6,5e,9850,1
+2583,large[26d0 x=9dd0],large[26d0 x=9dd0],0a,f6,5e,9650,1
+2584,large[26d0 x=9bd0],large[26d0 x=9bd0],0a,f6,5e,9450,1
+2585,large[26d0 x=99d0],large[26d0 x=99d0],0a,f6,5e,9250,1
+2586,large[26d0 x=97d0],large[26d0 x=97d0],0a,f6,5e,9050,1
+2587,large[26d0 x=95d0],large[26d0 x=95d0],0a,f6,5e,8e50,1
+2588,large[26d0 x=93d0],large[26d0 x=93d0],0a,f6,5e,8c50,1
+2589,large[26d0 x=91d0],large[26d0 x=91d0],0a,f6,5e,8a50,1
+2590,large[26d0 x=8fd0],large[26d0 x=8fd0],0a,f6,5e,8850,1
+2591,large[26d0 x=8dd0],large[26d0 x=8dd0],0a,f6,5e,8650,1
+2592,large[26d0 x=8bd0],large[26d0 x=8bd0],0a,f6,5e,8450,1
+2593,large[26d0 x=89d0],large[26d0 x=89d0],0a,f6,5e,8250,1
+2594,large[26d0 x=87d0],large[26d0 x=87d0],0a,f6,5e,8050,1
+2595,large[26d0 x=85d0],large[26d0 x=85d0],0a,f6,5e,7e50,1
+2596,large[26d0 x=83d0],large[26d0 x=83d0],0a,f6,5e,7c50,1
+2597,large[26d0 x=81d0],large[26d0 x=81d0],0a,f6,5e,7a50,1
+2598,large[26d0 x=7fd0],large[26d0 x=7fd0],0a,f6,5e,7850,1
+2599,large[26d0 x=7dd0],large[26d0 x=7dd0],0a,f6,5e,7650,1
+2600,large[26d0 x=7bd0],large[26d0 x=7bd0],0a,f6,5e,7450,1
+2601,large[26d0 x=79d0],large[26d0 x=79d0],0a,f6,5e,7250,1
+2602,large[26d0 x=77d0],large[26d0 x=77d0],0a,f6,5e,7050,1
+2603,large[26d0 x=75d0],large[26d0 x=75d0],0a,f6,5e,6e50,1
+2604,large[26d0 x=73d0],large[26d0 x=73d0],0a,f6,5e,6c50,1
+2605,large[26d0 x=71d0],large[26d0 x=71d0],0a,f6,5e,6a50,1
+2606,large[26d0 x=6fd0],large[26d0 x=6fd0],0a,f6,5e,6850,1
+2607,large[26d0 x=6dd0],large[26d0 x=6dd0],0a,f6,5e,6650,1
+2608,large[26d0 x=6bd0],large[26d0 x=6bd0],0a,f6,5e,6450,1
+2609,large[26d0 x=69d0],large[26d0 x=69d0],0a,f6,5e,6250,1
+2610,large[26d0 x=67d0],large[26d0 x=67d0],0a,f6,5e,6050,1
+2611,large[26d0 x=65d0],large[26d0 x=65d0],0a,f6,5e,5e50,1
+2612,large[26d0 x=63d0],large[26d0 x=63d0],0a,f6,5e,5c50,1
+2613,large[26d0 x=61d0],large[26d0 x=61d0],0a,f6,5e,5a50,1
+2614,large[26d0 x=5fd0],large[26d0 x=5fd0],0a,f6,5e,5850,1
+2615,large[26d0 x=5dd0],large[26d0 x=5dd0],0a,f6,5e,5650,1
+2616,large[26d0 x=5bd0],large[26d0 x=5bd0],0a,f6,5e,5450,1
+2617,large[26d0 x=59d0],large[26d0 x=59d0],0a,f6,5e,5250,1
+2618,large[26d0 x=57d0],large[26d0 x=57d0],0a,f6,5e,5050,1
+2619,large[26d0 x=55d0],large[26d0 x=55d0],0a,f6,5e,4e50,1
+2620,large[26d0 x=53d0],large[26d0 x=53d0],0a,f6,5e,4c50,1
+2621,large[26d0 x=51d0],large[26d0 x=51d0],0a,f6,5e,4a50,1
+2622,large[26d0 x=4fd0],large[26d0 x=4fd0],0a,f6,5e,4850,1
+2623,large[26d0 x=4dd0],large[26d0 x=4dd0],0a,f6,5e,4650,1
+2624,large[26d0 x=4bd0],large[26d0 x=4bd0],0a,f6,5e,4450,1
+2625,large[26d0 x=49d0],large[26d0 x=49d0],0a,f6,5e,4250,1
+2626,large[26d0 x=47d0],large[26d0 x=47d0],0a,f6,5e,4050,1
+2627,large[26d0 x=45d0],large[26d0 x=45d0],0a,f6,5e,3e50,1
+2628,large[26d0 x=43d0],large[26d0 x=43d0],0a,f6,5e,3c50,1
+2629,large[26d0 x=41d0],large[26d0 x=41d0],0a,f6,5e,3a50,1
+2630,large[26d0 x=3fd0],large[26d0 x=3fd0],0a,f6,5e,3850,1
+2631,large[26d0 x=3dd0],large[26d0 x=3dd0],0a,f6,5e,3650,1
+2632,large[26d0 x=3bd0],large[26d0 x=3bd0],0a,f6,5e,3450,1
+2633,large[26d0 x=39d0],large[26d0 x=39d0],0a,f6,5e,3250,1
+2634,large[26d0 x=37d0],large[26d0 x=37d0],0a,f6,5e,3050,1
+2635,large[26d0 x=35d0],large[26d0 x=35d0],0a,f6,5e,2e50,1
+2636,large[26d0 x=33d0],large[26d0 x=33d0],0a,f6,5e,2c50,1
+2637,large[26d0 x=31d0],large[26d0 x=31d0],0a,f6,5e,2a50,1
+2638,large[26d0 x=2fd0],large[26d0 x=2fd0],0a,f6,5e,2850,1
+2639,large[26d0 x=2dd0],large[26d0 x=2dd0],0a,f6,5e,2650,1
+2640,large[26d0 x=2bd0],large[26d0 x=2bd0],0a,f6,5e,2450,1
+2641,large[26d0 x=29d0],large[26d0 x=29d0],0a,f6,5e,2250,1
+2642,large[26d0 x=27d0],large[26d0 x=27d0],0a,f6,5e,2050,1
+2643,large[26d0 x=25d0],large[26d0 x=25d0],0a,f6,5e,1e50,1
+2644,large[26d0 x=23d0],large[26d0 x=23d0],0a,f6,5e,1c50,1
+2645,large[26d0 x=21d0],large[26d0 x=21d0],0a,f6,5e,1a50,1
+2646,large[26d0 x=1fd0],large[26d0 x=1fd0],0a,f6,5e,1850,1
+2647,large[26d0 x=1dd0],large[26d0 x=1dd0],0a,f6,5e,1650,1
+2648,large[26d0 x=1bd0],large[26d0 x=1bd0],0a,f6,5e,1450,1
+2649,large[26d0 x=19d0],large[26d0 x=19d0],0a,f6,5e,1250,1
+2650,large[26d0 x=17d0],large[26d0 x=17d0],0a,f6,5e,1050,1
+2651,large[26d0 x=15d0],large[26d0 x=15d0],0a,f6,5e,0e50,1
+2652,large[26d0 x=13d0],large[26d0 x=13d0],0a,f6,5e,0c50,1
+2653,large[26d0 x=11d0],large[26d0 x=11d0],0a,f6,5e,0a50,1
+2654,large[26d0 x=0fd0],large[26d0 x=0fd0],0a,f6,5e,0850,1
+2655,large[26d0 x=0dd0],large[26d0 x=0dd0],0a,f6,5e,0650,1
+2656,large[26d0 x=0e80],large[26d0 x=0e80],0a,f6,5e,0700,1
+2657,large[26d0 x=0f30],large[26d0 x=0f30],0a,f6,5e,07b0,1
+2658,large[26d0 x=0fe0],large[26d0 x=0fe0],0a,f6,5e,0860,1
+2659,large[26d0 x=1090],large[26d0 x=1090],0a,f6,5e,0910,1
+2660,large[26d0 x=1140],large[26d0 x=1140],0a,f6,5e,09c0,1
+2661,large[26d0 x=11f0],large[26d0 x=11f0],0a,f6,5e,0a70,1
+2662,large[26d0 x=12a0],large[26d0 x=12a0],0a,f6,5e,0b20,1
+2663,large[26d0 x=1350],large[26d0 x=1350],0a,f6,5e,0bd0,1
+2664,large[26d0 x=1400],large[26d0 x=1400],0a,f6,5e,0c80,1
+2665,large[26d0 x=14b0],large[26d0 x=14b0],0a,f6,5e,0d30,1
+2666,large[26d0 x=1560],large[26d0 x=1560],0a,f6,5e,0de0,1
+2667,large[26d0 x=1610],large[26d0 x=1610],0a,f6,5e,0e90,1
+2668,large[26d0 x=1590],large[26d0 x=1590],0a,f6,5e,0e10,1
+2669,large[26d0 x=1510],large[26d0 x=1510],0a,f6,5e,0d90,1
+2670,large[26d0 x=1490],large[26d0 x=1490],0a,f6,5e,0d10,1
+2671,large[26d0 x=1290],large[26d0 x=1290],0a,f6,5e,0b10,1
+2672,large[26d0 x=1090],large[26d0 x=1090],0a,f6,5e,0910,1
+2673,large[26d0 x=0e90],large[26d0 x=0e90],0a,f6,5e,0710,1
+2674,large[26d0 x=0c90],large[26d0 x=0c90],0a,f6,5e,0510,1
+2675,large[26d0 x=0a90],large[26d0 x=0a90],0a,f6,5e,0310,1
+2676,large[26d0 x=0890],large[26d0 x=0890],0a,f6,5e,0110,1
+2677,large[26d0 x=0690] small[2760 x=fd80],large[26d0 x=0690] small[2760 x=fd80],0b,ad,5e,ad00,1
+2678,large[26d0 x=0490] small[2760 x=fb80],large[26d0 x=0490] small[2760 x=fb80],0b,ad,5e,ab00,1
+2679,large[26d0 x=0290] small[2760 x=f980],large[26d0 x=0290] small[2760 x=f980],0b,ad,5e,a900,1
+2680,large[26d0 x=0090] small[2760 x=f780],large[26d0 x=0090] small[2760 x=f780],0b,ad,5e,a700,1
+2681,small[2760 x=f580],small[2760 x=f580],0b,ad,5e,a500,1
+2682,small[2760 x=f380],small[2760 x=f380],0b,ad,5e,a300,1
+2683,small[2760 x=f180],small[2760 x=f180],0b,ad,5e,a100,1
+2684,small[2760 x=ef80],small[2760 x=ef80],0b,ad,5e,9f00,1
+2685,small[2760 x=ed80],small[2760 x=ed80],0b,ad,5e,9d00,1
+2686,small[2760 x=eb80],small[2760 x=eb80],0b,ad,5e,9b00,1
+2687,small[2760 x=e980],small[2760 x=e980],0b,ad,5e,9900,1
+2688,small[2760 x=e780],small[2760 x=e780],0b,ad,5e,9700,1
+2689,small[2760 x=e580],small[2760 x=e580],0b,ad,5e,9500,1
+2690,small[2760 x=e380],small[2760 x=e380],0b,ad,5e,9300,1
+2691,small[2760 x=e180],small[2760 x=e180],0b,ad,5e,9100,1
+2692,small[2760 x=df80],small[2760 x=df80],0b,ad,5e,8f00,1
+2693,small[2760 x=dd80],small[2760 x=dd80],0b,ad,5e,8d00,1
+2694,small[2760 x=db80],small[2760 x=db80],0b,ad,5e,8b00,1
+2695,small[2760 x=d980],small[2760 x=d980],0b,ad,5e,8900,1
+2696,small[2760 x=d780],small[2760 x=d780],0b,ad,5e,8700,1
+2697,small[2760 x=d580],small[2760 x=d580],0b,ad,5e,8500,1
+2698,small[2760 x=d380],small[2760 x=d380],0b,ad,5e,8300,1
+2699,small[2760 x=d180],small[2760 x=d180],0b,ad,5e,8100,1
+2700,small[2760 x=cf80],small[2760 x=cf80],0b,ad,5e,7f00,1
+2701,small[2760 x=cd80],small[2760 x=cd80],0b,ad,5e,7d00,1
+2702,small[2760 x=cb80],small[2760 x=cb80],0b,ad,5e,7b00,1
+2703,small[2760 x=c980],small[2760 x=c980],0b,ad,5e,7900,1
+2704,small[2760 x=c780],small[2760 x=c780],0b,ad,5e,7700,1
+2705,small[2760 x=c580],small[2760 x=c580],0b,ad,5e,7500,1
+2706,small[2760 x=c380],small[2760 x=c380],0b,ad,5e,7300,1
+2707,small[2760 x=c180],small[2760 x=c180],0b,ad,5e,7100,1
+2708,small[2760 x=bf80],small[2760 x=bf80],0b,ad,5e,6f00,1
+2709,small[2760 x=bd80],small[2760 x=bd80],0b,ad,5e,6d00,1
+2710,small[2760 x=bb80],small[2760 x=bb80],0b,ad,5e,6b00,1
+2711,small[2760 x=b980],small[2760 x=b980],0b,ad,5e,6900,1
+2712,small[2760 x=b780],small[2760 x=b780],0b,ad,5e,6700,1
+2713,small[2760 x=b580],small[2760 x=b580],0b,ad,5e,6500,1
+2714,small[2760 x=b380],small[2760 x=b380],0b,ad,5e,6300,1
+2715,small[2760 x=b180],small[2760 x=b180],0b,ad,5e,6100,1
+2716,small[2760 x=af80],small[2760 x=af80],0b,ad,5e,5f00,1
+2717,small[2760 x=ad80],small[2760 x=ad80],0b,ad,5e,5d00,1
+2718,small[2760 x=ab80],small[2760 x=ab80],0b,ad,5e,5b00,1
+2719,small[2760 x=a980],small[2760 x=a980],0b,ad,5e,5900,1
+2720,small[2760 x=a780],small[2760 x=a780],0b,ad,5e,5700,1
+2721,small[2760 x=a580],small[2760 x=a580],0b,ad,5e,5500,1
+2722,small[2760 x=a380],small[2760 x=a380],0b,ad,5e,5300,1
+2723,small[2760 x=a180],small[2760 x=a180],0b,ad,5e,5100,1
+2724,small[2760 x=9f80],small[2760 x=9f80],0b,ad,5e,4f00,1
+2725,small[2760 x=9d80],small[2760 x=9d80],0b,ad,5e,4d00,1
+2726,small[2760 x=9b80],small[2760 x=9b80],0b,ad,5e,4b00,1
+2727,small[2760 x=9980],small[2760 x=9980],0b,ad,5e,4900,1
+2728,small[2760 x=9780],small[2760 x=9780],0b,ad,5e,4700,1
+2729,small[2760 x=9580],small[2760 x=9580],0b,ad,5e,4500,1
+2730,small[2760 x=9380],small[2760 x=9380],0b,ad,5e,4300,1
+2731,small[2760 x=9180],small[2760 x=9180],0b,ad,5e,4100,1
+2732,small[2760 x=8f80],small[2760 x=8f80],0b,ad,5e,3f00,1
+2733,small[2760 x=8d80],small[2760 x=8d80],0b,ad,5e,3d00,1
+2734,small[2760 x=8b80],small[2760 x=8b80],0b,ad,5e,3b00,1
+2735,small[2760 x=8980],small[2760 x=8980],0b,ad,5e,3900,1
+2736,small[2760 x=8780],small[2760 x=8780],0b,ad,5e,3700,1
+2737,small[2760 x=8580],small[2760 x=8580],0b,ad,5e,3500,1
+2738,small[2760 x=8380],small[2760 x=8380],0b,ad,5e,3300,1
+2739,small[2760 x=8180],small[2760 x=8180],0b,ad,5e,3100,1
+2740,small[2760 x=7f80],small[2760 x=7f80],0b,ad,5e,2f00,1
+2741,small[2760 x=7d80],small[2760 x=7d80],0b,ad,5e,2d00,1
+2742,small[2760 x=7d00],small[2760 x=7d00],0b,ad,5e,2c80,1
+2743,small[2760 x=7c80],small[2760 x=7c80],0b,ad,5e,2c00,1
+2744,small[2760 x=7c00],small[2760 x=7c00],0b,ad,5e,2b80,1
+2745,small[2760 x=7b80],small[2760 x=7b80],0b,ad,5e,2b00,1
+2746,small[2760 x=7b00],small[2760 x=7b00],0b,ad,5e,2a80,1
+2747,small[2760 x=7a80],small[2760 x=7a80],0b,ad,5e,2a00,1
+2748,small[2760 x=7a00],small[2760 x=7a00],0b,ad,5e,2980,1
+2749,small[2760 x=7980],small[2760 x=7980],0b,ad,5e,2900,1
+2750,small[2760 x=7900],small[2760 x=7900],0b,ad,5e,2880,1
+2751,small[2760 x=7880],small[2760 x=7880],0b,ad,5e,2800,1
+2752,small[2760 x=7800],small[2760 x=7800],0b,ad,5e,2780,1
+2753,small[2760 x=7780],small[2760 x=7780],0b,ad,5e,2700,1
+2754,small[2760 x=7700],small[2760 x=7700],0b,ad,5e,2680,1
+2755,small[2760 x=7680],small[2760 x=7680],0b,ad,5e,2600,1
+2756,small[2760 x=7600],small[2760 x=7600],0b,ad,5e,2580,1
+2757,small[2760 x=7580],small[2760 x=7580],0b,ad,5e,2500,1
+2758,small[2760 x=7500],small[2760 x=7500],0b,ad,5e,2480,1
+2759,small[2760 x=7480],small[2760 x=7480],0b,ad,5e,2400,1
+2760,small[2760 x=7400],small[2760 x=7400],0b,ad,5e,2380,1
+2761,small[2760 x=7380],small[2760 x=7380],0b,ad,5e,2300,1
+2762,small[2760 x=7300],small[2760 x=7300],0b,ad,5e,2280,1
+2763,small[2760 x=7280],small[2760 x=7280],0b,ad,5e,2200,1
+2764,small[2760 x=7200],small[2760 x=7200],0b,ad,5e,2180,1
+2765,small[2760 x=7180],small[2760 x=7180],0b,ad,5e,2100,1
+2766,small[2760 x=7230],small[2760 x=7230],0b,ad,5e,21b0,1
+2767,small[2760 x=72e0],small[2760 x=72e0],0b,ad,5e,2260,1
+2768,small[2760 x=7390],small[2760 x=7390],0b,ad,5e,2310,1
+2769,small[2760 x=7440],small[2760 x=7440],0b,ad,5e,23c0,1
+2770,small[2760 x=74f0],small[2760 x=74f0],0b,ad,5e,2470,1
+2771,small[2760 x=75a0],small[2760 x=75a0],0b,ad,5e,2520,1
+2772,small[2760 x=7650],small[2760 x=7650],0b,ad,5e,25d0,1
+2773,small[2760 x=7700],small[2760 x=7700],0b,ad,5e,2680,1
+2774,small[2760 x=77b0],small[2760 x=77b0],0b,ad,5e,2730,1
+2775,small[2760 x=7860],small[2760 x=7860],0b,ad,5e,27e0,1
+2776,small[2760 x=7910],small[2760 x=7910],0b,ad,5e,2890,1
+2777,small[2760 x=79c0],small[2760 x=79c0],0b,ad,5e,2940,1
+2778,small[2760 x=7a70],small[2760 x=7a70],0b,ad,5e,29f0,1
+2779,small[2760 x=7b20],small[2760 x=7b20],0b,ad,5e,2aa0,1
+2780,small[2760 x=7bd0],small[2760 x=7bd0],0b,ad,5e,2b50,1
+2781,small[2760 x=7c80],small[2760 x=7c80],0b,ad,5e,2c00,1
+2782,small[2760 x=7d30],small[2760 x=7d30],0b,ad,5e,2cb0,1
+2783,small[2760 x=7de0],small[2760 x=7de0],0b,ad,5e,2d60,1
+2784,small[2760 x=7e90],small[2760 x=7e90],0b,ad,5e,2e10,1
+2785,small[2760 x=7f40],small[2760 x=7f40],0b,ad,5e,2ec0,1
+2786,small[2760 x=7ff0],small[2760 x=7ff0],0b,ad,5e,2f70,1
+2787,small[2760 x=80a0],small[2760 x=80a0],0b,ad,5e,3020,1
+2788,small[2760 x=8150],small[2760 x=8150],0b,ad,5e,30d0,1
+2789,small[2760 x=8200],small[2760 x=8200],0b,ad,5e,3180,1
+2790,small[2760 x=82b0],small[2760 x=82b0],0b,ad,5e,3230,1
+2791,small[2760 x=8360],small[2760 x=8360],0b,ad,5e,32e0,1
+2792,small[2760 x=8410],small[2760 x=8410],0b,ad,5e,3390,1
+2793,small[2760 x=84c0],small[2760 x=84c0],0b,ad,5e,3440,1
+2794,small[2760 x=8570],small[2760 x=8570],0b,ad,5e,34f0,1
+2795,small[2760 x=8620],small[2760 x=8620],0b,ad,5e,35a0,1
+2796,small[2760 x=86d0],small[2760 x=86d0],0b,ad,5e,3650,1
+2797,small[2760 x=8780],small[2760 x=8780],0b,ad,5e,3700,1
+2798,small[2760 x=8830],small[2760 x=8830],0b,ad,5e,37b0,1
+2799,small[2760 x=88e0],small[2760 x=88e0],0b,ad,5e,3860,1
+2800,small[2760 x=8990],small[2760 x=8990],0b,ad,5e,3910,1
+2801,small[2760 x=8a40],small[2760 x=8a40],0b,ad,5e,39c0,1
+2802,small[2760 x=8af0],small[2760 x=8af0],0b,ad,5e,3a70,1
+2803,small[2760 x=8ba0],small[2760 x=8ba0],0b,ad,5e,3b20,1
+2804,small[2760 x=8c50],small[2760 x=8c50],0b,ad,5e,3bd0,1
+2805,small[2760 x=8d00],small[2760 x=8d00],0b,ad,5e,3c80,1
+2806,small[2760 x=8db0],small[2760 x=8db0],0b,ad,5e,3d30,1
+2807,small[2760 x=8e60],small[2760 x=8e60],0b,ad,5e,3de0,1
+2808,small[2760 x=8f10],small[2760 x=8f10],0b,ad,5e,3e90,1
+2809,small[2760 x=8fc0],small[2760 x=8fc0],0b,ad,5e,3f40,1
+2810,small[2760 x=9070],small[2760 x=9070],0b,ad,5e,3ff0,1
+2811,small[2760 x=9120],small[2760 x=9120],0b,ad,5e,40a0,1
+2812,small[2760 x=91d0],small[2760 x=91d0],0b,ad,5e,4150,1
+2813,small[2760 x=9280],small[2760 x=9280],0b,ad,5e,4200,1
+2814,small[2760 x=9330],small[2760 x=9330],0b,ad,5e,42b0,1
+2815,small[2760 x=93e0],small[2760 x=93e0],0b,ad,5e,4360,1
+2816,small[2760 x=9490],small[2760 x=9490],0b,ad,5e,4410,1
+2817,small[2760 x=9540],small[2760 x=9540],0b,ad,5e,44c0,1
+2818,small[2760 x=95f0],small[2760 x=95f0],0b,ad,5e,4570,1
+2819,small[2760 x=96a0],small[2760 x=96a0],0b,ad,5e,4620,1
+2820,small[2760 x=9750],small[2760 x=9750],0b,ad,5e,46d0,1
+2821,small[2760 x=9800],small[2760 x=9800],0b,ad,5e,4780,1
+2822,small[2760 x=98b0],small[2760 x=98b0],0b,ad,5e,4830,1
+2823,small[2760 x=9960],small[2760 x=9960],0b,ad,5e,48e0,1
+2824,small[2760 x=9a10],small[2760 x=9a10],0b,ad,5e,4990,1
+2825,small[2760 x=9ac0],small[2760 x=9ac0],0b,ad,5e,4a40,1
+2826,small[2760 x=9b70],small[2760 x=9b70],0b,ad,5e,4af0,1
+2827,small[2760 x=9c20],small[2760 x=9c20],0b,ad,5e,4ba0,1
+2828,small[2760 x=9cd0],small[2760 x=9cd0],0b,ad,5e,4c50,1
+2829,small[2760 x=9d80],small[2760 x=9d80],0b,ad,5e,4d00,1
+2830,small[2760 x=9e30],small[2760 x=9e30],0b,ad,5e,4db0,1
+2831,small[2760 x=9ee0],small[2760 x=9ee0],0b,ad,5e,4e60,1
+2832,small[2760 x=9f90],small[2760 x=9f90],0b,ad,5e,4f10,1
+2833,small[2760 x=a040],small[2760 x=a040],0b,ad,5e,4fc0,1
+2834,small[2760 x=a0f0],small[2760 x=a0f0],0b,ad,5e,5070,1
+2835,small[2760 x=a1a0],small[2760 x=a1a0],0b,ad,5e,5120,1
+2836,small[2760 x=a250],small[2760 x=a250],0b,ad,5e,51d0,1
+2837,small[2760 x=a300],small[2760 x=a300],0b,ad,5e,5280,1
+2838,small[2760 x=a3b0],small[2760 x=a3b0],0b,ad,5e,5330,1
+2839,small[2760 x=a460],small[2760 x=a460],0b,ad,5e,53e0,1
+2840,small[2760 x=a510],small[2760 x=a510],0b,ad,5e,5490,1
+2841,small[2760 x=a5c0],small[2760 x=a5c0],0b,ad,5e,5540,1
+2842,small[2760 x=a670],small[2760 x=a670],0b,ad,5e,55f0,1
+2843,small[2760 x=a720],small[2760 x=a720],0b,ad,5e,56a0,1
+2844,small[2760 x=a7d0],small[2760 x=a7d0],0b,ad,5e,5750,1
+2845,small[2760 x=a880],small[2760 x=a880],0b,ad,5e,5800,1
+2846,small[2760 x=a930],small[2760 x=a930],0b,ad,5e,58b0,1
+2847,small[2760 x=a9e0],small[2760 x=a9e0],0b,ad,5e,5960,1
+2848,small[2760 x=aa90],small[2760 x=aa90],0b,ad,5e,5a10,1
+2849,small[2760 x=ab40],small[2760 x=ab40],0b,ad,5e,5ac0,1
+2850,small[2760 x=abf0],small[2760 x=abf0],0b,ad,5e,5b70,1
+2851,small[2760 x=aca0],small[2760 x=aca0],0b,ad,5e,5c20,1
+2852,small[2760 x=ad50],small[2760 x=ad50],0b,ad,5e,5cd0,1
+2853,small[2760 x=ae00],small[2760 x=ae00],0b,ad,5e,5d80,1
+2854,small[2760 x=aeb0],small[2760 x=aeb0],0b,ad,5e,5e30,1
+2855,small[2760 x=af60],small[2760 x=af60],0b,ad,5e,5ee0,1
+2856,small[2760 x=b010],small[2760 x=b010],0b,ad,5e,5f90,1
+2857,small[2760 x=b0c0],small[2760 x=b0c0],0b,ad,5e,6040,1
+2858,small[2760 x=b170],small[2760 x=b170],0b,ad,5e,60f0,1
+2859,small[2760 x=b220],small[2760 x=b220],0b,ad,5e,61a0,1
+2860,small[2760 x=b2d0],small[2760 x=b2d0],0b,ad,5e,6250,1
+2861,small[2760 x=b380],small[2760 x=b380],0b,ad,5e,6300,1
+2862,small[2760 x=b300],small[2760 x=b300],0b,ad,5e,6280,1
+2863,small[2760 x=b280],small[2760 x=b280],0b,ad,5e,6200,1
+2864,small[2760 x=b080],small[2760 x=b080],0b,ad,5e,6000,1
+2865,small[2760 x=ae80],small[2760 x=ae80],0b,ad,5e,5e00,1
+2866,small[2760 x=ac80],small[2760 x=ac80],0b,ad,5e,5c00,1
+2867,small[2760 x=aa80],small[2760 x=aa80],0b,ad,5e,5a00,1
+2868,small[2760 x=a880],small[2760 x=a880],0b,ad,5e,5800,1
+2869,small[2760 x=a680],small[2760 x=a680],0b,ad,5e,5600,1
+2870,small[2760 x=a480],small[2760 x=a480],0b,ad,5e,5400,1
+2871,small[2760 x=a280],small[2760 x=a280],0b,ad,5e,5200,1
+2872,small[2760 x=a080],small[2760 x=a080],0b,ad,5e,5000,1
+2873,small[2760 x=9e80],small[2760 x=9e80],0b,ad,5e,4e00,1
+2874,small[2760 x=9c80],small[2760 x=9c80],0b,ad,5e,4c00,1
+2875,small[2760 x=9a80],small[2760 x=9a80],0b,ad,5e,4a00,1
+2876,small[2760 x=9880],small[2760 x=9880],0b,ad,5e,4800,1
+2877,small[2760 x=9680],small[2760 x=9680],0b,ad,5e,4600,1
+2878,small[2760 x=9480],small[2760 x=9480],0b,ad,5e,4400,1
+2879,small[2760 x=9280],small[2760 x=9280],0b,ad,5e,4200,1
+2880,small[2760 x=9080],small[2760 x=9080],0b,ad,5e,4000,1
+2881,small[2760 x=8e80],small[2760 x=8e80],0b,ad,5e,3e00,1
+2882,small[2760 x=8c80],small[2760 x=8c80],0b,ad,5e,3c00,1
+2883,small[2760 x=8a80],small[2760 x=8a80],0b,ad,5e,3a00,1
+2884,small[2760 x=8880],small[2760 x=8880],0b,ad,5e,3800,1
+2885,small[2760 x=8680],small[2760 x=8680],0b,ad,5e,3600,1
+2886,small[2760 x=8480],small[2760 x=8480],0b,ad,5e,3400,1
+2887,small[2760 x=8280],small[2760 x=8280],0b,ad,5e,3200,1
+2888,small[2760 x=8080],small[2760 x=8080],0b,ad,5e,3000,1
+2889,small[2760 x=7e80],small[2760 x=7e80],0b,ad,5e,2e00,1
+2890,small[2760 x=7c80],small[2760 x=7c80],0b,ad,5e,2c00,1
+2891,small[2760 x=7a80],small[2760 x=7a80],0b,ad,5e,2a00,1
+2892,small[2760 x=7880],small[2760 x=7880],0b,ad,5e,2800,1
+2893,small[2760 x=7680],small[2760 x=7680],0b,ad,5e,2600,1
+2894,small[2760 x=7480],small[2760 x=7480],0b,ad,5e,2400,1
+2895,small[2760 x=7280],small[2760 x=7280],0b,ad,5e,2200,1
+2896,small[2760 x=7080],small[2760 x=7080],0b,ad,5e,2000,1
+2897,small[2760 x=6e80],small[2760 x=6e80],0b,ad,5e,1e00,1
+2898,small[2760 x=6c80],small[2760 x=6c80],0b,ad,5e,1c00,1
+2899,small[2760 x=6a80],small[2760 x=6a80],0b,ad,5e,1a00,1
+2900,small[2760 x=6880],small[2760 x=6880],0b,ad,5e,1800,1
+2901,small[2760 x=6680],small[2760 x=6680],0b,ad,5e,1600,1
+2902,small[2760 x=6480],small[2760 x=6480],0b,ad,5e,1400,1
+2903,small[2760 x=6280],small[2760 x=6280],0b,ad,5e,1200,1
+2904,small[2760 x=6080],small[2760 x=6080],0b,ad,5e,1000,1
+2905,small[2760 x=5e80],small[2760 x=5e80],0b,ad,5e,0e00,1
+2906,small[2760 x=5c80],small[2760 x=5c80],0b,ad,5e,0c00,1
+2907,small[2760 x=5a80],small[2760 x=5a80],0b,ad,5e,0a00,1
+2908,small[2760 x=5880],small[2760 x=5880],0b,ad,5e,0800,1
+2909,small[2760 x=5680],small[2760 x=5680],0b,ad,5e,0600,1
+2910,small[2760 x=5480],small[2760 x=5480],0b,ad,5e,0400,1
+2911,small[2760 x=5280],small[2760 x=5280],0b,ad,5e,0200,1
+2912,small[2760 x=5080],small[2760 x=5080],0b,ad,5e,0000,1
+2913,large[26d0 x=fd80] small[2760 x=4e80],large[26d0 x=fd80] small[2760 x=4e80],0c,de,5e,de00,1
+2914,large[26d0 x=fb80] small[2760 x=4c80],large[26d0 x=fb80] small[2760 x=4c80],0c,de,5e,dc00,1
+2915,large[26d0 x=f980] small[2760 x=4a80],large[26d0 x=f980] small[2760 x=4a80],0c,de,5e,da00,1
+2916,large[26d0 x=f780] small[2760 x=4880],large[26d0 x=f780] small[2760 x=4880],0c,de,5e,d800,1
+2917,large[26d0 x=f580] small[2760 x=4680],large[26d0 x=f580] small[2760 x=4680],0c,de,5e,d600,1
+2918,large[26d0 x=f380] small[2760 x=4480],large[26d0 x=f380] small[2760 x=4480],0c,de,5e,d400,1
+2919,large[26d0 x=f180] small[2760 x=4280],large[26d0 x=f180] small[2760 x=4280],0c,de,5e,d200,1
+2920,large[26d0 x=ef80] small[2760 x=4080],large[26d0 x=ef80] small[2760 x=4080],0c,de,5e,d000,1
+2921,large[26d0 x=ed80] small[2760 x=3e80],large[26d0 x=ed80] small[2760 x=3e80],0c,de,5e,ce00,1
+2922,large[26d0 x=eb80] small[2760 x=3c80],large[26d0 x=eb80] small[2760 x=3c80],0c,de,5e,cc00,1
+2923,large[26d0 x=e980] small[2760 x=3a80],large[26d0 x=e980] small[2760 x=3a80],0c,de,5e,ca00,1
+2924,large[26d0 x=e780] small[2760 x=3880],large[26d0 x=e780] small[2760 x=3880],0c,de,5e,c800,1
+2925,large[26d0 x=e580] small[2760 x=3680],large[26d0 x=e580] small[2760 x=3680],0c,de,5e,c600,1
+2926,large[26d0 x=e380] small[2760 x=3480],large[26d0 x=e380] small[2760 x=3480],0c,de,5e,c400,1
+2927,large[26d0 x=e180] small[2760 x=3280],large[26d0 x=e180] small[2760 x=3280],0c,de,5e,c200,1
+2928,large[26d0 x=df80] small[2760 x=3080],large[26d0 x=df80] small[2760 x=3080],0c,de,5e,c000,1
+2929,large[26d0 x=dd80] small[2760 x=2e80],large[26d0 x=dd80] small[2760 x=2e80],0c,de,5e,be00,1
+2930,large[26d0 x=db80] small[2760 x=2c80],large[26d0 x=db80] small[2760 x=2c80],0c,de,5e,bc00,1
+2931,large[26d0 x=d980] small[2760 x=2a80],large[26d0 x=d980] small[2760 x=2a80],0c,de,5e,ba00,1
+2932,large[26d0 x=d780] small[2760 x=2880],large[26d0 x=d780] small[2760 x=2880],0c,de,5e,b800,1
+2933,large[26d0 x=d580] small[2760 x=2680],large[26d0 x=d580] small[2760 x=2680],0c,de,5e,b600,1
+2934,large[26d0 x=d380] small[2760 x=2480],large[26d0 x=d380] small[2760 x=2480],0c,de,5e,b400,1
+2935,large[26d0 x=d180] small[2760 x=2280],large[26d0 x=d180] small[2760 x=2280],0c,de,5e,b200,1
+2936,large[26d0 x=cf80] small[2760 x=2080],large[26d0 x=cf80] small[2760 x=2080],0c,de,5e,b000,1
+2937,large[26d0 x=cd80] small[2760 x=1e80],large[26d0 x=cd80] small[2760 x=1e80],0c,de,5e,ae00,1
+2938,large[26d0 x=cb80] small[2760 x=1c80],large[26d0 x=cb80] small[2760 x=1c80],0c,de,5e,ac00,1
+2939,large[26d0 x=c980] small[2760 x=1a80],large[26d0 x=c980] small[2760 x=1a80],0c,de,5e,aa00,1
+2940,large[26d0 x=c780] small[2760 x=1880],large[26d0 x=c780] small[2760 x=1880],0c,de,5e,a800,1
+2941,large[26d0 x=c580] small[2760 x=1680],large[26d0 x=c580] small[2760 x=1680],0c,de,5e,a600,1
+2942,large[26d0 x=c380] small[2760 x=1480],large[26d0 x=c380] small[2760 x=1480],0c,de,5e,a400,1
+2943,large[26d0 x=c180] small[2760 x=1280],large[26d0 x=c180] small[2760 x=1280],0c,de,5e,a200,1
+2944,large[26d0 x=bf80] small[2760 x=1080],large[26d0 x=bf80] small[2760 x=1080],0c,de,5e,a000,1
+2945,large[26d0 x=bd80] small[2760 x=0e80],large[26d0 x=bd80] small[2760 x=0e80],0c,de,5e,9e00,1
+2946,large[26d0 x=bb80] small[2760 x=0c80],large[26d0 x=bb80] small[2760 x=0c80],0c,de,5e,9c00,1
+2947,large[26d0 x=b980] small[2760 x=0a80],large[26d0 x=b980] small[2760 x=0a80],0c,de,5e,9a00,1
+2948,large[26d0 x=b780] small[2760 x=0880],large[26d0 x=b780] small[2760 x=0880],0c,de,5e,9800,1
+2949,large[26d0 x=b580] small[2760 x=0680],large[26d0 x=b580] small[2760 x=0680],0c,de,5e,9600,1
+2950,large[26d0 x=b380] small[2760 x=0480],large[26d0 x=b380] small[2760 x=0480],0c,de,5e,9400,1
+2951,large[26d0 x=b180] small[2760 x=0280],large[26d0 x=b180] small[2760 x=0280],0c,de,5e,9200,1
+2952,large[26d0 x=af80] small[2760 x=0080],large[26d0 x=af80] small[2760 x=0080],0c,de,5e,9000,1
+2953,large[26d0 x=ad80],large[26d0 x=ad80],0c,de,5e,8e00,1
+2954,large[26d0 x=ab80],large[26d0 x=ab80],0c,de,5e,8c00,1
+2955,large[26d0 x=a980],large[26d0 x=a980],0c,de,5e,8a00,1
+2956,large[26d0 x=a780],large[26d0 x=a780],0c,de,5e,8800,1
+2957,large[26d0 x=a580],large[26d0 x=a580],0c,de,5e,8600,1
+2958,large[26d0 x=a380],large[26d0 x=a380],0c,de,5e,8400,1
+2959,large[26d0 x=a180],large[26d0 x=a180],0c,de,5e,8200,1
+2960,large[26d0 x=9f80],large[26d0 x=9f80],0c,de,5e,8000,1
+2961,large[26d0 x=9d80],large[26d0 x=9d80],0c,de,5e,7e00,1
+2962,large[26d0 x=9b80],large[26d0 x=9b80],0c,de,5e,7c00,1
+2963,large[26d0 x=9980],large[26d0 x=9980],0c,de,5e,7a00,1
+2964,large[26d0 x=9780],large[26d0 x=9780],0c,de,5e,7800,1
+2965,large[26d0 x=9580],large[26d0 x=9580],0c,de,5e,7600,1
+2966,large[26d0 x=9380],large[26d0 x=9380],0c,de,5e,7400,1
+2967,large[26d0 x=9180],large[26d0 x=9180],0c,de,5e,7200,1
+2968,large[26d0 x=8f80],large[26d0 x=8f80],0c,de,5e,7000,1
+2969,large[26d0 x=8d80],large[26d0 x=8d80],0c,de,5e,6e00,1
+2970,large[26d0 x=8b80],large[26d0 x=8b80],0c,de,5e,6c00,1
+2971,large[26d0 x=8980],large[26d0 x=8980],0c,de,5e,6a00,1
+2972,large[26d0 x=8780],large[26d0 x=8780],0c,de,5e,6800,1
+2973,large[26d0 x=8580],large[26d0 x=8580],0c,de,5e,6600,1
+2974,large[26d0 x=8380],large[26d0 x=8380],0c,de,5e,6400,1
+2975,large[26d0 x=8180],large[26d0 x=8180],0c,de,5e,6200,1
+2976,large[26d0 x=7f80],large[26d0 x=7f80],0c,de,5e,6000,1
+2977,large[26d0 x=7d80],large[26d0 x=7d80],0c,de,5e,5e00,1
+2978,large[26d0 x=7b80],large[26d0 x=7b80],0c,de,5e,5c00,1
+2979,large[26d0 x=7980],large[26d0 x=7980],0c,de,5e,5a00,1
+2980,large[26d0 x=7780],large[26d0 x=7780],0c,de,5e,5800,1
+2981,large[26d0 x=7580],large[26d0 x=7580],0c,de,5e,5600,1
+2982,large[26d0 x=7380],large[26d0 x=7380],0c,de,5e,5400,1
+2983,large[26d0 x=7180],large[26d0 x=7180],0c,de,5e,5200,1
+2984,large[26d0 x=6f80],large[26d0 x=6f80],0c,de,5e,5000,1
+2985,large[26d0 x=6d80],large[26d0 x=6d80],0c,de,5e,4e00,1
+2986,large[26d0 x=6b80],large[26d0 x=6b80],0c,de,5e,4c00,1
+2987,large[26d0 x=6980],large[26d0 x=6980],0c,de,5e,4a00,1
+2988,large[26d0 x=6780],large[26d0 x=6780],0c,de,5e,4800,1
+2989,large[26d0 x=6580],large[26d0 x=6580],0c,de,5e,4600,1
+2990,large[26d0 x=6380],large[26d0 x=6380],0c,de,5e,4400,1
+2991,large[26d0 x=6180],large[26d0 x=6180],0c,de,5e,4200,1
+2992,large[26d0 x=5f80],large[26d0 x=5f80],0c,de,5e,4000,1
+2993,large[26d0 x=5d80],large[26d0 x=5d80],0c,de,5e,3e00,1
+2994,large[26d0 x=5b80],large[26d0 x=5b80],0c,de,5e,3c00,1
+2995,large[26d0 x=5980],large[26d0 x=5980],0c,de,5e,3a00,1
+2996,large[26d0 x=5780],large[26d0 x=5780],0c,de,5e,3800,1
+2997,large[26d0 x=5580],large[26d0 x=5580],0c,de,5e,3600,1
+2998,large[26d0 x=5380],large[26d0 x=5380],0c,de,5e,3400,1
+2999,large[26d0 x=5180],large[26d0 x=5180],0c,de,5e,3200,1
+3000,large[26d0 x=4f80],large[26d0 x=4f80],0c,de,5e,3000,1
+3001,large[26d0 x=4d80],large[26d0 x=4d80],0c,de,5e,2e00,1
+3002,large[26d0 x=4b80],large[26d0 x=4b80],0c,de,5e,2c00,1
+3003,large[26d0 x=4980],large[26d0 x=4980],0c,de,5e,2a00,1
+3004,large[26d0 x=4780],large[26d0 x=4780],0c,de,5e,2800,1
+3005,large[26d0 x=4580],large[26d0 x=4580],0c,de,5e,2600,1
+3006,large[26d0 x=4380],large[26d0 x=4380],0c,de,5e,2400,1
+3007,large[26d0 x=4180],large[26d0 x=4180],0c,de,5e,2200,1
+3008,large[26d0 x=3f80],large[26d0 x=3f80],0c,de,5e,2000,1
+3009,large[26d0 x=3d80],large[26d0 x=3d80],0c,de,5e,1e00,1
+3010,large[26d0 x=3b80],large[26d0 x=3b80],0c,de,5e,1c00,1
+3011,large[26d0 x=3980],large[26d0 x=3980],0c,de,5e,1a00,1
+3012,large[26d0 x=3780],large[26d0 x=3780],0c,de,5e,1800,1
+3013,large[26d0 x=3580],large[26d0 x=3580],0c,de,5e,1600,1
+3014,large[26d0 x=3380],large[26d0 x=3380],0c,de,5e,1400,1
+3015,large[26d0 x=3180],large[26d0 x=3180],0c,de,5e,1200,1
+3016,large[26d0 x=2f80],large[26d0 x=2f80],0c,de,5e,1000,1
+3017,large[26d0 x=2d80],large[26d0 x=2d80],0c,de,5e,0e00,1
+3018,large[26d0 x=2b80],large[26d0 x=2b80],0c,de,5e,0c00,1
+3019,large[26d0 x=2980],large[26d0 x=2980],0c,de,5e,0a00,1
+3020,large[26d0 x=2780],large[26d0 x=2780],0c,de,5e,0800,1
+3021,large[26d0 x=2580],large[26d0 x=2580],0c,de,5e,0600,1
+3022,large[26d0 x=2380],large[26d0 x=2380],0c,de,5e,0400,1
+3023,large[26d0 x=2180],large[26d0 x=2180],0c,de,5e,0200,1
+3024,large[26d0 x=1f80],large[26d0 x=1f80],0c,de,5e,0000,1
+3025,large[26d0 x=1d80] large[2700 x=fd80],large[26d0 x=1d80] large[2700 x=fd80],0d,ee,5e,ee00,1
+3026,large[26d0 x=1b80] large[2700 x=fb80],large[26d0 x=1b80] large[2700 x=fb80],0d,ee,5e,ec00,1
+3027,large[26d0 x=1980] large[2700 x=f980],large[26d0 x=1980] large[2700 x=f980],0d,ee,5e,ea00,1
+3028,large[26d0 x=1780] large[2700 x=f780],large[26d0 x=1780] large[2700 x=f780],0d,ee,5e,e800,1
+3029,large[26d0 x=1580] large[2700 x=f580],large[26d0 x=1580] large[2700 x=f580],0d,ee,5e,e600,1
+3030,large[26d0 x=1380] large[2700 x=f380],large[26d0 x=1380] large[2700 x=f380],0d,ee,5e,e400,1
+3031,large[26d0 x=1180] large[2700 x=f180],large[26d0 x=1180] large[2700 x=f180],0d,ee,5e,e200,1
+3032,large[26d0 x=0f80] large[2700 x=ef80],large[26d0 x=0f80] large[2700 x=ef80],0d,ee,5e,e000,1
+3033,large[26d0 x=0d80] large[2700 x=ed80],large[26d0 x=0d80] large[2700 x=ed80],0d,ee,5e,de00,1
+3034,large[26d0 x=0b80] large[2700 x=eb80],large[26d0 x=0b80] large[2700 x=eb80],0d,ee,5e,dc00,1
+3035,large[26d0 x=0980] large[2700 x=e980],large[26d0 x=0980] large[2700 x=e980],0d,ee,5e,da00,1
+3036,large[26d0 x=0780] large[2700 x=e780],large[26d0 x=0780] large[2700 x=e780],0d,ee,5e,d800,1
+3037,large[26d0 x=0580] large[2700 x=e580],large[26d0 x=0580] large[2700 x=e580],0d,ee,5e,d600,1
+3038,large[26d0 x=0380] large[2700 x=e380],large[26d0 x=0380] large[2700 x=e380],0d,ee,5e,d400,1
+3039,large[26d0 x=0180] large[2700 x=e180],large[26d0 x=0180] large[2700 x=e180],0d,ee,5e,d200,1
+3040,large[2700 x=df80],large[2700 x=df80],0d,ee,5e,d000,1
