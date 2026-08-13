@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <filesystem>
 #include <iostream>
 #include <iomanip>
 #include <optional>
@@ -218,6 +219,7 @@ struct Options {
   std::string captureScene = "gameplay";
   std::string tracePath;
   std::string traceMode = "hold-right";
+  std::string riderDiagnosticDir;
 };
 
 struct Vec2 {
@@ -329,6 +331,47 @@ enum class Scene {
   Complete,
 };
 
+enum class Level1RiderState : std::uint8_t {
+  RunA = 0,
+  RunB = 1,
+  RunC = 2,
+};
+
+constexpr std::array<int, 3> kLevel1RiderHdAtlasFrames{2, 7, 8};
+constexpr std::array<std::array<float, 2>, 3> kLevel1RiderHdAnchors{{
+    {285.0F, 344.0F},
+    {310.5F, 346.0F},
+    {286.0F, 315.0F},
+}};
+
+constexpr int level1RiderHdFrame(Level1RiderState state) {
+  return kLevel1RiderHdAtlasFrames[static_cast<std::size_t>(state)];
+}
+
+constexpr const char* level1RiderStateName(Level1RiderState state) {
+  switch (state) {
+    case Level1RiderState::RunA:
+      return "A";
+    case Level1RiderState::RunB:
+      return "B";
+    case Level1RiderState::RunC:
+      return "C";
+  }
+  return "?";
+}
+
+constexpr std::array<int, 6> level1RiderCodes(Level1RiderState state) {
+  switch (state) {
+    case Level1RiderState::RunA:
+      return {0x62, 0x61, 0x60, 0x5f, 0x5e, 0x5d};
+    case Level1RiderState::RunB:
+      return {0xcd, 0xcc, 0xb6, 0xb5, 0x64, 0x63};
+    case Level1RiderState::RunC:
+      return {0x5c, 0x5b, 0x5a, 0x59, 0x58, 0x57};
+  }
+  return {};
+}
+
 struct Game {
   Scene scene = Scene::Boot;
   Player player;
@@ -425,6 +468,13 @@ struct Game {
       kLevel1InitialActivationAccumulator;
   std::size_t level1HoopCourseIndex = 1;
   std::size_t level1HoopActivations = 1;
+  // circusc4 <$B4 is the grounded A/B/C selector. <$B3 stores the previous
+  // course-position sample used by $73DC-$7405, while this fixed value
+  // reproduces the low-byte course stream read by that routine. Rendering
+  // reads these fields only; Level 1 movement and collision remain separate.
+  Level1RiderState level1RiderState = Level1RiderState::RunA;
+  std::uint8_t level1RiderPositionSample = 0;
+  std::uint16_t level1RiderCourseFixed = 0xfe80;
 };
 
 struct RenderSurface {
@@ -571,6 +621,7 @@ void printUsage() {
       << "  --lion-test\n"
       << "  --capture FILE.png\n"
       << "  --trace FILE.csv\n"
+      << "  --rider-diagnostic-dir DIRECTORY\n"
       << "  --trace-mode hold-right|right-release|right-left|forward-jump|"
          "successful-hoop\n"
       << "  --capture-scene start|select|layout|large|prize|gameplay|stage2|stage2-goal|stage3|stage3-transfer|stage3-approach|stage3-goal|stage3-roof|stage4|stage4-jump|stage4-fall|stage4-goal|ring|extra|crash|goal|tally\n";
@@ -600,6 +651,8 @@ std::optional<Options> parseOptions(int argc, char** argv) {
         std::cerr << "Unknown Level 1 trace mode.\n";
         return std::nullopt;
       }
+    } else if (argument == "--rider-diagnostic-dir" && index + 1 < argc) {
+      options.riderDiagnosticDir = argv[++index];
     } else if (argument == "--capture-scene" && index + 1 < argc) {
       options.captureScene = argv[++index];
       if (options.captureScene != "start" &&
@@ -647,6 +700,12 @@ std::optional<Options> parseOptions(int argc, char** argv) {
       std::cerr << "Unknown option: " << argument << '\n';
       return std::nullopt;
     }
+  }
+  if (!options.riderDiagnosticDir.empty() &&
+      (options.tracePath.empty() || options.traceMode != "successful-hoop")) {
+    std::cerr << "Rider diagnostics require --trace and "
+                 "--trace-mode successful-hoop.\n";
+    return std::nullopt;
   }
   return options;
 }
@@ -1516,6 +1575,9 @@ void resetCourse(Game& game) {
       kLevel1InitialActivationAccumulator;
   game.level1HoopCourseIndex = 1;
   game.level1HoopActivations = 1;
+  game.level1RiderState = Level1RiderState::RunA;
+  game.level1RiderPositionSample = 0;
+  game.level1RiderCourseFixed = 0xfe80;
   game.hoops.front().active = true;
   game.hoops.front().sourceXFixed = kLevel1InitialHoopX;
   game.hoops.front().worldX =
@@ -2631,6 +2693,28 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   // immediate; retaining velocity here creates motion absent from the ROM.
   game.player.runSpeed = targetSpeed;
 
+  // circusc4 $73dc-$7405 advances the grounded rider composite from course
+  // displacement, not wall-clock time.  <$b3 is the previous position sample
+  // and <$b4 is the A/B/C selector.  Read the staged course byte before this
+  // tick applies its scroll command, matching the board's update order.
+  const std::uint8_t level1RiderCourseBeforeUpdate =
+      static_cast<std::uint8_t>(game.level1RiderCourseFixed >> 8U);
+  if (game.player.grounded && !game.player.level1JumpPending &&
+      moveLeft != moveRight) {
+    std::uint8_t difference = static_cast<std::uint8_t>(
+        game.level1RiderPositionSample - level1RiderCourseBeforeUpdate +
+        0x07U);
+    if (difference >= 0x12U) {
+      std::uint8_t sampleDelta = 0xf5U;
+      difference = static_cast<std::uint8_t>(difference - 0x07U);
+      if (static_cast<std::int8_t>(difference) < 0) sampleDelta = 0x07U;
+      game.level1RiderPositionSample = static_cast<std::uint8_t>(
+          game.level1RiderPositionSample + sampleDelta);
+      game.level1RiderState = static_cast<Level1RiderState>(
+          (static_cast<unsigned>(game.level1RiderState) + 1U) % 3U);
+    }
+  }
+
   game.player.position.x +=
       game.player.runSpeed * static_cast<float>(kFixedDt);
   if (game.player.position.x < 78.0F) {
@@ -2639,6 +2723,12 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   }
   game.cameraX =
       std::max(0.0F, game.player.position.x - 78.0F);
+
+  const std::int32_t riderAnimationCourseDelta =
+      moveRight != moveLeft ? (moveRight ? -0x0180 : 0x0130) : 0;
+  game.level1RiderCourseFixed = static_cast<std::uint16_t>(
+      static_cast<std::int32_t>(game.level1RiderCourseFixed) +
+      riderAnimationCourseDelta);
 
   // $7539-$7554 adds (<$b1:$b2 - $0080) to every live hoop's own X.
   // $7607-$766d applies that same signed delta to the independent activation
@@ -2705,6 +2795,9 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     game.player.jumpFrame = 0;
     game.player.verticalVelocity = 0.0F;
     level1JumpActivatedThisFrame = true;
+    // $7376-$7391 loads the Run C six-slot composite directly at takeoff.
+    // It remains unchanged for every airborne sample.
+    game.level1RiderState = Level1RiderState::RunC;
     ++game.jumpAudioSerial;
   }
 
@@ -2764,6 +2857,10 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
       game.player.jumpFrame = -1;
       game.player.grounded = true;
       landedThisFrame = true;
+      // $7257-$727f restores Run A and reseeds <$b3 from the current course
+      // byte. The next grounded transition is therefore displacement-based.
+      game.level1RiderState = Level1RiderState::RunA;
+      game.level1RiderPositionSample = level1RiderCourseBeforeUpdate;
     }
   }
 
@@ -3681,9 +3778,9 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
 }
 
 void drawRiderWalkTest(SDL_Renderer* renderer, float screenX, float groundY,
-                       double timeSeconds, bool alive,
-                       SDL_Texture* riderTexture, float runSpeed,
-                       bool grounded, bool facingRight) {
+                       bool alive, SDL_Texture* riderTexture,
+                       Level1RiderState riderState, bool grounded,
+                       bool facingRight) {
   int textureWidth = 0;
   int textureHeight = 0;
   SDL_QueryTexture(riderTexture, nullptr, nullptr, &textureWidth,
@@ -3691,13 +3788,11 @@ void drawRiderWalkTest(SDL_Renderer* renderer, float screenX, float groundY,
   const int cellWidth = textureWidth / 4;
   const int cellHeight = textureHeight / 3;
 
-  int frame = 0;
-  if (!grounded) {
-    frame = 3;
-  } else if (std::abs(runSpeed) > 5.0F) {
-    constexpr double kRiderTestFramesPerSecond = 12.0;
-    frame = static_cast<int>(timeSeconds * kRiderTestFramesPerSecond) % 12;
-  }
+  // Airborne is deliberately the same Run C artwork and anchor as grounded
+  // Run C. The arcade moves that one composite with its jump table rather
+  // than selecting a separate jumping picture.
+  if (!grounded) riderState = Level1RiderState::RunC;
+  const int frame = level1RiderHdFrame(riderState);
 
   const SDL_Rect source{(frame % 4) * cellWidth, (frame / 4) * cellHeight,
                         cellWidth, cellHeight};
@@ -3710,15 +3805,21 @@ void drawRiderWalkTest(SDL_Renderer* renderer, float screenX, float groundY,
   const float kTestHeight =
       kTestWidth * static_cast<float>(cellHeight) /
       static_cast<float>(cellWidth);
-  constexpr float kAtlasGroundLine = 348.0F;
-  constexpr float kJumpFrameBottom = 312.0F;
-  const float sourceGroundLine = grounded ? kAtlasGroundLine
-                                          : kJumpFrameBottom;
-  const float visualGroundOffset =
-      sourceGroundLine / static_cast<float>(cellHeight) * kTestHeight;
-  // Preserve the old composite's visual center at screenX + 10 while scaling.
-  const SDL_FRect destination{screenX + 10.0F - kTestWidth * 0.5F,
-                              groundY - visualGroundOffset,
+  // The authoritative original composite anchor is (24,32) on its invariant
+  // 48x32 canvas: horizontal center and gameplay baseline. Transfer that
+  // normalized anchor to each selected HD composite's measured alpha bounds,
+  // so transparent atlas padding cannot move the rider. For a flipped sprite
+  // the source-space anchor mirrors with the image.
+  const auto& anchor =
+      kLevel1RiderHdAnchors[static_cast<std::size_t>(riderState)];
+  const float sourceAnchorX =
+      facingRight ? anchor[0] : static_cast<float>(cellWidth) - anchor[0];
+  const float visualAnchorX =
+      sourceAnchorX / static_cast<float>(cellWidth) * kTestWidth;
+  const float visualAnchorY =
+      anchor[1] / static_cast<float>(cellHeight) * kTestHeight;
+  const SDL_FRect destination{screenX + 10.0F - visualAnchorX,
+                              groundY - visualAnchorY,
                               kTestWidth, kTestHeight};
   SDL_SetTextureColorMod(riderTexture, 255, alive ? 255 : 128,
                          alive ? 255 : 58);
@@ -3733,12 +3834,12 @@ void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
                       SDL_Texture* riderTexture,
                       SDL_Texture* riderWalkTestTexture,
                       bool /*lionOnlyTest*/, float runSpeed, bool grounded,
-                      bool facingRight) {
+                      bool facingRight, Level1RiderState riderState) {
   // The calibrated 12-frame sheet has replaced the earlier six-frame
   // prototype. Keep the old texture only as a loading fallback.
   if (riderWalkTestTexture) {
-    drawRiderWalkTest(renderer, screenX, groundY, timeSeconds, alive,
-                      riderWalkTestTexture, runSpeed, grounded, facingRight);
+    drawRiderWalkTest(renderer, screenX, groundY, alive,
+                      riderWalkTestTexture, riderState, grounded, facingRight);
     return;
   }
   if (riderTexture) {
@@ -4918,7 +5019,7 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
                        game.player.alive, lowDetail, assets.rider,
                        assets.riderWalkTest, game.lionOnlyTest,
                        game.player.runSpeed, game.player.grounded,
-                       game.player.facingRight);
+                       game.player.facingRight, game.level1RiderState);
     }
     for (const auto& hoop : game.hoops) {
       if (!hoop.active) continue;
@@ -5387,6 +5488,16 @@ int main(int argc, char** argv) {
   int movementTracePreviousScore = game.score;
   int movementTracePreviousHoopScore = game.level1HoopScoreAwarded;
   bool movementTracePreviousGrounded = game.player.grounded;
+  int lastRiderDiagnosticFrame = -1;
+  if (!options.riderDiagnosticDir.empty()) {
+    std::error_code error;
+    std::filesystem::create_directories(options.riderDiagnosticDir, error);
+    if (error) {
+      std::cerr << "Could not create rider diagnostic directory: "
+                << error.message() << '\n';
+      running = false;
+    }
+  }
   if (!options.tracePath.empty()) {
     movementTrace.open(options.tracePath);
     if (!movementTrace) {
@@ -5405,6 +5516,9 @@ int main(int argc, char** argv) {
              "course_state,scroll_command,scroll_accumulator,"
              "collision_result,score,score_event,landing_transition,"
              "pending_hoop_score,hoop_score_event,"
+             "rider_animation_state,rider_hd_frame,rider_anchor_x,"
+             "rider_anchor_y,rider_animation_position_sample,"
+             "rider_animation_course_8_8,"
              "rider0_status,rider0_y,rider0_x,rider0_code,rider0_attr,"
              "rider1_status,rider1_y,rider1_x,rider1_code,rider1_attr,"
              "rider2_status,rider2_y,rider2_x,rider2_code,rider2_attr,"
@@ -5615,31 +5729,12 @@ int main(int argc, char** argv) {
             game.level1HoopScoreAwarded - movementTracePreviousHoopScore;
         const bool landingTransition =
             !movementTracePreviousGrounded && game.player.grounded;
-        std::array<int, 6> riderCodes{0x5c, 0x5b, 0x5a,
-                                      0x59, 0x58, 0x57};
-        if (game.player.grounded && !game.player.level1JumpPending) {
-          enum class RiderComposite { RunA, RunB, RunC };
-          RiderComposite composite = RiderComposite::RunA;
-          if (movementTraceFrame >= 88) {
-            const int phase = (movementTraceFrame - 88) % 23;
-            composite = phase < 8 ? RiderComposite::RunB
-                                  : (phase < 15 ? RiderComposite::RunC
-                                                : RiderComposite::RunA);
-          } else if (movementTraceFrame >= 21) {
-            composite = RiderComposite::RunB;
-          } else if (movementTraceFrame >= 14) {
-            composite = RiderComposite::RunA;
-          } else if (movementTraceFrame >= 6) {
-            composite = RiderComposite::RunC;
-          } else if (movementTraceFrame >= 4) {
-            composite = RiderComposite::RunB;
-          }
-          if (composite == RiderComposite::RunB) {
-            riderCodes = {0x62, 0x61, 0x60, 0x5f, 0x5e, 0x5d};
-          } else if (composite == RiderComposite::RunC) {
-            riderCodes = {0xcd, 0xcc, 0xb6, 0xb5, 0x64, 0x63};
-          }
-        }
+        const Level1RiderState visibleRiderState =
+            game.player.grounded ? game.level1RiderState
+                                 : Level1RiderState::RunC;
+        const auto riderCodes = level1RiderCodes(visibleRiderState);
+        const auto& riderAnchor = kLevel1RiderHdAnchors[
+            static_cast<std::size_t>(visibleRiderState)];
         movementTrace << movementTraceFrame << ',' << (traceLeft ? 1 : 0)
                       << ',' << (traceRight ? 1 : 0) << ','
                       << (traceJump ? 1 : 0) << ',' << std::fixed
@@ -5677,7 +5772,12 @@ int main(int argc, char** argv) {
                       << ',' << collisionResult << ',' << game.score << ','
                       << scoreEvent << ',' << (landingTransition ? 1 : 0)
                       << ',' << game.level1PendingHoopScore << ','
-                      << hoopScoreEvent;
+                      << hoopScoreEvent << ','
+                      << level1RiderStateName(visibleRiderState) << ','
+                      << level1RiderHdFrame(visibleRiderState) + 1 << ','
+                      << riderAnchor[0] << ',' << riderAnchor[1] << ','
+                      << static_cast<int>(game.level1RiderPositionSample)
+                      << ',' << game.level1RiderCourseFixed;
         for (std::size_t slot = 0; slot < riderCodes.size(); ++slot) {
           const int slotY = riderSourceY + (slot < 3 ? 0x10 : 0x00);
           const int slotX = 0x45 - static_cast<int>(slot % 3) * 0x10;
@@ -5816,6 +5916,25 @@ int main(int argc, char** argv) {
     SDL_RenderCopyEx(renderer, surface.texture, nullptr, &surface.destination,
                      static_cast<double>(options.rotation), nullptr,
                      SDL_FLIP_NONE);
+    if (!options.riderDiagnosticDir.empty() && movementTraceFrame > 0) {
+      const int tracedFrame = movementTraceFrame - 1;
+      const std::array<int, 8> captureFrames{24, 25, 53, 73,
+                                              87, 88, 96, 103};
+      if (tracedFrame != lastRiderDiagnosticFrame &&
+          std::find(captureFrames.begin(), captureFrames.end(), tracedFrame) !=
+              captureFrames.end()) {
+        const int mameFrame = tracedFrame + 1322;
+        std::ostringstream filename;
+        filename << options.riderDiagnosticDir << "/native-frame-"
+                 << std::setw(3) << std::setfill('0') << tracedFrame
+                 << "-mame-" << mameFrame << ".png";
+        if (!captureRenderer(renderer, filename.str())) {
+          std::cerr << "Rider diagnostic capture failed: "
+                    << IMG_GetError() << '\n';
+        }
+        lastRiderDiagnosticFrame = tracedFrame;
+      }
+    }
     if (!options.capturePath.empty()) {
       if (!captureRenderer(renderer, options.capturePath)) {
         std::cerr << "Screenshot capture failed: " << IMG_GetError() << '\n';

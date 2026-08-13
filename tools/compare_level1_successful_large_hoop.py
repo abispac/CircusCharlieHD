@@ -42,6 +42,11 @@ def bcd_score(value: str) -> int:
     return int(value, 10)
 
 
+def mame_rider_state(row) -> str:
+    code = int(row["rider0_code"], 16)
+    return {0x62: "A", 0xCD: "B", 0x5C: "C"}.get(code, "?")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("mame")
@@ -56,6 +61,8 @@ def main() -> int:
         "mame_hoop_x_8_8", "native_hoop_x_8_8", "mame_collision",
         "native_collision", "mame_landing", "native_landing",
         "mame_score_event", "native_score_event", "match",
+        "mame_rider_state", "native_rider_state", "native_hd_frame",
+        "native_anchor_x", "native_anchor_y",
     ]
     first_divergence = None
     with open(args.comparison_out, "w", newline="", encoding="utf-8") as handle:
@@ -69,12 +76,25 @@ def main() -> int:
             mame_row = mame[mame_frame]
             native_landing = native_row["landing_transition"] == "1"
             native_score_event = int(native_row["hoop_score_event"])
+            expected_state = mame_rider_state(mame_row)
+            expected_hd_frame = {"A": 3, "B": 8, "C": 9}[expected_state]
+            expected_anchor = {
+                "A": (285.0, 344.0),
+                "B": (310.5, 346.0),
+                "C": (286.0, 315.0),
+            }[expected_state]
             checks = {
                 "rider_y": int(mame_row["rider_source_y"], 16) == source_y(native_row),
                 "hoop_x": int(mame_row["hoop_x_8_8"], 16) == source_x_fixed(native_row),
                 "collision": mame_row["collision_result"] == collision_result(native_row),
                 "landing": (mame_row["landing_transition"] == "1") == native_landing,
                 "score": bcd_score(mame_row["score_event_bcd"]) == native_score_event,
+                "rider_state": native_row["rider_animation_state"] == expected_state,
+                "hd_frame": int(native_row["rider_hd_frame"]) == expected_hd_frame,
+                "anchor": (
+                    abs(float(native_row["rider_anchor_x"]) - expected_anchor[0]) < 0.01
+                    and abs(float(native_row["rider_anchor_y"]) - expected_anchor[1]) < 0.01
+                ),
             }
             match = all(checks.values())
             if not match and first_divergence is None:
@@ -92,6 +112,11 @@ def main() -> int:
                 "native_landing": int(native_landing),
                 "mame_score_event": mame_row["score_event_bcd"],
                 "native_score_event": f"{native_score_event:06x}",
+                "mame_rider_state": expected_state,
+                "native_rider_state": native_row["rider_animation_state"],
+                "native_hd_frame": native_row["rider_hd_frame"],
+                "native_anchor_x": native_row["rider_anchor_x"],
+                "native_anchor_y": native_row["rider_anchor_y"],
                 "match": int(match),
             })
 

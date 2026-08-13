@@ -1,0 +1,117 @@
+{
+  "order": "left-to-right, top-to-bottom",
+  "captures": [
+    {
+      "native_frame": 24,
+      "mame_frame": 1346,
+      "description": "Run A, jump input staged",
+      "source": "docs/diagnostics/level1-hd-rider-integration/native-sequence/native-frame-024-mame-1346.png",
+      "sheet_cell": {
+        "column": 0,
+        "row": 0
+      },
+      "source_size": [
+        480,
+        640
+      ]
+    },
+    {
+      "native_frame": 25,
+      "mame_frame": 1347,
+      "description": "Run C, takeoff",
+      "source": "docs/diagnostics/level1-hd-rider-integration/native-sequence/native-frame-025-mame-1347.png",
+      "sheet_cell": {
+        "column": 1,
+        "row": 0
+      },
+      "source_size": [
+        480,
+        640
+      ]
+    },
+    {
+      "native_frame": 53,
+      "mame_frame": 1375,
+      "description": "Run C, ascent",
+      "source": "docs/diagnostics/level1-hd-rider-integration/native-sequence/native-frame-053-mame-1375.png",
+      "sheet_cell": {
+        "column": 2,
+        "row": 0
+      },
+      "source_size": [
+        480,
+        640
+      ]
+    },
+    {
+      "native_frame": 73,
+      "mame_frame": 1395,
+      "description": "Run C, hoop crossing/descent",
+      "source": "docs/diagnostics/level1-hd-rider-integration/native-sequence/native-frame-073-mame-1395.png",
+      "sheet_cell": {
+        "column": 3,
+        "row": 0
+      },
+      "source_size": [
+        480,
+        640
+      ]
+    },
+    {
+      "native_frame": 87,
+      "mame_frame": 1409,
+      "description": "Run C, final airborne sample",
+      "source": "docs/diagnostics/level1-hd-rider-integration/native-sequence/native-frame-087-mame-1409.png",
+      "sheet_cell": {
+        "column": 0,
+        "row": 1
+      },
+      "source_size": [
+        480,
+        640
+      ]
+    },
+    {
+      "native_frame": 88,
+      "mame_frame": 1410,
+      "description": "Run A, landing",
+      "source": "docs/diagnostics/level1-hd-rider-integration/native-sequence/native-frame-088-mame-1410.png",
+      "sheet_cell": {
+        "column": 1,
+        "row": 1
+      },
+      "source_size": [
+        480,
+        640
+      ]
+    },
+    {
+      "native_frame": 96,
+      "mame_frame": 1418,
+      "description": "Run B, grounded cadence",
+      "source": "docs/diagnostics/level1-hd-rider-integration/native-sequence/native-frame-096-mame-1418.png",
+      "sheet_cell": {
+        "column": 2,
+        "row": 1
+      },
+      "source_size": [
+        480,
+        640
+      ]
+    },
+    {
+      "native_frame": 103,
+      "mame_frame": 1425,
+      "description": "Run C, grounded cadence",
+      "source": "docs/diagnostics/level1-hd-rider-integration/native-sequence/native-frame-103-mame-1425.png",
+      "sheet_cell": {
+        "column": 3,
+        "row": 1
+      },
+      "source_size": [
+        480,
+        640
+      ]
+    }
+  ]
+}
