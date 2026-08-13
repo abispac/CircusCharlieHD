@@ -2,16 +2,20 @@
 
 ## Result
 
-**Visual production test: PASS.**
+**30%-larger visual production test: PASS.**
 
 The decision is based on actual native renderer captures, not solely on feature
 measurements or synthetic sprite previews.
 
-The production set is:
+The production set is now exactly 1.30 times the previously accepted artwork
+size:
 
-- A: `run/run a 2.png` at offline scale `0.4220552832`
-- B: `run/Run b 2.png` at offline scale `0.4380942671`
-- C and airborne: original `run/run c.png` at offline scale `0.4838703911`
+- A: `run/run a 2.png` at offline scale `0.54867186816`
+- B: `run/Run b 2.png` at offline scale `0.56952254723`
+- C and airborne: original `run/run c.png` at offline scale `0.62903150843`
+
+These are respectively `0.4220552832 * 1.30`, `0.4380942671 * 1.30`
+and `0.4838703911 * 1.30`. No pose-specific runtime scaling is used.
 
 No C2-C8 source participates in this production test.
 
@@ -23,14 +27,25 @@ The supplied masters remain unmodified. The prepared copies are:
 - `assets/stage1-rider-run-b-hd.png`
 - `assets/stage1-rider-run-c-hd.png`
 
-All are straight-alpha sRGB RGBA PNGs on identical 1024x768 canvases. The
+All are straight-alpha sRGB RGBA PNGs on identical 1280x768 canvases. The
 offline transforms use zero rotation and independently apply only the approved
 uniform scale and translation.
 
-The stable saddle/central-body reference is placed at `(512,438)` in every
-production canvas. The unchanged renderer gameplay anchor remains `(512,640)`,
-so the common body-to-gameplay-anchor vector is `(0,202)` for A/B/C. Feet,
-paws, tail and total bounds do not define the anchor.
+The stable saddle/central-body reference is placed at `(640,438)` in every
+production canvas. The source-canvas anchor is `(640,640)`, maintaining the
+common body-to-anchor vector `(0,202)` for A/B/C. The renderer retains the
+same source-pixel-to-world density used by the accepted 1024-wide production
+assets, so the enlarged transparent canvas does not move the character in
+world space. The synchronized logical gameplay anchor remains `(512,640)`.
+Feet, paws, tail and total bounds do not define the anchor.
+
+The nontransparent bounds are:
+
+- A: `(228,153)-(998,673)`
+- B: `(203,148)-(1022,693)`
+- C: `(127,143)-(1043,663)`
+
+No pose touches any canvas edge; the complete extended Run C is preserved.
 
 ## Original C alpha cleanup
 
@@ -63,9 +78,9 @@ The pre-existing renderer mapping remains unchanged:
 - state C -> production original C
 - airborne -> the exact same production original C
 
-The runtime renderer applies one identical source canvas, destination rectangle
-and gameplay anchor to all three. There is no pose-specific runtime scale or
-airborne correction.
+The runtime renderer applies one identical 1280x768 source canvas, one common
+source-pixel-to-world density and one source anchor to all three. There is no
+pose-specific runtime scale or airborne correction.
 
 ## Gameplay lock verification
 
@@ -96,7 +111,7 @@ Machine-readable evidence:
 
 ## Visual decision from actual gameplay
 
-Actual, unscaled renderer-pixel crops:
+Actual, unscaled renderer-pixel crops from the 30%-larger build:
 
 `docs/diagnostics/level1-rider-production/actual-runtime-rider-pixel-crops.jpg`
 
@@ -106,6 +121,7 @@ Full actual gameplay frames at their native 960x1280 backing-store size:
 
 Observed result:
 
+- every pose is exactly 1.30 times its previously accepted production size;
 - A -> B reads as the same-sized lion gathering its stride;
 - B -> C reads as the same-sized central character mass entering an extended
   horizontal leap, not as a medium-to-giant resize;
@@ -118,6 +134,8 @@ Observed result:
 - the shared central-body anchor does not visibly teleport;
 - no original-C glow/background contamination is visible.
 
-This pass changes only production copies and the deterministic preparation and
-diagnostic tooling. No gameplay, physics, collision, camera, state timing,
-scoring, hoop behavior, course data or Events 2-4 behavior was changed.
+The larger common source canvas required a canvas-aware renderer rectangle and
+source anchor, while preserving the prior source-pixel-to-world scale. The
+synchronized diagnostic reports all 120 comparison rows matching. No gameplay,
+physics, collision, camera, state timing, scoring, hoop behavior, course data
+or Events 2-4 behavior was changed.
