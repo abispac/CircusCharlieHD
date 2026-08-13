@@ -1,0 +1,73 @@
+{
+  "method": "accepted master-space feature envelopes transformed with the one common production scale; dimensions include retained pose rotation",
+  "units": "production canvas pixels [width,height]",
+  "common_production_scale": 0.41865765732,
+  "features": {
+    "run-a": {
+      "charlie_head": [
+        225.54,
+        135.94
+      ],
+      "lion_head": [
+        224.15,
+        194.29
+      ],
+      "mane": [
+        179.15,
+        213.0
+      ],
+      "saddle": [
+        115.11,
+        95.2
+      ],
+      "torso_depth": [
+        215.88,
+        152.17
+      ]
+    },
+    "run-b": {
+      "charlie_head": [
+        220.57,
+        124.63
+      ],
+      "lion_head": [
+        219.96,
+        185.26
+      ],
+      "mane": [
+        174.39,
+        202.96
+      ],
+      "saddle": [
+        108.83,
+        88.42
+      ],
+      "torso_depth": [
+        208.32,
+        136.87
+      ]
+    },
+    "run-c": {
+      "charlie_head": [
+        171.71,
+        143.82
+      ],
+      "lion_head": [
+        238.15,
+        187.93
+      ],
+      "mane": [
+        199.93,
+        196.21
+      ],
+      "saddle": [
+        127.07,
+        91.73
+      ],
+      "torso_depth": [
+        266.13,
+        141.52
+      ]
+    }
+  }
+}

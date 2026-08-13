@@ -62,6 +62,21 @@ def gameplay_sheet(capture_dir: Path) -> None:
         sheet.paste(panel, ((index % columns) * 360, (index // columns) * 522))
     sheet.save(OUTPUT / "successful-large-hoop-native-contact-sheet.jpg", quality=94)
 
+    runtime_frames = (
+        (0, "Run A"),
+        (6, "Run B"),
+        (14, "Run C grounded"),
+        (57, "Run C airborne"),
+        (88, "Landing Run A"),
+    )
+    runtime_sheet = Image.new("RGB", (360 * 5, 522), (8, 9, 12))
+    for column, (native_frame, title) in enumerate(runtime_frames):
+        matches = sorted(capture_dir.glob(f"native-frame-{native_frame:03d}-mame-*.png"))
+        if len(matches) != 1:
+            raise SystemExit(f"expected one runtime capture for native frame {native_frame}")
+        runtime_sheet.paste(labelled(Image.open(matches[0]), title), (column * 360, 0))
+    runtime_sheet.save(OUTPUT / "common-scale-runtime-contact-sheet.jpg", quality=94)
+
 
 def anchored_original(path: Path) -> Image.Image:
     source = Image.open(path).convert("RGBA")

@@ -22,11 +22,16 @@ master before doing any work. It then creates production copies with:
 2. removal only of alpha values below 32 that fall outside the spatial support
    of the antialiased subject fringe (`alpha >= 32`, expanded by a deterministic
    9-by-9 maximum filter);
-3. one similarity transform per pose based on the accepted hip, shoulder and
-   seat landmarks;
-4. one common 0.92 post-normalization scale about the shared gameplay anchor,
-   used for all three poses to preserve accepted relative scale while keeping
-   the complete extended C8 pose inside the canvas.
+3. one common source-to-production uniform scale, `0.41865765732`, applied
+   directly and identically to A2, B2 and C8;
+4. pose-specific translation only to place each accepted source anchor at the
+   shared gameplay anchor. The accepted artwork rotations are retained, but no
+   pose has a separate production scale.
+
+The old effective per-pose scales were A `0.41336292208`, B
+`0.42395239256`, and C `0.57708686360`. The disproportionate C scale was the
+cause of the visible small -> medium -> giant transition. Those values are now
+historical metadata only and do not participate in rendering.
 
 No binary threshold, color key, AI segmentation, manual painting or
 pose-specific runtime correction is used.
@@ -91,6 +96,14 @@ The machine-readable results are:
 
 ## Visual diagnostics
 
+- Common-scale A/B/C side-by-side:
+  `docs/diagnostics/level1-rider-production/common-scale-side-by-side.jpg`
+- Gameplay-anchor overlays (A/B, B/C, C/A):
+  `docs/diagnostics/level1-rider-production/common-scale-anchor-overlays.jpg`
+- Common-scale runtime sequence (A, B, grounded C, airborne C, landing A):
+  `docs/diagnostics/level1-rider-production/common-scale-runtime-contact-sheet.jpg`
+- Measured identity-feature envelopes:
+  `docs/diagnostics/level1-rider-production/common-scale-identity-measurements.json`
 - Full native sequence:
   `docs/diagnostics/level1-rider-production/successful-large-hoop-native-contact-sheet.jpg`
 - Original arcade A/B/C against final HD A/B/C at the shared anchor:
@@ -102,9 +115,9 @@ The machine-readable results are:
 
 1. alpha/edge artifact: no material artifact visible on the three inspection
    backgrounds; fine antialiasing remains intentionally preserved;
-2. artwork alignment: accepted reinterpretation differences remain visible,
-   but the common gameplay anchor is stable and the extended C pose is not
-   cropped;
+2. artwork alignment: accepted pose/foreshortening differences remain visible,
+   but all three masters now use one physical production scale, the common
+   gameplay anchor is stable, and the extended C pose is not cropped;
 3. renderer integration: none found in the deterministic sequence;
 4. gameplay/ROM divergence: none through the 120-frame comparison window.
 
