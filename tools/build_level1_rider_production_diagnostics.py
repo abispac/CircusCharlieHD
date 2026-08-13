@@ -98,6 +98,33 @@ def gameplay_sheet(capture_dir: Path) -> None:
         runtime_sheet.paste(panel, (column * native_size[0], 0))
     runtime_sheet.save(OUTPUT / "identity-scale-runtime-contact-sheet.jpg", quality=94)
 
+    # Actual renderer pixels, cropped around the rider only. Cropping makes the
+    # small gameplay sprite inspectable without rescaling or synthesizing a
+    # preview; every subject pixel is copied directly from the real frame.
+    crop_specs = (
+        (0, "Run A", (80, 1000, 300, 1220)),
+        (6, "Run B", (55, 995, 285, 1225)),
+        (14, "Run C grounded", (10, 995, 285, 1225)),
+        (57, "Run C airborne", (75, 720, 350, 950)),
+        (88, "Landing Run A", (80, 1000, 300, 1220)),
+    )
+    crop_w, crop_h, crop_header = 300, 260, 42
+    crop_sheet = Image.new(
+        "RGB", (crop_w * len(crop_specs), crop_h + crop_header), (8, 9, 12)
+    )
+    for column, (native_frame, title, box) in enumerate(crop_specs):
+        matches = sorted(capture_dir.glob(f"native-frame-{native_frame:03d}-mame-*.png"))
+        if len(matches) != 1:
+            raise SystemExit(f"expected one cropped runtime capture for native frame {native_frame}")
+        capture = Image.open(matches[0]).convert("RGB")
+        cropped = capture.crop(box)
+        panel = Image.new("RGB", (crop_w, crop_h + crop_header), (16, 18, 23))
+        # Center the unscaled crop. It may be smaller than the common panel.
+        panel.paste(cropped, ((crop_w - cropped.width) // 2, crop_header + (crop_h - cropped.height) // 2))
+        ImageDraw.Draw(panel).text((12, 10), title, fill=(245, 245, 245), font=font(20))
+        crop_sheet.paste(panel, (column * crop_w, 0))
+    crop_sheet.save(OUTPUT / "actual-runtime-rider-pixel-crops.jpg", quality=97)
+
 
 def anchored_original(path: Path) -> Image.Image:
     source = Image.open(path).convert("RGBA")

@@ -1,5 +1,5 @@
 {
-  "method": "least-squares offline per-source scalar using Charlie head, lion head, mane and saddle dimensions against the A2/B2 mean; dimensions include retained pose rotation",
+  "method": "approved independent offline scales from stable character-identity features; no runtime scaling",
   "units": "production canvas pixels [width,height]",
   "raw_source_feature_pixels": {
     "run-a": {
@@ -49,23 +49,23 @@
     "run-c": {
       "charlie_head": [
         380.0,
-        305.0
+        285.0
       ],
       "lion_head": [
-        530.0,
-        395.0
+        440.0,
+        365.0
       ],
       "mane": [
-        435.0,
-        425.0
+        460.0,
+        430.0
       ],
       "saddle": [
-        285.0,
-        190.0
+        300.0,
+        210.0
       ],
       "torso_depth": [
-        610.0,
-        275.0
+        670.0,
+        315.0
       ]
     }
   },
@@ -87,156 +87,150 @@
       210.0
     ]
   },
-  "base_production_scale": 0.41865765732,
-  "identity_normalization_factors": {
-    "run-a": 0.9911990483448263,
-    "run-b": 1.0088182063229234,
-    "run-c": 1.0570370848668775
-  },
   "effective_source_to_canvas_scales": {
-    "run-a": 0.4149730715178584,
-    "run-b": 0.4223494669209195,
-    "run-c": 0.44253666965072896
+    "run-a": 0.4220552832,
+    "run-b": 0.4380942671,
+    "run-c": 0.4838703911
   },
   "final_target_pixels": {
     "charlie_head": [
-      218.75,
-      122.46
+      224.71,
+      125.8
     ],
     "lion_head": [
-      215.61,
-      182.12
+      221.49,
+      187.08
     ],
     "mane": [
-      169.56,
-      202.0
+      174.18,
+      207.51
     ],
     "saddle": [
-      108.85,
-      87.92
+      111.82,
+      90.32
     ]
   },
   "final_feature_pixels": {
     "run-a": {
       "charlie_head": [
-        223.55,
-        134.75
+        221.58,
+        126.62
       ],
       "lion_head": [
-        222.18,
-        192.58
+        217.36,
+        185.7
       ],
       "mane": [
-        177.57,
-        211.12
+        170.93,
+        206.81
       ],
       "saddle": [
-        114.1,
-        94.36
+        111.84,
+        90.74
       ],
       "torso_depth": [
-        213.98,
-        150.83
+        211.03,
+        143.5
       ]
     },
     "run-b": {
       "charlie_head": [
-        222.51,
-        125.72
+        227.81,
+        124.86
       ],
       "lion_head": [
-        221.9,
-        186.89
+        225.62,
+        188.38
       ],
       "mane": [
-        175.92,
-        204.75
+        177.43,
+        208.09
       ],
       "saddle": [
-        109.79,
-        89.2
+        111.71,
+        89.81
       ],
       "torso_depth": [
-        210.15,
-        138.08
+        214.67,
+        138.0
       ]
     },
     "run-c": {
       "charlie_head": [
-        181.51,
-        152.02
+        183.87,
+        137.9
       ],
       "lion_head": [
-        251.73,
-        198.65
+        212.9,
+        176.61
       ],
       "mane": [
-        211.33,
-        207.4
+        222.58,
+        208.06
       ],
       "saddle": [
-        134.32,
-        96.96
+        145.16,
+        101.61
       ],
       "torso_depth": [
-        281.31,
-        149.59
+        324.19,
+        152.42
       ]
     }
   },
   "percent_difference_from_grounded_target": {
     "run-a": {
       "charlie_head": [
-        2.19,
-        10.04
+        -1.39,
+        0.65
       ],
       "lion_head": [
-        3.05,
-        5.74
+        -1.86,
+        -0.74
       ],
       "mane": [
-        4.72,
-        4.51
+        -1.87,
+        -0.34
       ],
       "saddle": [
-        4.82,
-        7.32
+        0.02,
+        0.47
       ]
     },
     "run-b": {
       "charlie_head": [
-        1.72,
-        2.66
+        1.38,
+        -0.75
       ],
       "lion_head": [
-        2.92,
-        2.62
+        1.86,
+        0.69
       ],
       "mane": [
-        3.75,
-        1.36
+        1.87,
+        0.28
       ],
       "saddle": [
-        0.86,
-        1.46
+        -0.1,
+        -0.56
       ]
     },
     "run-c": {
       "charlie_head": [
-        -17.02,
-        24.14
+        -18.17,
+        9.62
       ],
       "lion_head": [
-        16.75,
-        9.08
+        -3.88,
+        -5.6
       ],
       "mane": [
-        24.63,
-        2.67
+        27.79,
+        0.27
       ],
       "saddle": [
-        23.4,
-        10.28
+        29.82,
+        12.5
       ]
     }
   }

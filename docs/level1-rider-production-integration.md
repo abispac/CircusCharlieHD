@@ -2,11 +2,15 @@
 
 ## Scope
 
-This pass prepares and integrates only the accepted Level 1 rider/lion set:
+This document's earlier C8 integration has been superseded by the approved
+original-Run-C production test documented in
+`docs/level1-original-c-production-test.md`.
+
+The active Level 1 rider/lion set is now:
 
 - Run A: `run/run a 2.png`
 - Run B: `run/Run b 2.png`
-- Run C and airborne: `run/run c 8.png`
+- Run C and airborne: original pre-C2 `run/run c.png`
 
 The supplied masters remain unchanged. The old 12-frame atlas remains in the
 repository as rollback/reference material, but normal Level 1 Run A/B/C and

@@ -2,8 +2,8 @@
 """Prepare accepted Level 1 rider art without modifying supplied masters.
 
 The cleanup and one-transform normalization are deterministic. This tool is
-intentionally specific to the accepted A2/B2/C8 set and writes only production
-copies plus diagnostics/metadata.
+intentionally specific to the accepted A2/B2/original-C production test and
+writes only production copies plus diagnostics/metadata.
 """
 
 from __future__ import annotations
@@ -23,6 +23,10 @@ OUTPUT = ROOT / "assets"
 DIAGNOSTICS = ROOT / "docs/diagnostics/level1-rider-production"
 CANVAS = (1024, 768)
 GAMEPLAY_ANCHOR = (512, 640)
+# Stable saddle/central-body point inside the production canvas. The runtime
+# samples every sprite at GAMEPLAY_ANCHOR; keeping this body point at a common
+# canvas location makes the body-to-gameplay-anchor vector identical in A/B/C.
+PRODUCTION_BODY_ANCHOR = (512, 438)
 # Fixed LittleCMS sRGB profile bytes. Creating a fresh profile at runtime puts
 # the current time in its ICC header and makes otherwise identical PNG builds
 # hash differently.
@@ -40,35 +44,30 @@ SRGB_ICC = base64.b64decode(
     "YpcAALeHAAAY2XBhcmEAAAAAAAMAAAACZmYAAPKnAAANWQAAE9AAAApbY2hybQAAAAAA"
     "AwAAAACj1wAAVHsAAEzNAACZmgAAJmYAAA9c"
 )
-# This is only the base source-to-canvas density. Each master receives an
-# offline identity-normalization factor derived below from stable head/mane/
-# saddle feature sizes. Runtime still draws every 1024x768 PNG identically.
-BASE_PRODUCTION_SCALE = 0.41865765732
-
 POSES = {
     "run-a": {
         "source": ROOT / "run/run a 2.png",
         "source_sha256": "50f2b9b381c630d8740c1b947e1ce0e97824dc987370b2715a93948b6d09d207",
         "output": OUTPUT / "stage1-rider-run-a-hd.png",
-        "old_effective_scale": 0.41336292208,
-        "rotation_degrees": -2.734871,
-        "source_anchor": (718.131548, 999.403464),
+        "production_scale": 0.4220552832,
+        "rotation_degrees": 0.0,
+        "source_anchor": (767.5, 582.5),
     },
     "run-b": {
         "source": ROOT / "run/Run b 2.png",
         "source_sha256": "add70517b36a9b921d7a43d8286d7e35f26ba8d132aad4746dca7a1261429a90",
         "output": OUTPUT / "stage1-rider-run-b-hd.png",
-        "old_effective_scale": 0.42395239256,
-        "rotation_degrees": -1.406612,
-        "source_anchor": (749.021806, 974.150163),
+        "production_scale": 0.4380942671,
+        "rotation_degrees": 0.0,
+        "source_anchor": (777.5, 572.5),
     },
     "run-c": {
-        "source": ROOT / "run/run c 8.png",
-        "source_sha256": "949ff7cd42c37a02980cea7cd3f103288dfbe1e785d365da111ad7574e2b4d9d",
+        "source": ROOT / "run/run c.png",
+        "source_sha256": "51881d33b803c8dec3d6c3177db3767fd4e84642a6e4077aab583d6a677cc9f9",
         "output": OUTPUT / "stage1-rider-run-c-hd.png",
-        "old_effective_scale": 0.57708686360,
-        "rotation_degrees": -6.077358,
-        "source_anchor": (969.088108, 834.642175),
+        "production_scale": 0.4838703911,
+        "rotation_degrees": 0.0,
+        "source_anchor": (850.0, 520.0),
     },
 }
 
@@ -90,11 +89,11 @@ IDENTITY_FEATURES = {
         "torso_depth": (430, 480, 920, 795),
     },
     "run-c": {
-        "charlie_head": (880, 45, 1260, 350),
-        "lion_head": (1050, 295, 1580, 690),
-        "mane": (1000, 295, 1435, 720),
-        "saddle": (745, 420, 1030, 610),
-        "torso_depth": (510, 425, 1120, 700),
+        "charlie_head": (775, 55, 1155, 340),
+        "lion_head": (1050, 285, 1490, 650),
+        "mane": (980, 280, 1440, 710),
+        "saddle": (710, 415, 1010, 625),
+        "torso_depth": (390, 420, 1060, 735),
     },
 }
 
@@ -126,16 +125,40 @@ def clean_alpha(image: Image.Image) -> tuple[Image.Image, dict]:
     }
 
 
+def clean_original_c_alpha(image: Image.Image) -> tuple[Image.Image, dict]:
+    """Remove the historical backdrop while preserving the subject fringe.
+
+    The original C export contains a broad translucent colored backdrop. Its
+    real subject is the dense alpha component. Build a spatial support region
+    from alpha >= 224, expand that support by five source pixels, and retain
+    the continuously restored alpha only inside it. This preserves the genuine
+    low-alpha fur/hair/whisker fringe adjacent to the subject without retaining
+    the distant glow/background. Character RGB pixels are never edited.
+    """
+    alpha = np.asarray(image.getchannel("A"), dtype=np.float32)
+    restored = np.clip(np.rint(alpha * (255.0 / 253.0)), 0, 255).astype(np.uint8)
+    subject_core = Image.fromarray((alpha >= 224).astype(np.uint8) * 255, "L")
+    spatial_support = np.asarray(subject_core.filter(ImageFilter.MaxFilter(11))) > 0
+    remove = ~spatial_support
+    restored[remove] = 0
+    result = image.copy()
+    result.putalpha(Image.fromarray(restored, "L"))
+    return result, {
+        "continuous_restoration": "round(alpha * 255 / 253), clipped to 255",
+        "subject_core": "alpha >= 224",
+        "spatial_support": "deterministic 11x11 max filter (5 source-pixel fringe)",
+        "removed_pixels": int(remove.sum()),
+        "removed_percent": round(float(remove.mean() * 100.0), 6),
+        "preservation_rule": "RGB unchanged; restored alpha retained only in subject support",
+    }
+
+
 def feature_dimensions(bounds):
     left, top, right, bottom = bounds
     return [float(right - left), float(bottom - top)]
 
 
-def identity_normalization_factors():
-    # A2/B2 establish the grounded physical-size target. Use all dimensions of
-    # the stable identity envelopes together; no pose span, limb, tail, torso,
-    # hip/shoulder/seat triangle, or outer silhouette participates.
-    fitted_features = ("charlie_head", "lion_head", "mane", "saddle")
+def feature_measurements():
     raw = {
         pose: {
             feature: feature_dimensions(bounds)
@@ -148,22 +171,10 @@ def identity_normalization_factors():
             (raw["run-a"][feature][axis] + raw["run-b"][feature][axis]) / 2.0
             for axis in range(2)
         ]
-        for feature in fitted_features
+        for feature in ("charlie_head", "lion_head", "mane", "saddle")
     }
-    factors = {}
-    for pose in POSES:
-        source_values = []
-        target_values = []
-        for feature in fitted_features:
-            source_values.extend(raw[pose][feature])
-            target_values.extend(target[feature])
-        source_vector = np.asarray(source_values, dtype=np.float64)
-        target_vector = np.asarray(target_values, dtype=np.float64)
-        factors[pose] = float(
-            np.dot(source_vector, target_vector) /
-            np.dot(source_vector, source_vector)
-        )
-    return raw, target, factors
+    scales = {pose: specification["production_scale"] for pose, specification in POSES.items()}
+    return raw, target, scales
 
 
 def production_transform(image: Image.Image, specification: dict,
@@ -175,7 +186,7 @@ def production_transform(image: Image.Image, specification: dict,
         dtype=np.float64,
     )
     source_anchor = np.asarray(specification["source_anchor"], dtype=np.float64)
-    translation = np.asarray(GAMEPLAY_ANCHOR, dtype=np.float64) - (
+    translation = np.asarray(PRODUCTION_BODY_ANCHOR, dtype=np.float64) - (
         source_anchor @ (production_scale * rotation)
     )
     forward = production_scale * rotation.T
@@ -255,7 +266,7 @@ def feature_canvas_bounds(pose, feature, production_scale):
         dtype=np.float64,
     )
     source_anchor = np.asarray(specification["source_anchor"], dtype=np.float64)
-    translation = np.asarray(GAMEPLAY_ANCHOR, dtype=np.float64) - (
+    translation = np.asarray(PRODUCTION_BODY_ANCHOR, dtype=np.float64) - (
         source_anchor @ (production_scale * rotation)
     )
     left, top, right, bottom = IDENTITY_FEATURES[pose][feature]
@@ -270,7 +281,7 @@ def feature_canvas_bounds(pose, feature, production_scale):
     )
 
 
-def build_identity_scale_diagnostics(prepared, raw, target, factors):
+def build_identity_scale_diagnostics(prepared, raw, target, scales):
     cell = (512, 384)
     side_by_side = Image.new("RGB", (cell[0] * 3, cell[1]), (20, 20, 20))
     for column, pose in enumerate(("run-a", "run-b", "run-c")):
@@ -295,7 +306,7 @@ def build_identity_scale_diagnostics(prepared, raw, target, factors):
         draw = ImageDraw.Draw(canvas)
         for pose, color in ((first, (0, 210, 255, 255)),
                             (second, (255, 64, 130, 255))):
-            production_scale = BASE_PRODUCTION_SCALE * factors[pose]
+            production_scale = scales[pose]
             for feature in ("charlie_head", "lion_head", "saddle"):
                 draw.rectangle(
                     feature_canvas_bounds(pose, feature, production_scale),
@@ -324,12 +335,12 @@ def build_identity_scale_diagnostics(prepared, raw, target, factors):
         measurements[pose] = {
             feature: transformed_feature_size(
                 bounds, POSES[pose]["rotation_degrees"],
-                BASE_PRODUCTION_SCALE * factors[pose],
+                scales[pose],
             )
             for feature, bounds in features.items()
         }
     final_target = {
-        feature: [round(value * BASE_PRODUCTION_SCALE, 2) for value in dimensions]
+        feature: [round(value * ((scales["run-a"] + scales["run-b"]) / 2.0), 2) for value in dimensions]
         for feature, dimensions in target.items()
     }
     differences = {}
@@ -344,15 +355,12 @@ def build_identity_scale_diagnostics(prepared, raw, target, factors):
     (DIAGNOSTICS / "identity-scale-measurements.json").write_text(
         json.dumps(
             {
-                "method": "least-squares offline per-source scalar using Charlie head, lion head, mane and saddle dimensions against the A2/B2 mean; dimensions include retained pose rotation",
+                "method": "approved independent offline scales from stable character-identity features; no runtime scaling",
                 "units": "production canvas pixels [width,height]",
                 "raw_source_feature_pixels": raw,
                 "grounded_target_source_pixels": target,
-                "base_production_scale": BASE_PRODUCTION_SCALE,
-                "identity_normalization_factors": factors,
                 "effective_source_to_canvas_scales": {
-                    pose: BASE_PRODUCTION_SCALE * factor
-                    for pose, factor in factors.items()
+                    pose: scale for pose, scale in scales.items()
                 },
                 "final_target_pixels": final_target,
                 "final_feature_pixels": measurements,
@@ -367,12 +375,8 @@ def build_identity_scale_diagnostics(prepared, raw, target, factors):
 def main() -> int:
     OUTPUT.mkdir(parents=True, exist_ok=True)
     DIAGNOSTICS.mkdir(parents=True, exist_ok=True)
-    raw_features, target_features, normalization_factors = identity_normalization_factors()
-    effective_scales = {
-        pose: BASE_PRODUCTION_SCALE * factor
-        for pose, factor in normalization_factors.items()
-    }
-    metadata = {"canvas": list(CANVAS), "gameplay_anchor": list(GAMEPLAY_ANCHOR), "production_scale_rule": "offline per-source identity-feature normalization; identical 1024x768 runtime rendering", "base_production_scale": BASE_PRODUCTION_SCALE, "identity_normalization_factors": normalization_factors, "effective_source_to_canvas_scales": effective_scales, "old_effective_scales": {pose: specification["old_effective_scale"] for pose, specification in POSES.items()}, "alpha_representation": "straight/unassociated RGBA", "color_profile": "embedded sRGB ICC", "poses": {}}
+    raw_features, target_features, effective_scales = feature_measurements()
+    metadata = {"canvas": list(CANVAS), "gameplay_anchor": list(GAMEPLAY_ANCHOR), "production_body_anchor": list(PRODUCTION_BODY_ANCHOR), "body_to_gameplay_anchor_vector": [GAMEPLAY_ANCHOR[0] - PRODUCTION_BODY_ANCHOR[0], GAMEPLAY_ANCHOR[1] - PRODUCTION_BODY_ANCHOR[1]], "production_scale_rule": "approved independent offline identity-feature normalization; identical 1024x768 runtime rendering", "effective_source_to_canvas_scales": effective_scales, "alpha_representation": "straight/unassociated RGBA", "color_profile": "embedded sRGB ICC", "poses": {}}
     prepared = {}
     for pose, specification in POSES.items():
         source = specification["source"]
@@ -382,7 +386,9 @@ def main() -> int:
                 f"{pose}: supplied master hash changed: {actual_source_hash}"
             )
         image = Image.open(source).convert("RGBA")
-        cleaned, cleanup = clean_alpha(image)
+        cleaned, cleanup = (
+            clean_original_c_alpha(image) if pose == "run-c" else clean_alpha(image)
+        )
         production_scale = effective_scales[pose]
         production, translation = production_transform(
             cleaned, specification, production_scale
@@ -393,7 +399,7 @@ def main() -> int:
             "source": str(source.relative_to(ROOT)), "source_sha256": actual_source_hash,
             "output": str(specification["output"].relative_to(ROOT)), "output_sha256": sha256(specification["output"]),
             "cleanup": cleanup,
-            "production_transform": {"offline_identity_factor": normalization_factors[pose], "source_to_canvas_scale": production_scale, "rotation_degrees": specification["rotation_degrees"], "translation": [round(value, 6) for value in translation], "source_anchor": list(specification["source_anchor"])},
+            "production_transform": {"source_to_canvas_scale": production_scale, "rotation_degrees": specification["rotation_degrees"], "translation": [round(value, 6) for value in translation], "source_anchor": list(specification["source_anchor"])},
             "production_anchor": list(GAMEPLAY_ANCHOR), "output_stats": alpha_stats(production),
         }
 
@@ -407,7 +413,7 @@ def main() -> int:
             sheet.paste(base.resize(cell, Image.Resampling.LANCZOS).convert("RGB"), (column * cell[0], row * cell[1]))
     sheet.save(DIAGNOSTICS / "alpha-light-dark-checkerboard.jpg", quality=95)
     build_identity_scale_diagnostics(
-        prepared, raw_features, target_features, normalization_factors
+        prepared, raw_features, target_features, effective_scales
     )
     (DIAGNOSTICS / "production-metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
 
