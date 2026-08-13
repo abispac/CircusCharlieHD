@@ -1,0 +1,332 @@
+{
+  "status": "diagnostic-only; no production asset or gameplay modification",
+  "authoritative_sources": {
+    "run-a": {
+      "path": "run/run a 2.png",
+      "sha256": "50f2b9b381c630d8740c1b947e1ce0e97824dc987370b2715a93948b6d09d207",
+      "alpha": {
+        "dimensions": [
+          1448,
+          1086
+        ],
+        "alpha_range": [
+          0,
+          255
+        ],
+        "fully_transparent_percent": 63.137763,
+        "fully_opaque_percent": 0.025564
+      }
+    },
+    "run-b": {
+      "path": "run/Run b 2.png",
+      "sha256": "add70517b36a9b921d7a43d8286d7e35f26ba8d132aad4746dca7a1261429a90",
+      "alpha": {
+        "dimensions": [
+          1448,
+          1086
+        ],
+        "alpha_range": [
+          0,
+          255
+        ],
+        "fully_transparent_percent": 63.844968,
+        "fully_opaque_percent": 0.018124
+      }
+    },
+    "run-c-original": {
+      "path": "run/run c.png",
+      "sha256": "51881d33b803c8dec3d6c3177db3767fd4e84642a6e4077aab583d6a677cc9f9",
+      "alpha": {
+        "dimensions": [
+          1536,
+          1024
+        ],
+        "alpha_range": [
+          0,
+          254
+        ],
+        "fully_transparent_percent": 50.600052,
+        "fully_opaque_percent": 0.0
+      }
+    }
+  },
+  "method": {
+    "size_target": "A2/B2 arithmetic mean for stable identity-feature width and height",
+    "fit_features": [
+      "charlie_head",
+      "charlie_torso",
+      "lion_head",
+      "mane",
+      "saddle",
+      "body_depth",
+      "paw"
+    ],
+    "fit_axes": {
+      "charlie_head": [
+        0,
+        1
+      ],
+      "charlie_torso": [
+        1
+      ],
+      "lion_head": [
+        0,
+        1
+      ],
+      "mane": [
+        1
+      ],
+      "saddle": [
+        0,
+        1
+      ],
+      "body_depth": [
+        1
+      ],
+      "paw": [
+        0,
+        1
+      ]
+    },
+    "excluded": [
+      "total image size",
+      "outer silhouette",
+      "tail length",
+      "leg extension",
+      "total pose width"
+    ],
+    "anchor": "center of saddle/body relationship, translated to diagnostic point (512,438)",
+    "rotation": "none",
+    "runtime_changes": "none"
+  },
+  "source_feature_dimensions_px": {
+    "run-a": {
+      "charlie_head": [
+        525.0,
+        300.0
+      ],
+      "charlie_torso": [
+        360.0,
+        265.0
+      ],
+      "lion_head": [
+        515.0,
+        440.0
+      ],
+      "mane": [
+        405.0,
+        490.0
+      ],
+      "saddle": [
+        265.0,
+        215.0
+      ],
+      "body_depth": [
+        500.0,
+        340.0
+      ],
+      "paw": [
+        285.0,
+        200.0
+      ]
+    },
+    "run-b": {
+      "charlie_head": [
+        520.0,
+        285.0
+      ],
+      "charlie_torso": [
+        360.0,
+        270.0
+      ],
+      "lion_head": [
+        515.0,
+        430.0
+      ],
+      "mane": [
+        405.0,
+        475.0
+      ],
+      "saddle": [
+        255.0,
+        205.0
+      ],
+      "body_depth": [
+        490.0,
+        315.0
+      ],
+      "paw": [
+        205.0,
+        180.0
+      ]
+    },
+    "run-c-original": {
+      "charlie_head": [
+        380.0,
+        285.0
+      ],
+      "charlie_torso": [
+        330.0,
+        250.0
+      ],
+      "lion_head": [
+        440.0,
+        365.0
+      ],
+      "mane": [
+        460.0,
+        430.0
+      ],
+      "saddle": [
+        300.0,
+        210.0
+      ],
+      "body_depth": [
+        670.0,
+        315.0
+      ],
+      "paw": [
+        230.0,
+        180.0
+      ]
+    }
+  },
+  "a_b_target_feature_dimensions_px": {
+    "charlie_head": [
+      522.5,
+      292.5
+    ],
+    "charlie_torso": [
+      360.0,
+      267.5
+    ],
+    "lion_head": [
+      515.0,
+      435.0
+    ],
+    "mane": [
+      405.0,
+      482.5
+    ],
+    "saddle": [
+      260.0,
+      210.0
+    ],
+    "body_depth": [
+      495.0,
+      327.5
+    ],
+    "paw": [
+      245.0,
+      190.0
+    ]
+  },
+  "identity_density_factor": {
+    "run-a": 0.9806290111219381,
+    "run-b": 1.017894965513496,
+    "run-c-original": 1.1242540065714477
+  },
+  "proposed_offline_scale": {
+    "run-a": 0.4220552832286883,
+    "run-b": 0.4380942671432286,
+    "run-c-original": 0.4838703911294928
+  },
+  "proposed_rendered_feature_dimensions_px": {
+    "run-a": {
+      "charlie_head": [
+        221.579,
+        126.617
+      ],
+      "charlie_torso": [
+        151.94,
+        111.845
+      ],
+      "lion_head": [
+        217.358,
+        185.704
+      ],
+      "mane": [
+        170.932,
+        206.807
+      ],
+      "saddle": [
+        111.845,
+        90.742
+      ],
+      "body_depth": [
+        211.028,
+        143.499
+      ],
+      "paw": [
+        120.286,
+        84.411
+      ]
+    },
+    "run-b": {
+      "charlie_head": [
+        227.809,
+        124.857
+      ],
+      "charlie_torso": [
+        157.714,
+        118.285
+      ],
+      "lion_head": [
+        225.619,
+        188.381
+      ],
+      "mane": [
+        177.428,
+        208.095
+      ],
+      "saddle": [
+        111.714,
+        89.809
+      ],
+      "body_depth": [
+        214.666,
+        138.0
+      ],
+      "paw": [
+        89.809,
+        78.857
+      ]
+    },
+    "run-c-original": {
+      "charlie_head": [
+        183.871,
+        137.903
+      ],
+      "charlie_torso": [
+        159.677,
+        120.968
+      ],
+      "lion_head": [
+        212.903,
+        176.613
+      ],
+      "mane": [
+        222.58,
+        208.064
+      ],
+      "saddle": [
+        145.161,
+        101.613
+      ],
+      "body_depth": [
+        324.193,
+        152.419
+      ],
+      "paw": [
+        111.29,
+        87.097
+      ]
+    }
+  },
+  "diagnostics": [
+    "original-a-b-c.jpg",
+    "proposed-normalized-a-b-c.jpg",
+    "proposed-anchor-overlays.jpg",
+    "simulated-a-b-c-airborne-c-a.jpg"
+  ]
+}
