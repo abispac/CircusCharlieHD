@@ -1,0 +1,2308 @@
+{
+  "authority": "verified original 48x32 hardware composites",
+  "source_canvas": [
+    48,
+    32
+  ],
+  "source_gameplay_anchor": [
+    24,
+    32
+  ],
+  "recommended_final_canvas": [
+    1024,
+    768
+  ],
+  "recommended_final_anchor": [
+    512,
+    640
+  ],
+  "source_to_final_scale": 16,
+  "poses": {
+    "run-a": {
+      "exact_silhouette_bounds_source": [
+        0,
+        0,
+        47,
+        32
+      ],
+      "exact_silhouette_bounds_anchor_relative": [
+        -0.5,
+        -1.0,
+        0.479167,
+        0.0
+      ],
+      "exact_silhouette_bounds_final_hd": [
+        128,
+        128,
+        880,
+        640
+      ],
+      "charlie": {
+        "overall_bounds": {
+          "source": [
+            11,
+            0,
+            30,
+            25
+          ],
+          "anchor_relative": [
+            -0.270833,
+            -1.0,
+            0.125,
+            -0.21875
+          ],
+          "final_hd": [
+            304.0,
+            128.0,
+            608.0,
+            528.0
+          ],
+          "size_source": [
+            19,
+            25
+          ],
+          "size_normalized": [
+            0.395833,
+            0.78125
+          ],
+          "size_final_hd": [
+            304,
+            400
+          ]
+        },
+        "head_center": {
+          "source": [
+            21.0,
+            7.0
+          ],
+          "anchor_relative": [
+            -0.0625,
+            -0.78125
+          ],
+          "final_hd": [
+            464.0,
+            240.0
+          ]
+        },
+        "head_bounds": {
+          "source": [
+            11,
+            0,
+            30,
+            14
+          ],
+          "anchor_relative": [
+            -0.270833,
+            -1.0,
+            0.125,
+            -0.5625
+          ],
+          "final_hd": [
+            304.0,
+            128.0,
+            608.0,
+            352.0
+          ],
+          "size_source": [
+            19,
+            14
+          ],
+          "size_normalized": [
+            0.395833,
+            0.4375
+          ],
+          "size_final_hd": [
+            304,
+            224
+          ]
+        },
+        "body_center": {
+          "source": [
+            20.5,
+            16.5
+          ],
+          "anchor_relative": [
+            -0.072917,
+            -0.484375
+          ],
+          "final_hd": [
+            456.0,
+            392.0
+          ]
+        },
+        "body_bounds": {
+          "source": [
+            14,
+            10,
+            29,
+            24
+          ],
+          "anchor_relative": [
+            -0.208333,
+            -0.6875,
+            0.104167,
+            -0.25
+          ],
+          "final_hd": [
+            352.0,
+            288.0,
+            592.0,
+            512.0
+          ],
+          "size_source": [
+            15,
+            14
+          ],
+          "size_normalized": [
+            0.3125,
+            0.4375
+          ],
+          "size_final_hd": [
+            240,
+            224
+          ]
+        },
+        "seat": {
+          "source": [
+            22.5,
+            21.5
+          ],
+          "anchor_relative": [
+            -0.03125,
+            -0.328125
+          ],
+          "final_hd": [
+            488.0,
+            472.0
+          ]
+        },
+        "grip": {
+          "source": [
+            28.5,
+            13.5
+          ],
+          "anchor_relative": [
+            0.09375,
+            -0.578125
+          ],
+          "final_hd": [
+            584.0,
+            344.0
+          ]
+        },
+        "boot": {
+          "source": [
+            25.5,
+            22.5
+          ],
+          "anchor_relative": [
+            0.03125,
+            -0.296875
+          ],
+          "final_hd": [
+            536.0,
+            488.0
+          ]
+        }
+      },
+      "lion": {
+        "overall_bounds": {
+          "source": [
+            0,
+            9,
+            47,
+            32
+          ],
+          "anchor_relative": [
+            -0.5,
+            -0.71875,
+            0.479167,
+            0.0
+          ],
+          "final_hd": [
+            128.0,
+            272.0,
+            880.0,
+            640.0
+          ],
+          "size_source": [
+            47,
+            23
+          ],
+          "size_normalized": [
+            0.979167,
+            0.71875
+          ],
+          "size_final_hd": [
+            752,
+            368
+          ]
+        },
+        "torso_bounds": {
+          "source": [
+            9,
+            13,
+            35,
+            25
+          ],
+          "anchor_relative": [
+            -0.3125,
+            -0.59375,
+            0.229167,
+            -0.21875
+          ],
+          "final_hd": [
+            272.0,
+            336.0,
+            688.0,
+            528.0
+          ],
+          "size_source": [
+            26,
+            12
+          ],
+          "size_normalized": [
+            0.541667,
+            0.375
+          ],
+          "size_final_hd": [
+            416,
+            192
+          ]
+        },
+        "head_center": {
+          "source": [
+            39.0,
+            16.5
+          ],
+          "anchor_relative": [
+            0.3125,
+            -0.484375
+          ],
+          "final_hd": [
+            752.0,
+            392.0
+          ]
+        },
+        "head_bounds": {
+          "source": [
+            31,
+            9,
+            47,
+            24
+          ],
+          "anchor_relative": [
+            0.145833,
+            -0.71875,
+            0.479167,
+            -0.25
+          ],
+          "final_hd": [
+            624.0,
+            272.0,
+            880.0,
+            512.0
+          ],
+          "size_source": [
+            16,
+            15
+          ],
+          "size_normalized": [
+            0.333333,
+            0.46875
+          ],
+          "size_final_hd": [
+            256,
+            240
+          ]
+        },
+        "nose_muzzle": {
+          "source": [
+            45.0,
+            17.5
+          ],
+          "anchor_relative": [
+            0.4375,
+            -0.453125
+          ],
+          "final_hd": [
+            848.0,
+            408.0
+          ]
+        },
+        "shoulder": {
+          "source": [
+            32.0,
+            17.0
+          ],
+          "anchor_relative": [
+            0.166667,
+            -0.46875
+          ],
+          "final_hd": [
+            640.0,
+            400.0
+          ]
+        },
+        "hip": {
+          "source": [
+            13.5,
+            18.0
+          ],
+          "anchor_relative": [
+            -0.21875,
+            -0.4375
+          ],
+          "final_hd": [
+            344.0,
+            416.0
+          ]
+        },
+        "tail_base": {
+          "source": [
+            10.0,
+            17.0
+          ],
+          "anchor_relative": [
+            -0.291667,
+            -0.46875
+          ],
+          "final_hd": [
+            288.0,
+            400.0
+          ]
+        },
+        "tail_tip": {
+          "source": [
+            0.5,
+            24.5
+          ],
+          "anchor_relative": [
+            -0.489583,
+            -0.234375
+          ],
+          "final_hd": [
+            136.0,
+            520.0
+          ]
+        },
+        "rear_paw_1": {
+          "source": [
+            15.0,
+            30.0
+          ],
+          "anchor_relative": [
+            -0.1875,
+            -0.0625
+          ],
+          "final_hd": [
+            368.0,
+            608.0
+          ]
+        },
+        "rear_paw_2": {
+          "source": [
+            20.0,
+            30.0
+          ],
+          "anchor_relative": [
+            -0.083333,
+            -0.0625
+          ],
+          "final_hd": [
+            448.0,
+            608.0
+          ]
+        },
+        "front_paw_1": {
+          "source": [
+            30.0,
+            31.0
+          ],
+          "anchor_relative": [
+            0.125,
+            -0.03125
+          ],
+          "final_hd": [
+            608.0,
+            624.0
+          ]
+        },
+        "front_paw_2": {
+          "source": [
+            35.0,
+            31.0
+          ],
+          "anchor_relative": [
+            0.229167,
+            -0.03125
+          ],
+          "final_hd": [
+            688.0,
+            624.0
+          ]
+        }
+      },
+      "back_line": [
+        {
+          "source": [
+            9.5,
+            14.0
+          ],
+          "anchor_relative": [
+            -0.302083,
+            -0.5625
+          ],
+          "final_hd": [
+            280.0,
+            352.0
+          ]
+        },
+        {
+          "source": [
+            16.0,
+            13.0
+          ],
+          "anchor_relative": [
+            -0.166667,
+            -0.59375
+          ],
+          "final_hd": [
+            384.0,
+            336.0
+          ]
+        },
+        {
+          "source": [
+            24.5,
+            14.0
+          ],
+          "anchor_relative": [
+            0.010417,
+            -0.5625
+          ],
+          "final_hd": [
+            520.0,
+            352.0
+          ]
+        },
+        {
+          "source": [
+            31.5,
+            13.0
+          ],
+          "anchor_relative": [
+            0.15625,
+            -0.59375
+          ],
+          "final_hd": [
+            632.0,
+            336.0
+          ]
+        }
+      ],
+      "belly_line": [
+        {
+          "source": [
+            11.5,
+            22.0
+          ],
+          "anchor_relative": [
+            -0.260417,
+            -0.3125
+          ],
+          "final_hd": [
+            312.0,
+            480.0
+          ]
+        },
+        {
+          "source": [
+            18.0,
+            24.0
+          ],
+          "anchor_relative": [
+            -0.125,
+            -0.25
+          ],
+          "final_hd": [
+            416.0,
+            512.0
+          ]
+        },
+        {
+          "source": [
+            26.5,
+            23.0
+          ],
+          "anchor_relative": [
+            0.052083,
+            -0.28125
+          ],
+          "final_hd": [
+            552.0,
+            496.0
+          ]
+        },
+        {
+          "source": [
+            31.0,
+            22.0
+          ],
+          "anchor_relative": [
+            0.145833,
+            -0.3125
+          ],
+          "final_hd": [
+            624.0,
+            480.0
+          ]
+        }
+      ],
+      "limbs": [
+        [
+          {
+            "source": [
+              13.5,
+              20.0
+            ],
+            "anchor_relative": [
+              -0.21875,
+              -0.375
+            ],
+            "final_hd": [
+              344.0,
+              448.0
+            ]
+          },
+          {
+            "source": [
+              15.0,
+              30.0
+            ],
+            "anchor_relative": [
+              -0.1875,
+              -0.0625
+            ],
+            "final_hd": [
+              368.0,
+              608.0
+            ]
+          }
+        ],
+        [
+          {
+            "source": [
+              18.5,
+              21.5
+            ],
+            "anchor_relative": [
+              -0.114583,
+              -0.328125
+            ],
+            "final_hd": [
+              424.0,
+              472.0
+            ]
+          },
+          {
+            "source": [
+              20.0,
+              30.0
+            ],
+            "anchor_relative": [
+              -0.083333,
+              -0.0625
+            ],
+            "final_hd": [
+              448.0,
+              608.0
+            ]
+          }
+        ],
+        [
+          {
+            "source": [
+              29.5,
+              20.5
+            ],
+            "anchor_relative": [
+              0.114583,
+              -0.359375
+            ],
+            "final_hd": [
+              600.0,
+              456.0
+            ]
+          },
+          {
+            "source": [
+              30.0,
+              31.0
+            ],
+            "anchor_relative": [
+              0.125,
+              -0.03125
+            ],
+            "final_hd": [
+              608.0,
+              624.0
+            ]
+          }
+        ],
+        [
+          {
+            "source": [
+              33.0,
+              20.5
+            ],
+            "anchor_relative": [
+              0.1875,
+              -0.359375
+            ],
+            "final_hd": [
+              656.0,
+              456.0
+            ]
+          },
+          {
+            "source": [
+              35.0,
+              31.0
+            ],
+            "anchor_relative": [
+              0.229167,
+              -0.03125
+            ],
+            "final_hd": [
+              688.0,
+              624.0
+            ]
+          }
+        ]
+      ],
+      "negative_spaces": {
+        "between_rear_legs": {
+          "source": [
+            16,
+            24,
+            19,
+            30
+          ],
+          "anchor_relative": [
+            -0.166667,
+            -0.25,
+            -0.104167,
+            -0.0625
+          ],
+          "final_hd": [
+            384.0,
+            512.0,
+            432.0,
+            608.0
+          ],
+          "size_source": [
+            3,
+            6
+          ],
+          "size_normalized": [
+            0.0625,
+            0.1875
+          ],
+          "size_final_hd": [
+            48,
+            96
+          ]
+        },
+        "under_belly": {
+          "source": [
+            22,
+            24,
+            28,
+            30
+          ],
+          "anchor_relative": [
+            -0.041667,
+            -0.25,
+            0.083333,
+            -0.0625
+          ],
+          "final_hd": [
+            480.0,
+            512.0,
+            576.0,
+            608.0
+          ],
+          "size_source": [
+            6,
+            6
+          ],
+          "size_normalized": [
+            0.125,
+            0.1875
+          ],
+          "size_final_hd": [
+            96,
+            96
+          ]
+        },
+        "between_front_legs": {
+          "source": [
+            31,
+            24,
+            34,
+            30
+          ],
+          "anchor_relative": [
+            0.145833,
+            -0.25,
+            0.208333,
+            -0.0625
+          ],
+          "final_hd": [
+            624.0,
+            512.0,
+            672.0,
+            608.0
+          ],
+          "size_source": [
+            3,
+            6
+          ],
+          "size_normalized": [
+            0.0625,
+            0.1875
+          ],
+          "size_final_hd": [
+            48,
+            96
+          ]
+        }
+      }
+    },
+    "run-b": {
+      "exact_silhouette_bounds_source": [
+        0,
+        0,
+        45,
+        32
+      ],
+      "exact_silhouette_bounds_anchor_relative": [
+        -0.5,
+        -1.0,
+        0.4375,
+        0.0
+      ],
+      "exact_silhouette_bounds_final_hd": [
+        128,
+        128,
+        848,
+        640
+      ],
+      "charlie": {
+        "overall_bounds": {
+          "source": [
+            10,
+            0,
+            29,
+            25
+          ],
+          "anchor_relative": [
+            -0.291667,
+            -1.0,
+            0.104167,
+            -0.21875
+          ],
+          "final_hd": [
+            288.0,
+            128.0,
+            592.0,
+            528.0
+          ],
+          "size_source": [
+            19,
+            25
+          ],
+          "size_normalized": [
+            0.395833,
+            0.78125
+          ],
+          "size_final_hd": [
+            304,
+            400
+          ]
+        },
+        "head_center": {
+          "source": [
+            20.0,
+            6.5
+          ],
+          "anchor_relative": [
+            -0.083333,
+            -0.796875
+          ],
+          "final_hd": [
+            448.0,
+            232.0
+          ]
+        },
+        "head_bounds": {
+          "source": [
+            10,
+            0,
+            29,
+            13
+          ],
+          "anchor_relative": [
+            -0.291667,
+            -1.0,
+            0.104167,
+            -0.59375
+          ],
+          "final_hd": [
+            288.0,
+            128.0,
+            592.0,
+            336.0
+          ],
+          "size_source": [
+            19,
+            13
+          ],
+          "size_normalized": [
+            0.395833,
+            0.40625
+          ],
+          "size_final_hd": [
+            304,
+            208
+          ]
+        },
+        "body_center": {
+          "source": [
+            19.5,
+            16.0
+          ],
+          "anchor_relative": [
+            -0.09375,
+            -0.5
+          ],
+          "final_hd": [
+            440.0,
+            384.0
+          ]
+        },
+        "body_bounds": {
+          "source": [
+            15,
+            9,
+            28,
+            24
+          ],
+          "anchor_relative": [
+            -0.1875,
+            -0.71875,
+            0.083333,
+            -0.25
+          ],
+          "final_hd": [
+            368.0,
+            272.0,
+            576.0,
+            512.0
+          ],
+          "size_source": [
+            13,
+            15
+          ],
+          "size_normalized": [
+            0.270833,
+            0.46875
+          ],
+          "size_final_hd": [
+            208,
+            240
+          ]
+        },
+        "seat": {
+          "source": [
+            21.5,
+            21.5
+          ],
+          "anchor_relative": [
+            -0.052083,
+            -0.328125
+          ],
+          "final_hd": [
+            472.0,
+            472.0
+          ]
+        },
+        "grip": {
+          "source": [
+            27.5,
+            12.5
+          ],
+          "anchor_relative": [
+            0.072917,
+            -0.609375
+          ],
+          "final_hd": [
+            568.0,
+            328.0
+          ]
+        },
+        "boot": {
+          "source": [
+            25.0,
+            23.0
+          ],
+          "anchor_relative": [
+            0.020833,
+            -0.28125
+          ],
+          "final_hd": [
+            528.0,
+            496.0
+          ]
+        }
+      },
+      "lion": {
+        "overall_bounds": {
+          "source": [
+            0,
+            9,
+            45,
+            32
+          ],
+          "anchor_relative": [
+            -0.5,
+            -0.71875,
+            0.4375,
+            0.0
+          ],
+          "final_hd": [
+            128.0,
+            272.0,
+            848.0,
+            640.0
+          ],
+          "size_source": [
+            45,
+            23
+          ],
+          "size_normalized": [
+            0.9375,
+            0.71875
+          ],
+          "size_final_hd": [
+            720,
+            368
+          ]
+        },
+        "torso_bounds": {
+          "source": [
+            9,
+            13,
+            34,
+            25
+          ],
+          "anchor_relative": [
+            -0.3125,
+            -0.59375,
+            0.208333,
+            -0.21875
+          ],
+          "final_hd": [
+            272.0,
+            336.0,
+            672.0,
+            528.0
+          ],
+          "size_source": [
+            25,
+            12
+          ],
+          "size_normalized": [
+            0.520833,
+            0.375
+          ],
+          "size_final_hd": [
+            400,
+            192
+          ]
+        },
+        "head_center": {
+          "source": [
+            38.0,
+            15.5
+          ],
+          "anchor_relative": [
+            0.291667,
+            -0.515625
+          ],
+          "final_hd": [
+            736.0,
+            376.0
+          ]
+        },
+        "head_bounds": {
+          "source": [
+            30,
+            9,
+            45,
+            23
+          ],
+          "anchor_relative": [
+            0.125,
+            -0.71875,
+            0.4375,
+            -0.28125
+          ],
+          "final_hd": [
+            608.0,
+            272.0,
+            848.0,
+            496.0
+          ],
+          "size_source": [
+            15,
+            14
+          ],
+          "size_normalized": [
+            0.3125,
+            0.4375
+          ],
+          "size_final_hd": [
+            240,
+            224
+          ]
+        },
+        "nose_muzzle": {
+          "source": [
+            43.5,
+            16.5
+          ],
+          "anchor_relative": [
+            0.40625,
+            -0.484375
+          ],
+          "final_hd": [
+            824.0,
+            392.0
+          ]
+        },
+        "shoulder": {
+          "source": [
+            31.0,
+            16.5
+          ],
+          "anchor_relative": [
+            0.145833,
+            -0.484375
+          ],
+          "final_hd": [
+            624.0,
+            392.0
+          ]
+        },
+        "hip": {
+          "source": [
+            12.5,
+            18.0
+          ],
+          "anchor_relative": [
+            -0.239583,
+            -0.4375
+          ],
+          "final_hd": [
+            328.0,
+            416.0
+          ]
+        },
+        "tail_base": {
+          "source": [
+            8.5,
+            20.0
+          ],
+          "anchor_relative": [
+            -0.322917,
+            -0.375
+          ],
+          "final_hd": [
+            264.0,
+            448.0
+          ]
+        },
+        "tail_tip": {
+          "source": [
+            0.5,
+            22.0
+          ],
+          "anchor_relative": [
+            -0.489583,
+            -0.3125
+          ],
+          "final_hd": [
+            136.0,
+            480.0
+          ]
+        },
+        "rear_paw_1": {
+          "source": [
+            10.5,
+            30.5
+          ],
+          "anchor_relative": [
+            -0.28125,
+            -0.046875
+          ],
+          "final_hd": [
+            296.0,
+            616.0
+          ]
+        },
+        "rear_paw_2": {
+          "source": [
+            17.5,
+            30.5
+          ],
+          "anchor_relative": [
+            -0.135417,
+            -0.046875
+          ],
+          "final_hd": [
+            408.0,
+            616.0
+          ]
+        },
+        "front_paw_1": {
+          "source": [
+            24.5,
+            29.5
+          ],
+          "anchor_relative": [
+            0.010417,
+            -0.078125
+          ],
+          "final_hd": [
+            520.0,
+            600.0
+          ]
+        },
+        "front_paw_2": {
+          "source": [
+            33.0,
+            29.5
+          ],
+          "anchor_relative": [
+            0.1875,
+            -0.078125
+          ],
+          "final_hd": [
+            656.0,
+            600.0
+          ]
+        }
+      },
+      "back_line": [
+        {
+          "source": [
+            9.0,
+            15.0
+          ],
+          "anchor_relative": [
+            -0.3125,
+            -0.53125
+          ],
+          "final_hd": [
+            272.0,
+            368.0
+          ]
+        },
+        {
+          "source": [
+            15.0,
+            13.5
+          ],
+          "anchor_relative": [
+            -0.1875,
+            -0.578125
+          ],
+          "final_hd": [
+            368.0,
+            344.0
+          ]
+        },
+        {
+          "source": [
+            23.0,
+            13.5
+          ],
+          "anchor_relative": [
+            -0.020833,
+            -0.578125
+          ],
+          "final_hd": [
+            496.0,
+            344.0
+          ]
+        },
+        {
+          "source": [
+            30.5,
+            12.5
+          ],
+          "anchor_relative": [
+            0.135417,
+            -0.609375
+          ],
+          "final_hd": [
+            616.0,
+            328.0
+          ]
+        }
+      ],
+      "belly_line": [
+        {
+          "source": [
+            10.0,
+            22.0
+          ],
+          "anchor_relative": [
+            -0.291667,
+            -0.3125
+          ],
+          "final_hd": [
+            288.0,
+            480.0
+          ]
+        },
+        {
+          "source": [
+            17.0,
+            24.0
+          ],
+          "anchor_relative": [
+            -0.145833,
+            -0.25
+          ],
+          "final_hd": [
+            400.0,
+            512.0
+          ]
+        },
+        {
+          "source": [
+            25.0,
+            23.5
+          ],
+          "anchor_relative": [
+            0.020833,
+            -0.265625
+          ],
+          "final_hd": [
+            528.0,
+            504.0
+          ]
+        },
+        {
+          "source": [
+            30.0,
+            22.0
+          ],
+          "anchor_relative": [
+            0.125,
+            -0.3125
+          ],
+          "final_hd": [
+            608.0,
+            480.0
+          ]
+        }
+      ],
+      "limbs": [
+        [
+          {
+            "source": [
+              12.0,
+              20.0
+            ],
+            "anchor_relative": [
+              -0.25,
+              -0.375
+            ],
+            "final_hd": [
+              320.0,
+              448.0
+            ]
+          },
+          {
+            "source": [
+              10.5,
+              30.5
+            ],
+            "anchor_relative": [
+              -0.28125,
+              -0.046875
+            ],
+            "final_hd": [
+              296.0,
+              616.0
+            ]
+          }
+        ],
+        [
+          {
+            "source": [
+              17.0,
+              22.0
+            ],
+            "anchor_relative": [
+              -0.145833,
+              -0.3125
+            ],
+            "final_hd": [
+              400.0,
+              480.0
+            ]
+          },
+          {
+            "source": [
+              17.5,
+              30.5
+            ],
+            "anchor_relative": [
+              -0.135417,
+              -0.046875
+            ],
+            "final_hd": [
+              408.0,
+              616.0
+            ]
+          }
+        ],
+        [
+          {
+            "source": [
+              28.0,
+              20.5
+            ],
+            "anchor_relative": [
+              0.083333,
+              -0.359375
+            ],
+            "final_hd": [
+              576.0,
+              456.0
+            ]
+          },
+          {
+            "source": [
+              24.5,
+              29.5
+            ],
+            "anchor_relative": [
+              0.010417,
+              -0.078125
+            ],
+            "final_hd": [
+              520.0,
+              600.0
+            ]
+          }
+        ],
+        [
+          {
+            "source": [
+              31.0,
+              20.0
+            ],
+            "anchor_relative": [
+              0.145833,
+              -0.375
+            ],
+            "final_hd": [
+              624.0,
+              448.0
+            ]
+          },
+          {
+            "source": [
+              33.0,
+              29.5
+            ],
+            "anchor_relative": [
+              0.1875,
+              -0.078125
+            ],
+            "final_hd": [
+              656.0,
+              600.0
+            ]
+          }
+        ]
+      ],
+      "negative_spaces": {
+        "between_rear_legs": {
+          "source": [
+            12,
+            25,
+            16,
+            31
+          ],
+          "anchor_relative": [
+            -0.25,
+            -0.21875,
+            -0.166667,
+            -0.03125
+          ],
+          "final_hd": [
+            320.0,
+            528.0,
+            384.0,
+            624.0
+          ],
+          "size_source": [
+            4,
+            6
+          ],
+          "size_normalized": [
+            0.083333,
+            0.1875
+          ],
+          "size_final_hd": [
+            64,
+            96
+          ]
+        },
+        "under_belly": {
+          "source": [
+            19,
+            25,
+            24,
+            29
+          ],
+          "anchor_relative": [
+            -0.104167,
+            -0.21875,
+            0.0,
+            -0.09375
+          ],
+          "final_hd": [
+            432.0,
+            528.0,
+            512.0,
+            592.0
+          ],
+          "size_source": [
+            5,
+            4
+          ],
+          "size_normalized": [
+            0.104167,
+            0.125
+          ],
+          "size_final_hd": [
+            80,
+            64
+          ]
+        },
+        "between_front_legs": {
+          "source": [
+            27,
+            24,
+            32,
+            29
+          ],
+          "anchor_relative": [
+            0.0625,
+            -0.25,
+            0.166667,
+            -0.09375
+          ],
+          "final_hd": [
+            560.0,
+            512.0,
+            640.0,
+            592.0
+          ],
+          "size_source": [
+            5,
+            5
+          ],
+          "size_normalized": [
+            0.104167,
+            0.15625
+          ],
+          "size_final_hd": [
+            80,
+            80
+          ]
+        }
+      }
+    },
+    "run-c": {
+      "exact_silhouette_bounds_source": [
+        0,
+        0,
+        46,
+        29
+      ],
+      "exact_silhouette_bounds_anchor_relative": [
+        -0.5,
+        -1.0,
+        0.458333,
+        -0.09375
+      ],
+      "exact_silhouette_bounds_final_hd": [
+        128,
+        128,
+        864,
+        592
+      ],
+      "charlie": {
+        "overall_bounds": {
+          "source": [
+            8,
+            0,
+            28,
+            25
+          ],
+          "anchor_relative": [
+            -0.333333,
+            -1.0,
+            0.083333,
+            -0.21875
+          ],
+          "final_hd": [
+            256.0,
+            128.0,
+            576.0,
+            528.0
+          ],
+          "size_source": [
+            20,
+            25
+          ],
+          "size_normalized": [
+            0.416667,
+            0.78125
+          ],
+          "size_final_hd": [
+            320,
+            400
+          ]
+        },
+        "head_center": {
+          "source": [
+            18.5,
+            7.0
+          ],
+          "anchor_relative": [
+            -0.114583,
+            -0.78125
+          ],
+          "final_hd": [
+            424.0,
+            240.0
+          ]
+        },
+        "head_bounds": {
+          "source": [
+            8,
+            0,
+            28,
+            14
+          ],
+          "anchor_relative": [
+            -0.333333,
+            -1.0,
+            0.083333,
+            -0.5625
+          ],
+          "final_hd": [
+            256.0,
+            128.0,
+            576.0,
+            352.0
+          ],
+          "size_source": [
+            20,
+            14
+          ],
+          "size_normalized": [
+            0.416667,
+            0.4375
+          ],
+          "size_final_hd": [
+            320,
+            224
+          ]
+        },
+        "body_center": {
+          "source": [
+            18.5,
+            16.5
+          ],
+          "anchor_relative": [
+            -0.114583,
+            -0.484375
+          ],
+          "final_hd": [
+            424.0,
+            392.0
+          ]
+        },
+        "body_bounds": {
+          "source": [
+            11,
+            10,
+            28,
+            24
+          ],
+          "anchor_relative": [
+            -0.270833,
+            -0.6875,
+            0.083333,
+            -0.25
+          ],
+          "final_hd": [
+            304.0,
+            288.0,
+            576.0,
+            512.0
+          ],
+          "size_source": [
+            17,
+            14
+          ],
+          "size_normalized": [
+            0.354167,
+            0.4375
+          ],
+          "size_final_hd": [
+            272,
+            224
+          ]
+        },
+        "seat": {
+          "source": [
+            20.5,
+            21.5
+          ],
+          "anchor_relative": [
+            -0.072917,
+            -0.328125
+          ],
+          "final_hd": [
+            456.0,
+            472.0
+          ]
+        },
+        "grip": {
+          "source": [
+            27.0,
+            13.0
+          ],
+          "anchor_relative": [
+            0.0625,
+            -0.59375
+          ],
+          "final_hd": [
+            560.0,
+            336.0
+          ]
+        },
+        "boot": {
+          "source": [
+            24.0,
+            22.5
+          ],
+          "anchor_relative": [
+            0.0,
+            -0.296875
+          ],
+          "final_hd": [
+            512.0,
+            488.0
+          ]
+        }
+      },
+      "lion": {
+        "overall_bounds": {
+          "source": [
+            0,
+            9,
+            46,
+            29
+          ],
+          "anchor_relative": [
+            -0.5,
+            -0.71875,
+            0.458333,
+            -0.09375
+          ],
+          "final_hd": [
+            128.0,
+            272.0,
+            864.0,
+            592.0
+          ],
+          "size_source": [
+            46,
+            20
+          ],
+          "size_normalized": [
+            0.958333,
+            0.625
+          ],
+          "size_final_hd": [
+            736,
+            320
+          ]
+        },
+        "torso_bounds": {
+          "source": [
+            8,
+            13,
+            34,
+            25
+          ],
+          "anchor_relative": [
+            -0.333333,
+            -0.59375,
+            0.208333,
+            -0.21875
+          ],
+          "final_hd": [
+            256.0,
+            336.0,
+            672.0,
+            528.0
+          ],
+          "size_source": [
+            26,
+            12
+          ],
+          "size_normalized": [
+            0.541667,
+            0.375
+          ],
+          "size_final_hd": [
+            416,
+            192
+          ]
+        },
+        "head_center": {
+          "source": [
+            38.0,
+            16.0
+          ],
+          "anchor_relative": [
+            0.291667,
+            -0.5
+          ],
+          "final_hd": [
+            736.0,
+            384.0
+          ]
+        },
+        "head_bounds": {
+          "source": [
+            29,
+            9,
+            46,
+            24
+          ],
+          "anchor_relative": [
+            0.104167,
+            -0.71875,
+            0.458333,
+            -0.25
+          ],
+          "final_hd": [
+            592.0,
+            272.0,
+            864.0,
+            512.0
+          ],
+          "size_source": [
+            17,
+            15
+          ],
+          "size_normalized": [
+            0.354167,
+            0.46875
+          ],
+          "size_final_hd": [
+            272,
+            240
+          ]
+        },
+        "nose_muzzle": {
+          "source": [
+            44.5,
+            17.0
+          ],
+          "anchor_relative": [
+            0.427083,
+            -0.46875
+          ],
+          "final_hd": [
+            840.0,
+            400.0
+          ]
+        },
+        "shoulder": {
+          "source": [
+            31.0,
+            17.0
+          ],
+          "anchor_relative": [
+            0.145833,
+            -0.46875
+          ],
+          "final_hd": [
+            624.0,
+            400.0
+          ]
+        },
+        "hip": {
+          "source": [
+            12.0,
+            18.0
+          ],
+          "anchor_relative": [
+            -0.25,
+            -0.4375
+          ],
+          "final_hd": [
+            320.0,
+            416.0
+          ]
+        },
+        "tail_base": {
+          "source": [
+            8.0,
+            19.0
+          ],
+          "anchor_relative": [
+            -0.333333,
+            -0.40625
+          ],
+          "final_hd": [
+            256.0,
+            432.0
+          ]
+        },
+        "tail_tip": {
+          "source": [
+            0.5,
+            21.0
+          ],
+          "anchor_relative": [
+            -0.489583,
+            -0.34375
+          ],
+          "final_hd": [
+            136.0,
+            464.0
+          ]
+        },
+        "rear_paw_1": {
+          "source": [
+            2.0,
+            26.0
+          ],
+          "anchor_relative": [
+            -0.458333,
+            -0.1875
+          ],
+          "final_hd": [
+            160.0,
+            544.0
+          ]
+        },
+        "rear_paw_2": {
+          "source": [
+            7.0,
+            27.0
+          ],
+          "anchor_relative": [
+            -0.354167,
+            -0.15625
+          ],
+          "final_hd": [
+            240.0,
+            560.0
+          ]
+        },
+        "front_paw_1": {
+          "source": [
+            40.5,
+            27.0
+          ],
+          "anchor_relative": [
+            0.34375,
+            -0.15625
+          ],
+          "final_hd": [
+            776.0,
+            560.0
+          ]
+        },
+        "front_paw_2": {
+          "source": [
+            44.0,
+            25.0
+          ],
+          "anchor_relative": [
+            0.416667,
+            -0.21875
+          ],
+          "final_hd": [
+            832.0,
+            528.0
+          ]
+        }
+      },
+      "back_line": [
+        {
+          "source": [
+            8.0,
+            15.5
+          ],
+          "anchor_relative": [
+            -0.333333,
+            -0.515625
+          ],
+          "final_hd": [
+            256.0,
+            376.0
+          ]
+        },
+        {
+          "source": [
+            15.0,
+            14.0
+          ],
+          "anchor_relative": [
+            -0.1875,
+            -0.5625
+          ],
+          "final_hd": [
+            368.0,
+            352.0
+          ]
+        },
+        {
+          "source": [
+            23.5,
+            14.0
+          ],
+          "anchor_relative": [
+            -0.010417,
+            -0.5625
+          ],
+          "final_hd": [
+            504.0,
+            352.0
+          ]
+        },
+        {
+          "source": [
+            30.0,
+            13.5
+          ],
+          "anchor_relative": [
+            0.125,
+            -0.578125
+          ],
+          "final_hd": [
+            608.0,
+            344.0
+          ]
+        }
+      ],
+      "belly_line": [
+        {
+          "source": [
+            9.0,
+            22.0
+          ],
+          "anchor_relative": [
+            -0.3125,
+            -0.3125
+          ],
+          "final_hd": [
+            272.0,
+            480.0
+          ]
+        },
+        {
+          "source": [
+            18.0,
+            24.0
+          ],
+          "anchor_relative": [
+            -0.125,
+            -0.25
+          ],
+          "final_hd": [
+            416.0,
+            512.0
+          ]
+        },
+        {
+          "source": [
+            27.0,
+            23.0
+          ],
+          "anchor_relative": [
+            0.0625,
+            -0.28125
+          ],
+          "final_hd": [
+            560.0,
+            496.0
+          ]
+        },
+        {
+          "source": [
+            31.0,
+            21.5
+          ],
+          "anchor_relative": [
+            0.145833,
+            -0.328125
+          ],
+          "final_hd": [
+            624.0,
+            472.0
+          ]
+        }
+      ],
+      "limbs": [
+        [
+          {
+            "source": [
+              11.0,
+              20.0
+            ],
+            "anchor_relative": [
+              -0.270833,
+              -0.375
+            ],
+            "final_hd": [
+              304.0,
+              448.0
+            ]
+          },
+          {
+            "source": [
+              2.0,
+              26.0
+            ],
+            "anchor_relative": [
+              -0.458333,
+              -0.1875
+            ],
+            "final_hd": [
+              160.0,
+              544.0
+            ]
+          }
+        ],
+        [
+          {
+            "source": [
+              16.0,
+              22.0
+            ],
+            "anchor_relative": [
+              -0.166667,
+              -0.3125
+            ],
+            "final_hd": [
+              384.0,
+              480.0
+            ]
+          },
+          {
+            "source": [
+              7.0,
+              27.0
+            ],
+            "anchor_relative": [
+              -0.354167,
+              -0.15625
+            ],
+            "final_hd": [
+              240.0,
+              560.0
+            ]
+          }
+        ],
+        [
+          {
+            "source": [
+              30.0,
+              20.5
+            ],
+            "anchor_relative": [
+              0.125,
+              -0.359375
+            ],
+            "final_hd": [
+              608.0,
+              456.0
+            ]
+          },
+          {
+            "source": [
+              40.5,
+              27.0
+            ],
+            "anchor_relative": [
+              0.34375,
+              -0.15625
+            ],
+            "final_hd": [
+              776.0,
+              560.0
+            ]
+          }
+        ],
+        [
+          {
+            "source": [
+              32.0,
+              19.5
+            ],
+            "anchor_relative": [
+              0.166667,
+              -0.390625
+            ],
+            "final_hd": [
+              640.0,
+              440.0
+            ]
+          },
+          {
+            "source": [
+              44.0,
+              25.0
+            ],
+            "anchor_relative": [
+              0.416667,
+              -0.21875
+            ],
+            "final_hd": [
+              832.0,
+              528.0
+            ]
+          }
+        ]
+      ],
+      "negative_spaces": {
+        "between_rear_legs": {
+          "source": [
+            4,
+            23,
+            8,
+            27
+          ],
+          "anchor_relative": [
+            -0.416667,
+            -0.28125,
+            -0.333333,
+            -0.15625
+          ],
+          "final_hd": [
+            192.0,
+            496.0,
+            256.0,
+            560.0
+          ],
+          "size_source": [
+            4,
+            4
+          ],
+          "size_normalized": [
+            0.083333,
+            0.125
+          ],
+          "size_final_hd": [
+            64,
+            64
+          ]
+        },
+        "under_belly": {
+          "source": [
+            20,
+            24,
+            28,
+            27
+          ],
+          "anchor_relative": [
+            -0.083333,
+            -0.25,
+            0.083333,
+            -0.15625
+          ],
+          "final_hd": [
+            448.0,
+            512.0,
+            576.0,
+            560.0
+          ],
+          "size_source": [
+            8,
+            3
+          ],
+          "size_normalized": [
+            0.166667,
+            0.09375
+          ],
+          "size_final_hd": [
+            128,
+            48
+          ]
+        },
+        "between_front_legs": {
+          "source": [
+            38,
+            23,
+            42,
+            27
+          ],
+          "anchor_relative": [
+            0.291667,
+            -0.28125,
+            0.375,
+            -0.15625
+          ],
+          "final_hd": [
+            736.0,
+            496.0,
+            800.0,
+            560.0
+          ],
+          "size_source": [
+            4,
+            4
+          ],
+          "size_normalized": [
+            0.083333,
+            0.125
+          ],
+          "size_final_hd": [
+            64,
+            64
+          ]
+        }
+      }
+    }
+  }
+}
