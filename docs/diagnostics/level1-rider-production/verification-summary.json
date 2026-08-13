@@ -1,0 +1,32 @@
+{
+  "comparison_rows": 120,
+  "comparison_all_match": true,
+  "airborne_frame_range": [
+    25,
+    87
+  ],
+  "airborne_assets": [
+    3
+  ],
+  "airborne_states": [
+    "C"
+  ],
+  "airborne_anchors": [
+    [
+      512.0,
+      640.0
+    ]
+  ],
+  "landing_frames": [
+    88
+  ],
+  "landing_assets": [
+    1
+  ],
+  "score_events": [
+    {
+      "frame": 88,
+      "points": 100
+    }
+  ]
+}

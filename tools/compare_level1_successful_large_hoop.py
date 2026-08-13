@@ -66,7 +66,7 @@ def main() -> int:
     ]
     first_divergence = None
     with open(args.comparison_out, "w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=columns)
+        writer = csv.DictWriter(handle, fieldnames=columns, lineterminator="\n")
         writer.writeheader()
         for native_row in native:
             native_frame = int(native_row["frame"])
@@ -77,12 +77,8 @@ def main() -> int:
             native_landing = native_row["landing_transition"] == "1"
             native_score_event = int(native_row["hoop_score_event"])
             expected_state = mame_rider_state(mame_row)
-            expected_hd_frame = {"A": 3, "B": 8, "C": 9}[expected_state]
-            expected_anchor = {
-                "A": (285.0, 344.0),
-                "B": (310.5, 346.0),
-                "C": (286.0, 315.0),
-            }[expected_state]
+            expected_hd_frame = {"A": 1, "B": 2, "C": 3}[expected_state]
+            expected_anchor = (512.0, 640.0)
             checks = {
                 "rider_y": int(mame_row["rider_source_y"], 16) == source_y(native_row),
                 "hoop_x": int(mame_row["hoop_x_8_8"], 16) == source_x_fixed(native_row),

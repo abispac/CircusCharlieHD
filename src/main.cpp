@@ -189,9 +189,6 @@ constexpr int kBirdArrivalFrames = 170;
 constexpr int kBagDropFrames = 45;
 constexpr int kCoinShowerFrames = 220;
 constexpr int kRewardCoinCount = 18;
-// Preserve the measured arcade cadence. This was briefly reduced to 0.85,
-// which made the lion's full stride cycle 15% slower than normal.
-constexpr float kStrideAnimationSpeedScale = 1.00F;
 constexpr int kDefaultHighScore = 19830;
 constexpr int kFirstScoreLife = 20000;
 constexpr int kRecurringScoreLife = 70000;
@@ -337,16 +334,10 @@ enum class Level1RiderState : std::uint8_t {
   RunC = 2,
 };
 
-constexpr std::array<int, 3> kLevel1RiderHdAtlasFrames{2, 7, 8};
-constexpr std::array<std::array<float, 2>, 3> kLevel1RiderHdAnchors{{
-    {285.0F, 344.0F},
-    {310.5F, 346.0F},
-    {286.0F, 315.0F},
-}};
-
-constexpr int level1RiderHdFrame(Level1RiderState state) {
-  return kLevel1RiderHdAtlasFrames[static_cast<std::size_t>(state)];
-}
+// All accepted production poses use the same 1024x768 canvas and the same
+// authoritative gameplay anchor. Airborne selects Run C without a distinct
+// image or anchor; only the ROM-derived jump trajectory moves it.
+constexpr std::array<float, 2> kLevel1RiderProductionAnchor{512.0F, 640.0F};
 
 constexpr const char* level1RiderStateName(Level1RiderState state) {
   switch (state) {
@@ -358,6 +349,10 @@ constexpr const char* level1RiderStateName(Level1RiderState state) {
       return "C";
   }
   return "?";
+}
+
+constexpr int level1RiderProductionAsset(Level1RiderState state) {
+  return static_cast<int>(state) + 1;
 }
 
 constexpr std::array<int, 6> level1RiderCodes(Level1RiderState state) {
@@ -491,8 +486,9 @@ struct Assets {
   SDL_Texture* marquee = nullptr;
   SDL_Texture* ferrisWheel = nullptr;
   SDL_Texture* ferrisGondola = nullptr;
-  SDL_Texture* rider = nullptr;
-  SDL_Texture* riderWalkTest = nullptr;
+  SDL_Texture* riderRunA = nullptr;
+  SDL_Texture* riderRunB = nullptr;
+  SDL_Texture* riderRunC = nullptr;
   SDL_Texture* burnRider = nullptr;
   SDL_Texture* hoop = nullptr;
   SDL_Texture* hoopFlare = nullptr;
@@ -754,9 +750,9 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.marquee = loadAsset(renderer, "stage1-marquee-v2.png");
   assets.ferrisWheel = loadAsset(renderer, "stage1-ferris-wheel.png");
   assets.ferrisGondola = loadAsset(renderer, "stage1-ferris-gondola.png");
-  assets.rider = loadAsset(renderer, "stage1-rider-sheet-v8.png");
-  assets.riderWalkTest =
-      loadAsset(renderer, "stage1-rider-walk-12-v9.png");
+  assets.riderRunA = loadAsset(renderer, "stage1-rider-run-a-hd.png");
+  assets.riderRunB = loadAsset(renderer, "stage1-rider-run-b-hd.png");
+  assets.riderRunC = loadAsset(renderer, "stage1-rider-run-c-hd.png");
   assets.burnRider = loadAsset(renderer, "stage1-burn-rider-v1.png");
   assets.hoop = loadAsset(renderer, "stage1-hoop.png");
   assets.hoopFlare = loadAsset(renderer, "stage1-hoop-flare.png");
@@ -807,7 +803,8 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.stage4Charlie = loadAsset(renderer, "stage4-charlie-12-v2.png");
   assets.stage4Ball = loadAsset(renderer, "stage4-ball-centered-v2.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
-      !assets.ferrisGondola || !assets.rider || !assets.riderWalkTest ||
+      !assets.ferrisGondola || !assets.riderRunA || !assets.riderRunB ||
+      !assets.riderRunC ||
       !assets.burnRider || !assets.hoop ||
       !assets.hoopFlare || !assets.props || !assets.propsFlare ||
       !assets.bird || !assets.rewardBag || !assets.charlieLife ||
@@ -838,8 +835,9 @@ void destroyAssets(Assets& assets) {
   if (assets.marquee) SDL_DestroyTexture(assets.marquee);
   if (assets.ferrisWheel) SDL_DestroyTexture(assets.ferrisWheel);
   if (assets.ferrisGondola) SDL_DestroyTexture(assets.ferrisGondola);
-  if (assets.rider) SDL_DestroyTexture(assets.rider);
-  if (assets.riderWalkTest) SDL_DestroyTexture(assets.riderWalkTest);
+  if (assets.riderRunA) SDL_DestroyTexture(assets.riderRunA);
+  if (assets.riderRunB) SDL_DestroyTexture(assets.riderRunB);
+  if (assets.riderRunC) SDL_DestroyTexture(assets.riderRunC);
   if (assets.burnRider) SDL_DestroyTexture(assets.burnRider);
   if (assets.hoop) SDL_DestroyTexture(assets.hoop);
   if (assets.hoopFlare) SDL_DestroyTexture(assets.hoopFlare);
@@ -3777,116 +3775,38 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
   drawCheerCallouts();
 }
 
-void drawRiderWalkTest(SDL_Renderer* renderer, float screenX, float groundY,
-                       bool alive, SDL_Texture* riderTexture,
-                       Level1RiderState riderState, bool grounded,
-                       bool facingRight) {
-  int textureWidth = 0;
-  int textureHeight = 0;
-  SDL_QueryTexture(riderTexture, nullptr, nullptr, &textureWidth,
-                   &textureHeight);
-  const int cellWidth = textureWidth / 4;
-  const int cellHeight = textureHeight / 3;
-
-  // Airborne is deliberately the same Run C artwork and anchor as grounded
-  // Run C. The arcade moves that one composite with its jump table rather
-  // than selecting a separate jumping picture.
-  if (!grounded) riderState = Level1RiderState::RunC;
-  const int frame = level1RiderHdFrame(riderState);
-
-  const SDL_Rect source{(frame % 4) * cellWidth, (frame / 4) * cellHeight,
-                        cellWidth, cellHeight};
-  // Side-by-side calibration against the 224x256 MAME frame puts the visible
-  // lion/rider composite near 110 source-corrected logical pixels wide. The
-  // old 170-unit render made Charlie sit near mid-screen and dwarfed hoops.
-  // Ten percent more visual presence, requested after the calibrated Stage 1
-  // layout pass. Collision remains on the measured logical body above.
-  constexpr float kTestWidth = 118.8F;
-  const float kTestHeight =
-      kTestWidth * static_cast<float>(cellHeight) /
-      static_cast<float>(cellWidth);
-  // The authoritative original composite anchor is (24,32) on its invariant
-  // 48x32 canvas: horizontal center and gameplay baseline. Transfer that
-  // normalized anchor to each selected HD composite's measured alpha bounds,
-  // so transparent atlas padding cannot move the rider. For a flipped sprite
-  // the source-space anchor mirrors with the image.
-  const auto& anchor =
-      kLevel1RiderHdAnchors[static_cast<std::size_t>(riderState)];
-  const float sourceAnchorX =
-      facingRight ? anchor[0] : static_cast<float>(cellWidth) - anchor[0];
-  const float visualAnchorX =
-      sourceAnchorX / static_cast<float>(cellWidth) * kTestWidth;
-  const float visualAnchorY =
-      anchor[1] / static_cast<float>(cellHeight) * kTestHeight;
-  const SDL_FRect destination{screenX + 10.0F - visualAnchorX,
-                              groundY - visualAnchorY,
-                              kTestWidth, kTestHeight};
-  SDL_SetTextureColorMod(riderTexture, 255, alive ? 255 : 128,
-                         alive ? 255 : 58);
-  SDL_RenderCopyExF(renderer, riderTexture, &source, &destination, 0.0,
-                    nullptr,
-                    facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
-  SDL_SetTextureColorMod(riderTexture, 255, 255, 255);
-}
-
 void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
                       double timeSeconds, bool alive, bool lowDetail,
-                      SDL_Texture* riderTexture,
-                      SDL_Texture* riderWalkTestTexture,
+                      SDL_Texture* riderRunA, SDL_Texture* riderRunB,
+                      SDL_Texture* riderRunC,
                       bool /*lionOnlyTest*/, float runSpeed, bool grounded,
                       bool facingRight, Level1RiderState riderState) {
-  // The calibrated 12-frame sheet has replaced the earlier six-frame
-  // prototype. Keep the old texture only as a loading fallback.
-  if (riderWalkTestTexture) {
-    drawRiderWalkTest(renderer, screenX, groundY, alive,
-                      riderWalkTestTexture, riderState, grounded, facingRight);
-    return;
-  }
+  (void)timeSeconds;
+  (void)lowDetail;
+  (void)runSpeed;
+  if (!grounded) riderState = Level1RiderState::RunC;
+  SDL_Texture* riderTexture = riderState == Level1RiderState::RunA
+                                  ? riderRunA
+                              : riderState == Level1RiderState::RunB
+                                  ? riderRunB
+                                  : riderRunC;
   if (riderTexture) {
-    int textureWidth = 0;
-    int textureHeight = 0;
-    SDL_QueryTexture(riderTexture, nullptr, nullptr, &textureWidth,
-                     &textureHeight);
-    const int cellWidth = textureWidth / 3;
-    const int cellHeight = textureHeight / 2;
-
-    int frame = 0;
-    if (!grounded) {
-      // The original Event 1 rider keeps one stable composite throughout the
-      // fixed jump. Vertical movement comes only from the measured jump table;
-      // swapping generated poses here introduced the visible shake.
-      frame = 4;
-    } else if (std::abs(runSpeed) > 5.0F) {
-      // The original composite advances one pose every 7–8 board frames.
-      // Cycling all three grounded poses preserves that measured cadence and
-      // avoids the choppy old two-frame toggle.
-      frame = static_cast<int>(timeSeconds * (kBoardRefresh / 7.5) *
-                               kStrideAnimationSpeedScale) %
-              3;
-    }
-
-    const SDL_Rect source{(frame % 3) * cellWidth, (frame / 3) * cellHeight,
-                          cellWidth, cellHeight};
-    // The original six-tile composite is 48x32 source pixels and its visible
-    // grounded pose is about 47x28. These non-square dimensions preserve that
-    // measured silhouette on the 480x640 logical canvas.
-    constexpr float kSpriteWidth = 140.0F;
-    constexpr float kSpriteHeight = 132.0F;
-    constexpr std::array<float, 6> kAnchorCorrection{
-        30.0F, 30.0F, 30.0F, 30.0F, 30.0F, 30.0F};
-    const SDL_FRect destination{
-        screenX - 46.0F,
-        groundY - kSpriteHeight +
-            kAnchorCorrection[static_cast<size_t>(frame)],
-        kSpriteWidth,
-        kSpriteHeight,
-    };
-
+    constexpr float kRenderWidth = 118.8F;
+    constexpr float kRenderHeight = kRenderWidth * 768.0F / 1024.0F;
+    const float sourceAnchorX = facingRight
+        ? kLevel1RiderProductionAnchor[0]
+        : 1024.0F - kLevel1RiderProductionAnchor[0];
+    const float visualAnchorX = sourceAnchorX / 1024.0F * kRenderWidth;
+    const float visualAnchorY =
+        kLevel1RiderProductionAnchor[1] / 768.0F * kRenderHeight;
+    const SDL_FRect destination{screenX + 10.0F - visualAnchorX,
+                                groundY - visualAnchorY,
+                                kRenderWidth, kRenderHeight};
     SDL_SetTextureColorMod(riderTexture, 255, alive ? 255 : 128,
-                          alive ? 255 : 58);
-    SDL_RenderCopyExF(renderer, riderTexture, &source, &destination, 0.0,
-                      nullptr,
-                      facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
+                           alive ? 255 : 58);
+    SDL_RenderCopyExF(renderer, riderTexture, nullptr, &destination, 0.0,
+                      nullptr, facingRight ? SDL_FLIP_NONE
+                                           : SDL_FLIP_HORIZONTAL);
     SDL_SetTextureColorMod(riderTexture, 255, 255, 255);
     return;
   }
@@ -5016,8 +4936,8 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
     } else if (!(game.scene == Scene::Crashed &&
                  game.crashFrame < kCrashBurnFrames && assets.burnRider)) {
       drawLionAndRider(renderer, playerWorldX - camera, playerY, timeSeconds,
-                       game.player.alive, lowDetail, assets.rider,
-                       assets.riderWalkTest, game.lionOnlyTest,
+                       game.player.alive, lowDetail, assets.riderRunA,
+                       assets.riderRunB, assets.riderRunC, game.lionOnlyTest,
                        game.player.runSpeed, game.player.grounded,
                        game.player.facingRight, game.level1RiderState);
     }
@@ -5733,8 +5653,7 @@ int main(int argc, char** argv) {
             game.player.grounded ? game.level1RiderState
                                  : Level1RiderState::RunC;
         const auto riderCodes = level1RiderCodes(visibleRiderState);
-        const auto& riderAnchor = kLevel1RiderHdAnchors[
-            static_cast<std::size_t>(visibleRiderState)];
+        const auto& riderAnchor = kLevel1RiderProductionAnchor;
         movementTrace << movementTraceFrame << ',' << (traceLeft ? 1 : 0)
                       << ',' << (traceRight ? 1 : 0) << ','
                       << (traceJump ? 1 : 0) << ',' << std::fixed
@@ -5774,7 +5693,7 @@ int main(int argc, char** argv) {
                       << ',' << game.level1PendingHoopScore << ','
                       << hoopScoreEvent << ','
                       << level1RiderStateName(visibleRiderState) << ','
-                      << level1RiderHdFrame(visibleRiderState) + 1 << ','
+                      << level1RiderProductionAsset(visibleRiderState) << ','
                       << riderAnchor[0] << ',' << riderAnchor[1] << ','
                       << static_cast<int>(game.level1RiderPositionSample)
                       << ',' << game.level1RiderCourseFixed;
@@ -5918,8 +5837,8 @@ int main(int argc, char** argv) {
                      SDL_FLIP_NONE);
     if (!options.riderDiagnosticDir.empty() && movementTraceFrame > 0) {
       const int tracedFrame = movementTraceFrame - 1;
-      const std::array<int, 8> captureFrames{24, 25, 53, 73,
-                                              87, 88, 96, 103};
+      const std::array<int, 11> captureFrames{
+          0, 6, 14, 25, 33, 57, 73, 87, 88, 96, 103};
       if (tracedFrame != lastRiderDiagnosticFrame &&
           std::find(captureFrames.begin(), captureFrames.end(), tracedFrame) !=
               captureFrames.end()) {
