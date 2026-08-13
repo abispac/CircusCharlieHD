@@ -1,0 +1,711 @@
+{
+  "method": "One least-squares similarity transform per source using hip, shoulder, and rider seat; visual anatomy remains the decision criterion.",
+  "poses": {
+    "run-a": {
+      "alpha": {
+        "dimensions": [
+          1448,
+          1086
+        ],
+        "alpha_range": [
+          0,
+          255
+        ],
+        "fully_transparent_percent": 63.13776,
+        "fully_opaque_percent": 0.02556,
+        "alpha_gt_0_bounds": [
+          17,
+          48,
+          1422,
+          1062
+        ],
+        "alpha_gte_224_bounds": [
+          22,
+          67,
+          1416,
+          1009
+        ],
+        "low_alpha_1_31_percent": 1.63336,
+        "low_alpha_1_31_pixels": 25685
+      },
+      "normalization_scale": 0.449308,
+      "normalization_rotation_deg": -2.7349,
+      "normalized_shoulder_to_hip": 0.3574,
+      "normalized_body_depth": 0.2457,
+      "shoulder_hip_over_body_depth": 2.1819,
+      "shoulder_hip_over_head_length": 1.9346,
+      "body_length_over_representative_leg_length": 1.4507,
+      "source_landmarks": {
+        "charlie_head": [
+          610,
+          235
+        ],
+        "charlie_torso": [
+          550,
+          410
+        ],
+        "charlie_pelvis": [
+          525,
+          515
+        ],
+        "seat": [
+          525,
+          515
+        ],
+        "grip": [
+          635,
+          415
+        ],
+        "boot": [
+          510,
+          660
+        ],
+        "lion_head": [
+          1215,
+          470
+        ],
+        "head_base": [
+          1090,
+          450
+        ],
+        "muzzle": [
+          1380,
+          575
+        ],
+        "shoulder": [
+          1010,
+          485
+        ],
+        "hip": [
+          410,
+          600
+        ],
+        "tail_base": [
+          315,
+          585
+        ],
+        "tail_tip": [
+          60,
+          685
+        ],
+        "rear1": [
+          225,
+          965
+        ],
+        "rear2": [
+          485,
+          880
+        ],
+        "front1": [
+          1150,
+          920
+        ],
+        "front2": [
+          1310,
+          920
+        ],
+        "torso_top": [
+          700,
+          490
+        ],
+        "torso_bottom": [
+          700,
+          770
+        ]
+      }
+    },
+    "run-b": {
+      "alpha": {
+        "dimensions": [
+          1448,
+          1086
+        ],
+        "alpha_range": [
+          0,
+          255
+        ],
+        "fully_transparent_percent": 63.84497,
+        "fully_opaque_percent": 0.01812,
+        "alpha_gt_0_bounds": [
+          0,
+          19,
+          1448,
+          1060
+        ],
+        "alpha_gte_224_bounds": [
+          15,
+          67,
+          1445,
+          1018
+        ],
+        "low_alpha_1_31_percent": 1.56506,
+        "low_alpha_1_31_pixels": 24611
+      },
+      "normalization_scale": 0.460818,
+      "normalization_rotation_deg": -1.4066,
+      "normalized_shoulder_to_hip": 0.3554,
+      "normalized_body_depth": 0.2565,
+      "shoulder_hip_over_body_depth": 2.0782,
+      "shoulder_hip_over_head_length": 1.7148,
+      "body_length_over_representative_leg_length": 1.4589,
+      "source_landmarks": {
+        "charlie_head": [
+          615,
+          225
+        ],
+        "charlie_torso": [
+          550,
+          390
+        ],
+        "charlie_pelvis": [
+          530,
+          500
+        ],
+        "seat": [
+          530,
+          500
+        ],
+        "grip": [
+          630,
+          395
+        ],
+        "boot": [
+          520,
+          645
+        ],
+        "lion_head": [
+          1230,
+          445
+        ],
+        "head_base": [
+          1090,
+          425
+        ],
+        "muzzle": [
+          1410,
+          555
+        ],
+        "shoulder": [
+          1010,
+          460
+        ],
+        "hip": [
+          430,
+          580
+        ],
+        "tail_base": [
+          340,
+          575
+        ],
+        "tail_tip": [
+          55,
+          620
+        ],
+        "rear1": [
+          410,
+          870
+        ],
+        "rear2": [
+          520,
+          970
+        ],
+        "front1": [
+          870,
+          895
+        ],
+        "front2": [
+          1150,
+          915
+        ],
+        "torso_top": [
+          700,
+          475
+        ],
+        "torso_bottom": [
+          700,
+          760
+        ]
+      }
+    },
+    "run-c7": {
+      "alpha": {
+        "dimensions": [
+          1602,
+          981
+        ],
+        "alpha_range": [
+          0,
+          255
+        ],
+        "fully_transparent_percent": 59.91052,
+        "fully_opaque_percent": 0.0077,
+        "alpha_gt_0_bounds": [
+          0,
+          0,
+          1582,
+          981
+        ],
+        "alpha_gte_224_bounds": [
+          66,
+          12,
+          1566,
+          933
+        ],
+        "low_alpha_1_31_percent": 2.54645,
+        "low_alpha_1_31_pixels": 40019
+      },
+      "normalization_scale": 0.573445,
+      "normalization_rotation_deg": -6.0034,
+      "normalized_shoulder_to_hip": 0.4008,
+      "normalized_body_depth": 0.2576,
+      "shoulder_hip_over_body_depth": 2.3338,
+      "shoulder_hip_over_head_length": 1.8123,
+      "body_length_over_representative_leg_length": 1.1492,
+      "source_landmarks": {
+        "charlie_head": [
+          1135,
+          190
+        ],
+        "charlie_torso": [
+          1010,
+          365
+        ],
+        "charlie_pelvis": [
+          875,
+          485
+        ],
+        "seat": [
+          875,
+          485
+        ],
+        "grip": [
+          1130,
+          390
+        ],
+        "boot": [
+          895,
+          610
+        ],
+        "lion_head": [
+          1400,
+          465
+        ],
+        "head_base": [
+          1240,
+          445
+        ],
+        "muzzle": [
+          1515,
+          555
+        ],
+        "shoulder": [
+          1135,
+          500
+        ],
+        "hip": [
+          605,
+          585
+        ],
+        "tail_base": [
+          530,
+          500
+        ],
+        "tail_tip": [
+          90,
+          390
+        ],
+        "rear1": [
+          135,
+          650
+        ],
+        "rear2": [
+          205,
+          785
+        ],
+        "front1": [
+          1405,
+          835
+        ],
+        "front2": [
+          1510,
+          855
+        ],
+        "torso_top": [
+          850,
+          490
+        ],
+        "torso_bottom": [
+          850,
+          720
+        ]
+      }
+    },
+    "run-c8": {
+      "alpha": {
+        "dimensions": [
+          1604,
+          981
+        ],
+        "alpha_range": [
+          0,
+          255
+        ],
+        "fully_transparent_percent": 63.90834,
+        "fully_opaque_percent": 0.05707,
+        "alpha_gt_0_bounds": [
+          0,
+          3,
+          1572,
+          981
+        ],
+        "alpha_gte_224_bounds": [
+          98,
+          14,
+          1562,
+          914
+        ],
+        "low_alpha_1_31_percent": 1.72867,
+        "low_alpha_1_31_pixels": 27201
+      },
+      "normalization_scale": 0.627268,
+      "normalization_rotation_deg": -6.0774,
+      "normalized_shoulder_to_hip": 0.4022,
+      "normalized_body_depth": 0.2879,
+      "shoulder_hip_over_body_depth": 2.0953,
+      "shoulder_hip_over_head_length": 1.6997,
+      "body_length_over_representative_leg_length": 1.0485,
+      "source_landmarks": {
+        "charlie_head": [
+          1095,
+          185
+        ],
+        "charlie_torso": [
+          975,
+          350
+        ],
+        "charlie_pelvis": [
+          850,
+          470
+        ],
+        "seat": [
+          850,
+          470
+        ],
+        "grip": [
+          1100,
+          375
+        ],
+        "boot": [
+          875,
+          595
+        ],
+        "lion_head": [
+          1370,
+          445
+        ],
+        "head_base": [
+          1210,
+          430
+        ],
+        "muzzle": [
+          1480,
+          535
+        ],
+        "shoulder": [
+          1110,
+          485
+        ],
+        "hip": [
+          625,
+          570
+        ],
+        "tail_base": [
+          550,
+          485
+        ],
+        "tail_tip": [
+          105,
+          370
+        ],
+        "rear1": [
+          145,
+          620
+        ],
+        "rear2": [
+          220,
+          750
+        ],
+        "front1": [
+          1395,
+          815
+        ],
+        "front2": [
+          1490,
+          835
+        ],
+        "torso_top": [
+          850,
+          465
+        ],
+        "torso_bottom": [
+          850,
+          700
+        ]
+      }
+    }
+  },
+  "transitions": {
+    "run-a->run-b": {
+      "seat": [
+        -0.0251,
+        0.0012
+      ],
+      "charlie_pelvis": [
+        -0.0251,
+        0.0012
+      ],
+      "charlie_torso": [
+        -0.029,
+        -0.0063
+      ],
+      "charlie_head": [
+        -0.0275,
+        -0.0025
+      ],
+      "grip": [
+        -0.0306,
+        -0.008
+      ],
+      "boot": [
+        -0.0204,
+        0.005
+      ],
+      "shoulder": [
+        -0.0208,
+        -0.0182
+      ],
+      "hip": [
+        -0.0166,
+        0.0013
+      ],
+      "lion_head": [
+        -0.0088,
+        -0.0222
+      ],
+      "head_base": [
+        -0.02,
+        -0.0206
+      ]
+    },
+    "run-b->run-c7": {
+      "seat": [
+        0.0708,
+        -0.0223
+      ],
+      "charlie_pelvis": [
+        0.0708,
+        -0.0223
+      ],
+      "charlie_torso": [
+        0.1668,
+        -0.0416
+      ],
+      "charlie_head": [
+        0.2319,
+        -0.0749
+      ],
+      "grip": [
+        0.2061,
+        -0.006
+      ],
+      "boot": [
+        0.0841,
+        -0.011
+      ],
+      "shoulder": [
+        -0.0258,
+        0.0502
+      ],
+      "hip": [
+        -0.0763,
+        -0.0123
+      ],
+      "lion_head": [
+        0.0416,
+        0.0509
+      ],
+      "head_base": [
+        0.008,
+        0.031
+      ]
+    },
+    "run-c7->run-a": {
+      "seat": [
+        -0.0458,
+        0.0211
+      ],
+      "charlie_pelvis": [
+        -0.0458,
+        0.0211
+      ],
+      "charlie_torso": [
+        -0.1379,
+        0.0479
+      ],
+      "charlie_head": [
+        -0.2044,
+        0.0773
+      ],
+      "grip": [
+        -0.1755,
+        0.014
+      ],
+      "boot": [
+        -0.0637,
+        0.006
+      ],
+      "shoulder": [
+        0.0466,
+        -0.0321
+      ],
+      "hip": [
+        0.093,
+        0.011
+      ],
+      "lion_head": [
+        -0.0327,
+        -0.0287
+      ],
+      "head_base": [
+        0.012,
+        -0.0104
+      ]
+    },
+    "run-b->run-c8": {
+      "seat": [
+        0.0592,
+        -0.0282
+      ],
+      "charlie_pelvis": [
+        0.0592,
+        -0.0282
+      ],
+      "charlie_torso": [
+        0.1575,
+        -0.0597
+      ],
+      "charlie_head": [
+        0.2278,
+        -0.0981
+      ],
+      "grip": [
+        0.2089,
+        -0.0193
+      ],
+      "boot": [
+        0.0768,
+        -0.0029
+      ],
+      "shoulder": [
+        -0.0194,
+        0.0492
+      ],
+      "hip": [
+        -0.071,
+        -0.0053
+      ],
+      "lion_head": [
+        0.063,
+        0.0428
+      ],
+      "head_base": [
+        0.018,
+        0.0249
+      ]
+    },
+    "run-c8->run-a": {
+      "seat": [
+        -0.0341,
+        0.027
+      ],
+      "charlie_pelvis": [
+        -0.0341,
+        0.027
+      ],
+      "charlie_torso": [
+        -0.1285,
+        0.066
+      ],
+      "charlie_head": [
+        -0.2003,
+        0.1005
+      ],
+      "grip": [
+        -0.1783,
+        0.0272
+      ],
+      "boot": [
+        -0.0565,
+        -0.0021
+      ],
+      "shoulder": [
+        0.0402,
+        -0.031
+      ],
+      "hip": [
+        0.0877,
+        0.004
+      ],
+      "lion_head": [
+        -0.0542,
+        -0.0206
+      ],
+      "head_base": [
+        0.002,
+        -0.0043
+      ]
+    },
+    "run-c7->run-c8": {
+      "seat": [
+        -0.0116,
+        -0.0059
+      ],
+      "charlie_pelvis": [
+        -0.0116,
+        -0.0059
+      ],
+      "charlie_torso": [
+        -0.0094,
+        -0.018
+      ],
+      "charlie_head": [
+        -0.0041,
+        -0.0232
+      ],
+      "grip": [
+        0.0029,
+        -0.0133
+      ],
+      "boot": [
+        -0.0072,
+        0.008
+      ],
+      "shoulder": [
+        0.0063,
+        -0.0011
+      ],
+      "hip": [
+        0.0053,
+        0.007
+      ],
+      "lion_head": [
+        0.0214,
+        -0.0081
+      ],
+      "head_base": [
+        0.01,
+        -0.0061
+      ]
+    }
+  }
+}
