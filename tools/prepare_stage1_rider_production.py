@@ -21,12 +21,12 @@ from PIL import Image, ImageDraw, ImageFilter
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "assets"
 DIAGNOSTICS = ROOT / "docs/diagnostics/level1-rider-production"
-CANVAS = (1280, 768)
-GAMEPLAY_ANCHOR = (640, 640)
+CANVAS = (1024, 768)
+GAMEPLAY_ANCHOR = (512, 640)
 # Stable saddle/central-body point inside the production canvas. The runtime
 # samples every sprite at GAMEPLAY_ANCHOR; keeping this body point at a common
 # canvas location makes the body-to-gameplay-anchor vector identical in A/B/C.
-PRODUCTION_BODY_ANCHOR = (640, 438)
+PRODUCTION_BODY_ANCHOR = (512, 438)
 # Fixed LittleCMS sRGB profile bytes. Creating a fresh profile at runtime puts
 # the current time in its ICC header and makes otherwise identical PNG builds
 # hash differently.
@@ -49,7 +49,7 @@ POSES = {
         "source": ROOT / "run/run a 2.png",
         "source_sha256": "50f2b9b381c630d8740c1b947e1ce0e97824dc987370b2715a93948b6d09d207",
         "output": OUTPUT / "stage1-rider-run-a-hd.png",
-        "production_scale": 0.54867186816,
+        "production_scale": 0.4220552832,
         "rotation_degrees": 0.0,
         "source_anchor": (767.5, 582.5),
     },
@@ -57,7 +57,7 @@ POSES = {
         "source": ROOT / "run/Run b 2.png",
         "source_sha256": "add70517b36a9b921d7a43d8286d7e35f26ba8d132aad4746dca7a1261429a90",
         "output": OUTPUT / "stage1-rider-run-b-hd.png",
-        "production_scale": 0.56952254723,
+        "production_scale": 0.4380942671,
         "rotation_degrees": 0.0,
         "source_anchor": (777.5, 572.5),
     },
@@ -65,7 +65,7 @@ POSES = {
         "source": ROOT / "run/run c.png",
         "source_sha256": "51881d33b803c8dec3d6c3177db3767fd4e84642a6e4077aab583d6a677cc9f9",
         "output": OUTPUT / "stage1-rider-run-c-hd.png",
-        "production_scale": 0.62903150843,
+        "production_scale": 0.44947802783109236,
         "rotation_degrees": 0.0,
         "source_anchor": (850.0, 520.0),
     },
@@ -76,24 +76,30 @@ POSES = {
 IDENTITY_FEATURES = {
     "run-a": {
         "charlie_head": (545, 70, 1070, 370),
+        "charlie_torso": (650, 305, 1010, 570),
         "lion_head": (925, 305, 1440, 745),
         "mane": (890, 305, 1295, 795),
         "saddle": (635, 475, 900, 690),
         "torso_depth": (400, 480, 900, 820),
+        "paw": (1090, 805, 1375, 1005),
     },
     "run-b": {
         "charlie_head": (550, 65, 1070, 350),
+        "charlie_torso": (650, 285, 1010, 555),
         "lion_head": (930, 290, 1445, 720),
         "mane": (900, 290, 1305, 765),
         "saddle": (650, 470, 905, 675),
         "torso_depth": (430, 480, 920, 795),
+        "paw": (1065, 805, 1270, 985),
     },
     "run-c": {
         "charlie_head": (775, 55, 1155, 340),
+        "charlie_torso": (770, 250, 1100, 500),
         "lion_head": (1050, 285, 1490, 650),
         "mane": (980, 280, 1440, 710),
         "saddle": (710, 415, 1010, 625),
         "torso_depth": (390, 420, 1060, 735),
+        "paw": (1260, 695, 1490, 875),
     },
 }
 
@@ -171,7 +177,10 @@ def feature_measurements():
             (raw["run-a"][feature][axis] + raw["run-b"][feature][axis]) / 2.0
             for axis in range(2)
         ]
-        for feature in ("charlie_head", "lion_head", "mane", "saddle")
+        for feature in (
+            "charlie_head", "charlie_torso", "lion_head", "mane", "saddle",
+            "torso_depth", "paw",
+        )
     }
     scales = {pose: specification["production_scale"] for pose, specification in POSES.items()}
     return raw, target, scales
@@ -355,7 +364,7 @@ def build_identity_scale_diagnostics(prepared, raw, target, scales):
     (DIAGNOSTICS / "identity-scale-measurements.json").write_text(
         json.dumps(
             {
-                "method": "approved independent offline scales from stable character-identity features; no runtime scaling",
+                "method": "A/B accepted scales unchanged; C-only scale derived from A/B mean Charlie head height and torso height; no runtime scaling",
                 "units": "production canvas pixels [width,height]",
                 "raw_source_feature_pixels": raw,
                 "grounded_target_source_pixels": target,
@@ -376,7 +385,7 @@ def main() -> int:
     OUTPUT.mkdir(parents=True, exist_ok=True)
     DIAGNOSTICS.mkdir(parents=True, exist_ok=True)
     raw_features, target_features, effective_scales = feature_measurements()
-    metadata = {"canvas": list(CANVAS), "gameplay_anchor": list(GAMEPLAY_ANCHOR), "production_body_anchor": list(PRODUCTION_BODY_ANCHOR), "body_to_gameplay_anchor_vector": [GAMEPLAY_ANCHOR[0] - PRODUCTION_BODY_ANCHOR[0], GAMEPLAY_ANCHOR[1] - PRODUCTION_BODY_ANCHOR[1]], "production_scale_rule": "approved independent offline normalization multiplied by exactly 1.30; identical 1280x768 runtime canvas and pixel density", "effective_source_to_canvas_scales": effective_scales, "alpha_representation": "straight/unassociated RGBA", "color_profile": "embedded sRGB ICC", "poses": {}}
+    metadata = {"canvas": list(CANVAS), "gameplay_anchor": list(GAMEPLAY_ANCHOR), "production_body_anchor": list(PRODUCTION_BODY_ANCHOR), "body_to_gameplay_anchor_vector": [GAMEPLAY_ANCHOR[0] - PRODUCTION_BODY_ANCHOR[0], GAMEPLAY_ANCHOR[1] - PRODUCTION_BODY_ANCHOR[1]], "production_scale_rule": "A/B unchanged; original Run C uses one Charlie-height-derived offline scale; identical runtime rendering", "effective_source_to_canvas_scales": effective_scales, "alpha_representation": "straight/unassociated RGBA", "color_profile": "embedded sRGB ICC", "poses": {}}
     prepared = {}
     for pose, specification in POSES.items():
         source = specification["source"]

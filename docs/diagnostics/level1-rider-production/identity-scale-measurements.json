@@ -1,11 +1,15 @@
 {
-  "method": "approved independent offline scales from stable character-identity features; no runtime scaling",
+  "method": "A/B accepted scales unchanged; C-only scale derived from A/B mean Charlie head height and torso height; no runtime scaling",
   "units": "production canvas pixels [width,height]",
   "raw_source_feature_pixels": {
     "run-a": {
       "charlie_head": [
         525.0,
         300.0
+      ],
+      "charlie_torso": [
+        360.0,
+        265.0
       ],
       "lion_head": [
         515.0,
@@ -22,12 +26,20 @@
       "torso_depth": [
         500.0,
         340.0
+      ],
+      "paw": [
+        285.0,
+        200.0
       ]
     },
     "run-b": {
       "charlie_head": [
         520.0,
         285.0
+      ],
+      "charlie_torso": [
+        360.0,
+        270.0
       ],
       "lion_head": [
         515.0,
@@ -44,12 +56,20 @@
       "torso_depth": [
         490.0,
         315.0
+      ],
+      "paw": [
+        205.0,
+        180.0
       ]
     },
     "run-c": {
       "charlie_head": [
         380.0,
         285.0
+      ],
+      "charlie_torso": [
+        330.0,
+        250.0
       ],
       "lion_head": [
         440.0,
@@ -66,6 +86,10 @@
       "torso_depth": [
         670.0,
         315.0
+      ],
+      "paw": [
+        230.0,
+        180.0
       ]
     }
   },
@@ -73,6 +97,10 @@
     "charlie_head": [
       522.5,
       292.5
+    ],
+    "charlie_torso": [
+      360.0,
+      267.5
     ],
     "lion_head": [
       515.0,
@@ -85,122 +113,182 @@
     "saddle": [
       260.0,
       210.0
+    ],
+    "torso_depth": [
+      495.0,
+      327.5
+    ],
+    "paw": [
+      245.0,
+      190.0
     ]
   },
   "effective_source_to_canvas_scales": {
-    "run-a": 0.54867186816,
-    "run-b": 0.56952254723,
-    "run-c": 0.62903150843
+    "run-a": 0.4220552832,
+    "run-b": 0.4380942671,
+    "run-c": 0.44947802783109236
   },
   "final_target_pixels": {
     "charlie_head": [
-      292.13,
-      163.54
+      224.71,
+      125.8
+    ],
+    "charlie_torso": [
+      154.83,
+      115.05
     ],
     "lion_head": [
-      287.94,
-      243.21
+      221.49,
+      187.08
     ],
     "mane": [
-      226.43,
-      269.76
+      174.18,
+      207.51
     ],
     "saddle": [
-      145.37,
-      117.41
+      111.82,
+      90.32
+    ],
+    "torso_depth": [
+      212.89,
+      140.85
+    ],
+    "paw": [
+      105.37,
+      81.71
     ]
   },
   "final_feature_pixels": {
     "run-a": {
       "charlie_head": [
-        288.05,
-        164.6
+        221.58,
+        126.62
+      ],
+      "charlie_torso": [
+        151.94,
+        111.84
       ],
       "lion_head": [
-        282.57,
-        241.42
+        217.36,
+        185.7
       ],
       "mane": [
-        222.21,
-        268.85
+        170.93,
+        206.81
       ],
       "saddle": [
-        145.4,
-        117.96
+        111.84,
+        90.74
       ],
       "torso_depth": [
-        274.34,
-        186.55
+        211.03,
+        143.5
+      ],
+      "paw": [
+        120.29,
+        84.41
       ]
     },
     "run-b": {
       "charlie_head": [
-        296.15,
-        162.31
+        227.81,
+        124.86
+      ],
+      "charlie_torso": [
+        157.71,
+        118.29
       ],
       "lion_head": [
-        293.3,
-        244.89
+        225.62,
+        188.38
       ],
       "mane": [
-        230.66,
-        270.52
+        177.43,
+        208.09
       ],
       "saddle": [
-        145.23,
-        116.75
+        111.71,
+        89.81
       ],
       "torso_depth": [
-        279.07,
-        179.4
+        214.67,
+        138.0
+      ],
+      "paw": [
+        89.81,
+        78.86
       ]
     },
     "run-c": {
       "charlie_head": [
-        239.03,
-        179.27
+        170.8,
+        128.1
+      ],
+      "charlie_torso": [
+        148.33,
+        112.37
       ],
       "lion_head": [
-        276.77,
-        229.6
+        197.77,
+        164.06
       ],
       "mane": [
-        289.35,
-        270.48
+        206.76,
+        193.28
       ],
       "saddle": [
-        188.71,
-        132.1
+        134.84,
+        94.39
       ],
       "torso_depth": [
-        421.45,
-        198.14
+        301.15,
+        141.59
+      ],
+      "paw": [
+        103.38,
+        80.91
       ]
     }
   },
   "percent_difference_from_grounded_target": {
     "run-a": {
       "charlie_head": [
-        -1.4,
+        -1.39,
         0.65
+      ],
+      "charlie_torso": [
+        -1.87,
+        -2.79
       ],
       "lion_head": [
         -1.86,
         -0.74
       ],
       "mane": [
-        -1.86,
+        -1.87,
         -0.34
       ],
       "saddle": [
         0.02,
         0.47
+      ],
+      "torso_depth": [
+        -0.87,
+        1.88
+      ],
+      "paw": [
+        14.16,
+        3.3
       ]
     },
     "run-b": {
       "charlie_head": [
         1.38,
         -0.75
+      ],
+      "charlie_torso": [
+        1.86,
+        2.82
       ],
       "lion_head": [
         1.86,
@@ -213,24 +301,44 @@
       "saddle": [
         -0.1,
         -0.56
+      ],
+      "torso_depth": [
+        0.84,
+        -2.02
+      ],
+      "paw": [
+        -14.77,
+        -3.49
       ]
     },
     "run-c": {
       "charlie_head": [
-        -18.18,
-        9.62
+        -23.99,
+        1.83
+      ],
+      "charlie_torso": [
+        -4.2,
+        -2.33
       ],
       "lion_head": [
-        -3.88,
-        -5.6
+        -10.71,
+        -12.3
       ],
       "mane": [
-        27.79,
-        0.27
+        18.7,
+        -6.86
       ],
       "saddle": [
-        29.81,
-        12.51
+        20.59,
+        4.51
+      ],
+      "torso_depth": [
+        41.46,
+        0.53
+      ],
+      "paw": [
+        -1.89,
+        -0.98
       ]
     }
   }

@@ -125,6 +125,48 @@ def gameplay_sheet(capture_dir: Path) -> None:
         crop_sheet.paste(panel, (column * crop_w, 0))
     crop_sheet.save(OUTPUT / "actual-runtime-rider-pixel-crops.jpg", quality=97)
 
+    # Two complete grounded A -> B -> C -> A cycles, copied from actual native
+    # renderer frames. This exposes size pops without using synthetic previews.
+    grounded_cycle = (
+        (0, "A1"), (6, "B1"), (14, "C1"), (21, "A2"),
+        (6, "B2"), (14, "C2"), (21, "A3"),
+    )
+    cycle_crop = (0, 985, 300, 1235)
+    cycle_w, cycle_h = 300, 250
+    cycle_sheet = Image.new(
+        "RGB", (cycle_w * len(grounded_cycle), cycle_h + crop_header), (8, 9, 12)
+    )
+    charlie_sheet = Image.new(
+        "RGB", (180 * len(grounded_cycle), 180 + crop_header), (8, 9, 12)
+    )
+    for column, (native_frame, title) in enumerate(grounded_cycle):
+        matches = sorted(capture_dir.glob(f"native-frame-{native_frame:03d}-mame-*.png"))
+        if len(matches) != 1:
+            raise SystemExit(f"expected grounded-cycle frame {native_frame}")
+        capture = Image.open(matches[0]).convert("RGB")
+        rider = capture.crop(cycle_crop)
+        panel = Image.new("RGB", (cycle_w, cycle_h + crop_header), (16, 18, 23))
+        panel.paste(rider, (0, crop_header))
+        ImageDraw.Draw(panel).text((12, 10), title, fill=(245, 245, 245), font=font(20))
+        cycle_sheet.paste(panel, (column * cycle_w, 0))
+
+        # Charlie-only close crop at the same native pixel scale. A/B/C boxes
+        # follow the measured identity regions; they are crops, never resizes.
+        state = title[0]
+        charlie_boxes = {
+            "A": (90, 1030, 210, 1150),
+            "B": (80, 1020, 200, 1140),
+            "C": (85, 1015, 205, 1135),
+        }
+        charlie = capture.crop(charlie_boxes[state])
+        close = Image.new("RGB", (180, 180 + crop_header), (16, 18, 23))
+        close.paste(charlie, ((180 - charlie.width) // 2,
+                             crop_header + (180 - charlie.height) // 2))
+        ImageDraw.Draw(close).text((12, 10), title, fill=(245, 245, 245), font=font(20))
+        charlie_sheet.paste(close, (column * 180, 0))
+    cycle_sheet.save(OUTPUT / "actual-runtime-grounded-abca-cycles.jpg", quality=97)
+    charlie_sheet.save(OUTPUT / "actual-runtime-grounded-charlie-closeups.jpg", quality=97)
+
 
 def anchored_original(path: Path) -> Image.Image:
     source = Image.open(path).convert("RGBA")

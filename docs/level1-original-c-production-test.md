@@ -1,4 +1,9 @@
-# Level 1 original Run C production test
+# Level 1 original Run C production test (superseded)
+
+This earlier 30%-larger test has been superseded by the C-only Charlie-size
+match documented in `docs/level1-run-c-charlie-size-match-test.md`. It remains
+here only as historical diagnostic evidence and does not describe the active
+production assets.
 
 ## Result
 

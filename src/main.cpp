@@ -334,17 +334,10 @@ enum class Level1RiderState : std::uint8_t {
   RunC = 2,
 };
 
-// All accepted production poses use the same 1280x768 canvas and the same
+// All accepted production poses use the same 1024x768 canvas and the same
 // authoritative gameplay anchor. Airborne selects Run C without a distinct
 // image or anchor; only the ROM-derived jump trajectory moves it.
-constexpr std::array<float, 2> kLevel1RiderProductionCanvas{1280.0F, 768.0F};
-constexpr std::array<float, 2> kLevel1RiderProductionSourceAnchor{640.0F,
-                                                                  640.0F};
-// Keep the synchronized trace expressed in the established 1024-wide logical
-// production coordinate system. The larger canvas changes only transparent
-// source padding; its world-space anchor remains the same.
-constexpr std::array<float, 2> kLevel1RiderGameplayAnchor{512.0F, 640.0F};
-constexpr float kLevel1RiderProductionPixelToWorld = 118.8F / 1024.0F;
+constexpr std::array<float, 2> kLevel1RiderProductionAnchor{512.0F, 640.0F};
 
 constexpr const char* level1RiderStateName(Level1RiderState state) {
   switch (state) {
@@ -3798,19 +3791,14 @@ void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
                                   ? riderRunB
                                   : riderRunC;
   if (riderTexture) {
-    constexpr float kRenderWidth =
-        kLevel1RiderProductionCanvas[0] * kLevel1RiderProductionPixelToWorld;
-    constexpr float kRenderHeight =
-        kLevel1RiderProductionCanvas[1] * kLevel1RiderProductionPixelToWorld;
+    constexpr float kRenderWidth = 118.8F;
+    constexpr float kRenderHeight = kRenderWidth * 768.0F / 1024.0F;
     const float sourceAnchorX = facingRight
-        ? kLevel1RiderProductionSourceAnchor[0]
-        : kLevel1RiderProductionCanvas[0] -
-              kLevel1RiderProductionSourceAnchor[0];
-    const float visualAnchorX =
-        sourceAnchorX * kLevel1RiderProductionPixelToWorld;
+        ? kLevel1RiderProductionAnchor[0]
+        : 1024.0F - kLevel1RiderProductionAnchor[0];
+    const float visualAnchorX = sourceAnchorX / 1024.0F * kRenderWidth;
     const float visualAnchorY =
-        kLevel1RiderProductionSourceAnchor[1] *
-        kLevel1RiderProductionPixelToWorld;
+        kLevel1RiderProductionAnchor[1] / 768.0F * kRenderHeight;
     const SDL_FRect destination{screenX + 10.0F - visualAnchorX,
                                 groundY - visualAnchorY,
                                 kRenderWidth, kRenderHeight};
@@ -5665,7 +5653,7 @@ int main(int argc, char** argv) {
             game.player.grounded ? game.level1RiderState
                                  : Level1RiderState::RunC;
         const auto riderCodes = level1RiderCodes(visibleRiderState);
-        const auto& riderAnchor = kLevel1RiderGameplayAnchor;
+        const auto& riderAnchor = kLevel1RiderProductionAnchor;
         movementTrace << movementTraceFrame << ',' << (traceLeft ? 1 : 0)
                       << ',' << (traceRight ? 1 : 0) << ','
                       << (traceJump ? 1 : 0) << ',' << std::fixed
@@ -5849,8 +5837,8 @@ int main(int argc, char** argv) {
                      SDL_FLIP_NONE);
     if (!options.riderDiagnosticDir.empty() && movementTraceFrame > 0) {
       const int tracedFrame = movementTraceFrame - 1;
-      const std::array<int, 11> captureFrames{
-          0, 6, 14, 25, 33, 57, 73, 87, 88, 96, 103};
+      const std::array<int, 12> captureFrames{
+          0, 6, 14, 21, 25, 33, 57, 73, 87, 88, 96, 103};
       if (tracedFrame != lastRiderDiagnosticFrame &&
           std::find(captureFrames.begin(), captureFrames.end(), tracedFrame) !=
               captureFrames.end()) {
