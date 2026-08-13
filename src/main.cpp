@@ -3791,14 +3791,24 @@ void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
                                   ? riderRunB
                                   : riderRunC;
   if (riderTexture) {
-    constexpr float kRenderWidth = 118.8F;
-    constexpr float kRenderHeight = kRenderWidth * 768.0F / 1024.0F;
+    // Production A/B/C use a larger transparent canvas so the corrected
+    // rider/lion set can match the burning composite without cropping Run C.
+    // Pixel density is unchanged; only these three artwork files grow.
+    constexpr float kProductionPixelToWorld = 118.8F / 1024.0F;
+    constexpr float kProductionCanvasWidth = 1536.0F;
+    constexpr float kProductionCanvasHeight = 1024.0F;
+    constexpr float kProductionAnchorX = 768.0F;
+    constexpr float kProductionAnchorY = 714.0F;
+    constexpr float kRenderWidth =
+        kProductionCanvasWidth * kProductionPixelToWorld;
+    constexpr float kRenderHeight =
+        kProductionCanvasHeight * kProductionPixelToWorld;
     const float sourceAnchorX = facingRight
-        ? kLevel1RiderProductionAnchor[0]
-        : 1024.0F - kLevel1RiderProductionAnchor[0];
-    const float visualAnchorX = sourceAnchorX / 1024.0F * kRenderWidth;
+        ? kProductionAnchorX
+        : kProductionCanvasWidth - kProductionAnchorX;
+    const float visualAnchorX = sourceAnchorX * kProductionPixelToWorld;
     const float visualAnchorY =
-        kLevel1RiderProductionAnchor[1] / 768.0F * kRenderHeight;
+        kProductionAnchorY * kProductionPixelToWorld;
     const SDL_FRect destination{screenX + 10.0F - visualAnchorX,
                                 groundY - visualAnchorY,
                                 kRenderWidth, kRenderHeight};
