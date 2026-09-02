@@ -17,9 +17,10 @@ folder and are not stored in this repository.
 
 The current milestone includes playable Event 1, Event 2, and an Event 3
 tambourine first pass, plus a faithful six-event HD selection screen.
-The friendly blond Charlie rider uses a six-pose sheet while retaining the
-original HD lion artwork. Vector rendering remains only as a fallback if an
-asset cannot be loaded.
+Event 1 is frame-synchronized with the original board (see below). The
+friendly blond Charlie rider uses the production Run A/B/C poses plus the
+backward walking poses E/F while retaining the original HD lion artwork.
+Vector rendering remains only as a fallback if an asset cannot be loaded.
 
 ## Display design
 
@@ -142,7 +143,8 @@ The local build uses these standardized 48 kHz mono files:
 - `event1-stage.wav`: track 03, looped during Event 1, stopped immediately on
   a miss or goal arrival, and restarted from the beginning when Charlie
   respawns. Its playback switches to the arcade-style double-speed warning
-  as soon as the Zeppelin bonus reaches `0999`.
+  when the Zeppelin bonus reaches `0499`, the value tested by the board at
+  `$BB73`.
 - `jump.wav`: track 08, restarted on every valid jump
 - `event3-stage.wav`: full track 06 (`Trombonanza`), looped during Event 3
 - `stage3-bounce.wav`: isolated command `0x46` (catalog RMS 1279), played on
@@ -189,6 +191,21 @@ cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
 Pass `--capture-scene start`, `--capture-scene select`, `--capture-scene stage3`, `--capture-scene stage3-approach`, `--capture-scene stage3-roof`,
 `--capture-scene ring`, `--capture-scene extra`, or `--capture-scene crash`
 to inspect those animation states; `goal` and `tally` are also available.
+
+## Level 1 board model and replay verification
+
+Event 1 now runs the `circusc4` board model documented in
+`docs/LEVEL1_ROM_MODEL.md`: course progress as page/offset, the full course
+stream, the three fire-pot records, the hidden coin, the extra Charlie, the
+goal, the coin shower and the failure restart all follow the disassembled
+routines. `--replay capture-state.csv --replay-output native.csv
+--replay-frame-byte N` feeds the joystick column of a MAME capture into the
+native game; `tools/compare_level1_replay.py` then compares every board frame
+with the emulated state (`tools/compact_level1_objects.py` reduces the
+object capture for it). The two manual captures and the headless
+three-failure run in `docs/diagnostics/level1-replay/` replay with no
+mismatches. `tools/autoplay_level1_headless.lua` produces new captures in
+headless MAME (`-video none -sound none -nothrottle`).
 
 ## Reference analysis
 

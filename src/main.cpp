@@ -215,7 +215,10 @@ constexpr float kBonusRingCenterHeight = 170.0F;
 // matches both measurements and still returns visibly to the pot when missed.
 constexpr int kCoinFlightFrames = 96;
 constexpr float kCoinArcHeight = 170.0F;
-constexpr int kCrashBurnFrames = 72;
+// <$CB: the burning composite is shown for 64 board frames ($7CA9/$7CC1);
+// the board hands control back 160 frames after the collision.
+constexpr int kCrashBurnFrames = 64;
+constexpr int kLevel1FailureFrames = 160;
 constexpr int kGoalArrivalFrames = 90;
 constexpr int kBirdArrivalFrames = 170;
 constexpr int kBagDropFrames = 45;
@@ -504,11 +507,12 @@ struct Game {
   bool hiddenCoinTriggered = false;
   bool timeScoreApplied = false;
   int openingBackwardJumps = 0;
-  bool extraCharlieActive = false;
-  bool extraCharlieCollected = false;
-  bool extraCharlieTriggered = false;
-  bool extraCharliePending = false;
+  // $220A: 0 available, 1 pending, 2 converted record exists, 3 collected.
+  // extraCharlieHoopIndex mirrors <$BF (the tracked record, -1 when none).
+  int level1ExtraCharlieState = 0;
   int extraCharlieHoopIndex = -1;
+  // Derived for rendering: the doll is visible while state 2 tracks a record.
+  bool extraCharlieActive = false;
   // ---- circusc4 Level 1 board state ----
   // $2203:$2204:$2205 as one signed value in 1/256 source pixel.  RIGHT adds
   // $0180 per frame, LEFT subtracts $0130 unless the page byte is zero.
@@ -1567,7 +1571,7 @@ void drawText(SDL_Renderer* renderer, std::string_view text, float x, float y,
   }
 }
 
-std::uint32_t nextRandom(Game& game) {
+[[maybe_unused]] std::uint32_t nextRandom(Game& game) {
   std::uint32_t value = game.randomState;
   value ^= value << 13;
   value ^= value >> 17;
@@ -1690,7 +1694,6 @@ void initializeLevel1Board(Game& game) {
   }
   game.extraCharlieActive = false;
   game.extraCharlieHoopIndex = -1;
-  if (game.extraCharliePending) game.extraCharlieTriggered = true;
   game.player.level1JumpPending = false;
   game.player.level1JumpBuffered = false;
   game.player.level1AirborneDirection = 0;
@@ -1731,9 +1734,7 @@ void resetCourse(Game& game) {
   game.timeScoreApplied = false;
   game.openingBackwardJumps = 0;
   game.extraCharlieActive = false;
-  game.extraCharlieCollected = false;
-  game.extraCharlieTriggered = false;
-  game.extraCharliePending = false;
+  game.level1ExtraCharlieState = 0;
   game.extraCharlieHoopIndex = -1;
   game.stage2JumpClears = 0;
   game.stage2JumpBrown = false;
@@ -2006,16 +2007,14 @@ void restartAfterCrash(Game& game) {
   }
   game.scene = Scene::Playing;
   if (game.selectedEvent == 0) {
-    // $7CC5-$7CD4: the course page steps back by one (two from page seven
-    // onward) while the page offset is kept, every object record is cleared
-    // and $6E9F re-runs.  Course index, extra-Charlie and coin states persist.
-    const int page = level1Page(game.level1ProgressFixed);
-    if (page >= 7) {
-      game.level1ProgressFixed -= 2 * 0x10000;
-    } else if (page >= 1) {
-      game.level1ProgressFixed -= 0x10000;
-    }
-    if (game.level1ProgressFixed < 0) game.level1ProgressFixed = 0;
+    // $7CC5-$7CD4 steps the course page back by one (two from page seven
+    // onward); the restart phase then zeroes the page offset, clears every
+    // object record and re-runs $6E9F (headless MAME run: death at $0378
+    // restarts at $0200).  Course index, extra-Charlie and coin states
+    // persist.
+    int page = level1Page(game.level1ProgressFixed);
+    page = page >= 7 ? page - 2 : std::max(0, page - 1);
+    game.level1ProgressFixed = static_cast<std::int32_t>(page) << 16;
     ++game.level1MissedRewards;
     initializeLevel1Board(game);
     game.player.alive = true;
@@ -2169,6 +2168,11 @@ bool overlapsLevel1LargeHoop(const Player& player, const Hoop& hoop,
 
 void crashPlayer(Game& game) {
   if (game.scene != Scene::Playing) return;
+  // $7CB6-$7CBD: a converted hanging Charlie (state two) becomes pending
+  // again, so it is offered once more after the restart.
+  if (game.selectedEvent == 0 && game.level1ExtraCharlieState == 2) {
+    game.level1ExtraCharlieState = 1;
+  }
   game.player.alive = false;
   game.player.runSpeed = 0.0F;
   game.player.verticalVelocity = 0.0F;
@@ -2211,13 +2215,12 @@ void showStage1Score(Game& game, int points, float worldX, float y) {
 }
 
 void armStage1ExtraCharlie(Game& game) {
-  if (game.extraCharlieTriggered) return;
-  game.extraCharlieTriggered = true;
-  // $220A becomes 1 here. $7670-$7684 converts the next newly allocated
+  // $729D: $220A becomes 1. $7670-$7684 converts the next newly allocated
   // ordinary hoop record into the hanging Charlie. It never repurposes an
   // object already active in the course and never controls the $2760
   // small/prize-ring branch.
-  game.extraCharliePending = true;
+  if (game.level1ExtraCharlieState != 0) return;
+  game.level1ExtraCharlieState = 1;
 }
 
 void finishStage(Game& game) {
@@ -2905,13 +2908,6 @@ std::int32_t level1MovementCommand(int direction) {
   return 0;
 }
 
-// $7539/$7607/$76FE: while $2203 is zero a LEFT command contributes nothing
-// to object movement or scheduling.
-std::int32_t level1ObjectCommand(const Game& game, std::int32_t command) {
-  if (command > 0 && level1Page(game.level1ProgressFixed) == 0) return 0;
-  return command;
-}
-
 int level1RiderDisplacement(const Player& player) {
   if (player.grounded || player.jumpFrame < 0) return 0;
   return kJumpSourceDisplacement[static_cast<std::size_t>(
@@ -2946,9 +2942,7 @@ void retireLevel1Hoop(Game& game, std::size_t index, bool exitedRight) {
     if (game.extraCharlieHoopIndex == static_cast<int>(index)) {
       // $75A3-$75B5: an uncollected doll returns to the pending state and
       // converts the next ordinary admission again.
-      if (game.extraCharlieActive && !game.extraCharlieCollected) {
-        game.extraCharliePending = true;
-      }
+      if (game.level1ExtraCharlieState == 2) game.level1ExtraCharlieState = 1;
       game.extraCharlieActive = false;
       game.extraCharlieHoopIndex = -1;
     }
@@ -2964,7 +2958,8 @@ void retireLevel1Hoop(Game& game, std::size_t index, bool exitedRight) {
     }
     if (game.extraCharlieHoopIndex == static_cast<int>(index)) {
       // $75B8-$75E2: the tracked object becomes an ordinary hoop again and
-      // $220A stays at two, so the reward is gone for this course.
+      // $220A stays at two, so the reward is gone unless a later failure
+      // ($7CB6) returns the state to pending.
       game.extraCharlieActive = false;
       game.extraCharlieHoopIndex = -1;
     }
@@ -3025,9 +3020,9 @@ void admitLevel1Hoop(Game& game, std::int32_t objectDelta) {
     hoop.active = true;
     hoop.kind = Level1HoopKind::Large;
     hoop.sourceXFixed = 0xff80;
-    if (game.extraCharliePending) {
+    if (game.level1ExtraCharlieState == 1) {
       // $767E-$76C8: a pending reward converts this new ordinary record.
-      game.extraCharliePending = false;
+      game.level1ExtraCharlieState = 2;
       game.extraCharlieActive = true;
       game.extraCharlieHoopIndex = static_cast<int>(index);
       hoop.kind = Level1HoopKind::ExtraCharlie;
@@ -3349,7 +3344,7 @@ void finishLevel1Landing(Game& game, int direction) {
   if (direction < 0) {
     // $728B-$72A9: a backward jump that carried an object from behind the
     // rider to ahead of him earns the hanging Charlie.
-    if (!game.extraCharlieTriggered) {
+    if (game.level1ExtraCharlieState == 0) {
       for (const auto& hoop : game.hoops) {
         if (hoop.takeoffCandidate) continue;
         const std::uint8_t high = static_cast<std::uint8_t>(hoop.sourceXFixed >> 8U);
@@ -3544,10 +3539,9 @@ void updateLevel1(Game& game, const Uint8* keyboard, bool jumpPressed,
     if (trackedHoop) {
       // $71A0: collection needs the rider row above $A8.  The record keeps
       // its slot (invisible) until it retires, exactly like <$BF.
-      if (game.extraCharlieActive && !game.extraCharlieCollected &&
-          riderRowBefore < 0xa8) {
+      if (game.level1ExtraCharlieState == 2 && riderRowBefore < 0xa8) {
         game.extraCharlieActive = false;
-        game.extraCharlieCollected = true;
+        game.level1ExtraCharlieState = 3;
         ++game.lives;
         ++game.extraCharlieAudioSerial;
       }
@@ -3592,7 +3586,6 @@ void updateLevel1(Game& game, const Uint8* keyboard, bool jumpPressed,
   // ---- $71E4-$7335: jump physics, goal, landing ---------------------------
   const std::uint8_t offsetByteBeforeScroll =
       level1PageOffsetByte(game.level1ProgressFixed);
-  bool landedThisFrame = false;
   bool jumpActivatedThisFrame = false;
   if (!game.player.grounded) {
     const int nextFrame = std::min(
@@ -3624,7 +3617,6 @@ void updateLevel1(Game& game, const Uint8* keyboard, bool jumpPressed,
       game.player.verticalVelocity = 0.0F;
       game.player.jumpFrame = -1;
       game.player.grounded = true;
-      landedThisFrame = true;
       finishLevel1Landing(game, game.player.level1AirborneDirection);
       if (game.scene != Scene::Playing) return;
       if (game.player.level1JumpBuffered) {
@@ -3740,7 +3732,12 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     }
     // The cabinet owns the failure sequence. Player input cannot dismiss it;
     // Charlie returns only after the complete failure cue has played once.
-    if (game.crashFrame >= game.crashDurationFrames) {
+    // Level 1: 64 burning frames (<$CB) plus the 96-frame restart phase
+    // measured in the headless MAME failure run (death at 1463, control back
+    // at 1623).
+    const int failureFrames =
+        game.selectedEvent == 0 ? kLevel1FailureFrames : game.crashDurationFrames;
+    if (game.crashFrame >= failureFrames) {
       restartAfterCrash(game);
     }
     return;
@@ -6260,7 +6257,7 @@ int main(int argc, char** argv) {
       }
       game.hoops.front().cleared = true;
       game.hoops.front().kind = Level1HoopKind::ExtraCharlie;
-      game.extraCharlieTriggered = true;
+      game.level1ExtraCharlieState = 2;
       game.extraCharlieActive = true;
       game.extraCharlieHoopIndex = 0;
     } else if (options.captureScene == "crash") {
@@ -6642,7 +6639,7 @@ int main(int argc, char** argv) {
                        << game.level1CoinPot << ',' << game.level1CoinState
                        << ',' << static_cast<int>(game.level1CoinX) << ','
                        << ((game.level1CoinYFixed >> 8) & 0xff) << ','
-                       << (game.extraCharlieCollected ? 3 : (game.extraCharlieActive ? 2 : (game.extraCharliePending ? 1 : 0)))
+                       << game.level1ExtraCharlieState
                        << ',' << static_cast<int>(game.level1BagState) << ','
                        << level1RiderStateName(game.level1RiderState) << ','
                        << game.level1GoalCounter << '\n';
