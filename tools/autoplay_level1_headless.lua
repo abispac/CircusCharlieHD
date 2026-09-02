@@ -1,12 +1,20 @@
--- Headless Level 1 autoplay: coin, start, hold RIGHT, scripted jumps.
--- Records the same state columns as capture_level1_manual_reference.lua plus
--- the object records needed by the native replay comparator.
+-- Headless Level 1 autoplay for circusc4 (no display, no sound needed):
+--   mame circusc4 -video none -sound none -nothrottle -seconds_to_run 90 \
+--     -autoboot_script tools/autoplay_level1_headless.lua
+-- Inserts a coin at frame 300, presses start at 400 and then either holds
+-- RIGHT without jumping (CIRCUS_AUTO_MODE=death), replays the player_input
+-- column of a manual capture aligned by the level-start frame
+-- (CIRCUS_AUTO_MODE=csv with CIRCUS_AUTO_CSV, CIRCUS_AUTO_CSV_OFFSET and
+-- CIRCUS_AUTO_CSV_CUTOFF), or jumps once (death-jump).  It writes the same
+-- state columns as capture_level1_manual_reference.lua plus lives, $220A,
+-- $220B, $220C, <$BB, <$C1, <$C4, the phase bytes, <$CB and the bonus, and a
+-- compact per-frame object file that tools/compare_level1_replay.py reads.
 local machine = manager.machine
 local maincpu = assert(machine.devices[":maincpu"])
 local program = assert(maincpu.spaces["program"])
 local system_port = assert(machine.ioport.ports[":SYSTEM"])
 local player_port = assert(machine.ioport.ports[":P1"])
-local prefix = os.getenv("CIRCUS_AUTO_PREFIX") or "/home/claude/mame/out/auto"
+local prefix = os.getenv("CIRCUS_AUTO_PREFIX") or "/tmp/circusc4-level1-headless"
 local last_frame = tonumber(os.getenv("CIRCUS_AUTO_LAST") or "2400")
 local mode = os.getenv("CIRCUS_AUTO_MODE") or "death"
 
@@ -32,7 +40,7 @@ state_file:write(table.concat({
   "object_26d0_status", "object_26d0_x88", "object_26d0_y",
   "object_26d0_timer", "object_26d0_code", "object_26d0_attr",
   "frame_byte_14", "lives_2200", "extra_220a", "coin_220b", "missed_220c",
-  "bb_20bb", "c1_20c1", "c4_20c4", "phase_05", "phase_06", "cb_20cb"
+  "bb_20bb", "c1_20c1", "c4_20c4", "phase_05", "phase_06", "cb_20cb", "bonus_227c"
 }, ",") .. "\n")
 local recs = {0x24b0, 0x24f0, 0x2530, 0x2570, 0x2580, 0x25e0, 0x26d0, 0x2700, 0x2730, 0x2760}
 local header = {"frame"}
@@ -103,7 +111,7 @@ emu.register_frame_done(function()
   frame = frame + 1
   inputs()
   state_file:write(string.format(
-    "%d,%04x,%02x,%02x,%02x,%02x,%d,%d,%02x,%04x,%04x,%04x,%04x,%02x,%02x,%02x,%02x,%02x,%06x,%02x,%04x,%d,%02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x,%04x,%02x,%02x,%02x\n",
+    "%d,%04x,%02x,%02x,%02x,%02x,%d,%d,%02x,%04x,%04x,%04x,%04x,%02x,%02x,%02x,%02x,%02x,%06x,%02x,%04x,%d,%02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x,%04x,%02x,%02x,%02x,%d\n",
     frame, maincpu.state["PC"].value,
     system_port:read(), player_port:read(),
     u8(0x2800), u8(0x20b0), u8(0x2646), u8(0x2644), u8(0x20b4),
@@ -112,7 +120,8 @@ emu.register_frame_done(function()
     u8(0x20a0) * 65536 + u8(0x20a1) * 256 + u8(0x20a2),
     u8(0x26d0), u16(0x26d6), u8(0x26d4), u8(0x26d8), u8(0x26de), u8(0x26df),
     u8(0x2014), u8(0x2200), u8(0x220a), u8(0x220b), u8(0x220c),
-    u8(0x20bb), u8(0x20c1), u16(0x20c4), u8(0x2005), u8(0x2006), u8(0x20cb)))
+    u8(0x20bb), u8(0x20c1), u16(0x20c4), u8(0x2005), u8(0x2006), u8(0x20cb),
+    u8(0x227c) * 1000 + u8(0x227d) * 100 + u8(0x227e) * 10 + u8(0x227f)))
   local row = {tostring(frame)}
   for _, r in ipairs(recs) do
     row[#row+1] = string.format("%02x", u8(r))
