@@ -180,12 +180,7 @@ constexpr std::array<std::uint8_t, 58> kStage2JumpSourceDisplacement{
     52, 52, 52, 51, 50, 49, 48, 47, 46, 45, 44, 42, 40, 38, 36,
     34, 32, 30, 28, 25, 22, 19, 16, 13, 10, 7,  4,  0,
 };
-constexpr float kLionCollisionLeft = 26.0F;
-constexpr float kLionCollisionRight = 34.0F;
 constexpr float kLionCollisionCenterOffset = 20.0F;
-constexpr float kFirePotCollisionHalfWidth = 32.0F;
-constexpr float kFirePotClearance = 42.0F;
-constexpr float kHoopPotSafetyDistance = 76.0F;
 // The HD hoop source has about 50% transparent horizontal padding. A
 // 108-unit destination produces the measured 46-unit visible MAME width.
 constexpr float kBigRingVisualHalfWidth = 54.0F;
@@ -210,11 +205,6 @@ constexpr int kLevel1FourthHoopYOffset = 0x10;
 constexpr float kBonusRingVisualHalfWidth = 56.0F;
 constexpr float kBonusRingVisualHalfHeight = 99.0F;
 constexpr float kBonusRingCenterHeight = 170.0F;
-// The MAME sequence places the coin near its apex about 50 frames after the
-// launch and catches it on the descending half at frame 66. A 96-frame arc
-// matches both measurements and still returns visibly to the pot when missed.
-constexpr int kCoinFlightFrames = 96;
-constexpr float kCoinArcHeight = 170.0F;
 // <$CB: the burning composite is shown for 64 board frames ($7CA9/$7CC1);
 // the board hands control back 160 frames after the collision.
 constexpr int kCrashBurnFrames = 64;
@@ -1931,6 +1921,9 @@ void resetCourse(Game& game) {
   }
 
   game.stage2Monkeys.clear();
+  // The board initialises the Event 1 bonus digits to 5800 on the frame
+  // that hands over control (headless capture: $227C-$227F = 5,8,0,0).
+  game.bonus = 5800;
   game.level1ProgressFixed = 0;
   game.level1HoopCourseIndex = 0;
   game.level1HoopActivations = 0;
@@ -5618,9 +5611,9 @@ void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
            kWorldWidth * 0.5F, 260.0F, 1.7F, color(255, 255, 255), true);
 
   constexpr std::array<std::string_view, 10> ranges{
-      "6000-4500", "4499-4000", "3999-3500", "3499-3000",
-      "2999-2500", "2499-2000", "1999-1500", "1499-1001",
-      "1000-500",  "499-0",
+      "5800-4500", "4499-4000", "3999-3500", "3499-3000",
+      "2999-2500", "2499-2000", "1999-1500", "1499-1000",
+      "999-500",   "499-0",
   };
   constexpr std::array<int, 10> awards{
       10000, 5000, 4000, 3000, 2000, 1000, 800, 600, 400, 200,

@@ -60,8 +60,9 @@ shower down repeatedly at 40 points per launch until the presentation ends
 
 ## Finish and time tally
 
-- The remaining bonus freezes when Charlie reaches the goal and counts down
-  one unit per board frame while playing; the hurry music starts at 0499.
+- The bonus starts at 5800, counts down one unit per board frame while
+  playing, freezes during the failure sequence and when Charlie reaches the
+  goal; the hurry music starts at 0499.
 - The `FINE!!` screen converts the remaining bonus with the `$FCC9` table:
   `4500+ = 10000`, `4000-4499 = 5000`, `3500-3999 = 4000`,
   `3000-3499 = 3000`, `2500-2999 = 2000`, `2000-2499 = 1000`,

@@ -149,6 +149,12 @@ the restart phase zeroes the offset, clears every record and re-runs the
 initialisation; control returns 160 frames after the collision. `$220C`
 increments and a converted extra Charlie (`$220A == 2`) becomes pending.
 
+## Bonus
+
+The bonus digits `$227C-$227F` are set to 5800 on the frame that hands over
+control and count down by one per playing frame (`$BC12`); they freeze
+during the failure sequence, the restart phase and the goal presentation.
+
 ## Presentation data
 
 - Distance signs: `$EF07 + 3 * page`, positioned at `page * 256 - 24`.
