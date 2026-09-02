@@ -96,16 +96,49 @@ constexpr float kForwardSpeed =
 constexpr float kBackSpeed =
     -1.1875F * static_cast<float>(kBoardRefresh) * kSourceToWorldX;
 constexpr float kRingRailSpeed = 65.0F;
-// Level 1 bytes actually read at $F7C4-$F7D0 during the complete circusc4
-// attract-mode course trace.  The stream continues past the ten entries used
-// by the earlier single-hoop reconstruction.
-constexpr std::array<std::uint8_t, 13> kLevel1HoopActivationReload{
-    0xdc, 0xf4, 0xd4, 0xec, 0xdc, 0xe4, 0xde,
-    0x1b, 0xee, 0xf6, 0x1b, 0xde, 0xee};
-constexpr std::uint16_t kLevel1InitialHoopX = 0xd480;
-constexpr std::uint16_t kLevel1InitialActivationAccumulator = 0xb180;
+// Level 1 course stream.  $7633-$7658 forms selector B = $10 + $2208 (normal
+// difficulty, wave 1), wraps B >= $68 into the eight-entry loop at $60-$67,
+// and reads the reload byte from table base $F7B4.  These are the bytes at
+// $F7C4-$F81B (selector $10-$67); the manual full-course capture reads
+// entries 0-16 before the goal, the attract trace entries 0-12.
+constexpr std::array<std::uint8_t, 88> kLevel1HoopActivationReload{
+    0xdc, 0xf4, 0xd4, 0xec, 0xdc, 0xe4, 0xde, 0x1b, 0xee, 0xf6, 0x1b,
+    0xde, 0xee, 0x1b, 0xd0, 0xc0, 0xe8, 0xb8, 0xe0, 0xe8, 0xb8, 0xd0,
+    0xe8, 0x1e, 0xde, 0x1e, 0xc6, 0x1e, 0xe0, 0x1e, 0xc6, 0x1e, 0xbc,
+    0xa4, 0xf4, 0xd4, 0xec, 0x84, 0x8c, 0xbc, 0xbc, 0x21, 0xc0, 0x21,
+    0xc4, 0x21, 0xee, 0x21, 0xc0, 0x21, 0xa8, 0x88, 0xc8, 0x78, 0x70,
+    0xd8, 0xe0, 0xa8, 0xe2, 0x24, 0xda, 0x7a, 0x24, 0xca, 0x8a, 0x24,
+    0x94, 0x64, 0xcc, 0xac, 0xc4, 0x5c, 0x94, 0x7c, 0x7e, 0xc6, 0xae,
+    0x27, 0xce, 0x66, 0x84, 0x9c, 0x6c, 0x9c, 0x84, 0x6c, 0x9c, 0x6c};
+constexpr std::uint8_t level1CourseByte(std::size_t courseIndex) {
+  std::size_t selector = 0x10U + courseIndex;
+  if (selector >= 0x68U) selector = (selector & 0x07U) + 0x60U;
+  return kLevel1HoopActivationReload[selector - 0x10U];
+}
+// Fire-pot spacing table read by $7841 (base $F81C).  Wave 1 on normal
+// difficulty indexes entry 8 + pot counter; $7839 wraps indices >= $34 into
+// $30-$33.  Each value is the 8.8 countdown (in source pixels) until the next
+// pot appears at the right edge.
+constexpr std::array<std::uint8_t, 52> kLevel1PotSpacing{
+    0xf6, 0xfc, 0xf2, 0xfc, 0xee, 0xfc, 0xea, 0xfc, 0xe6, 0xfc, 0xe2,
+    0xfc, 0xde, 0xfc, 0xda, 0xfc, 0xd6, 0xfc, 0xd2, 0xfc, 0xce, 0xfc,
+    0xca, 0xfc, 0xc6, 0xfc, 0xc2, 0xfc, 0xbe, 0xfc, 0xba, 0xfc, 0xb6,
+    0xfc, 0xb2, 0xfc, 0xae, 0xfc, 0xaa, 0xfc, 0xa6, 0xfc, 0xa2, 0xfc,
+    0x9e, 0xfc, 0x9a, 0xfc, 0x96, 0xfc, 0x92, 0xfc};
 constexpr float kLevel1RiderCollisionScreenX = 98.0F;
-constexpr float kCourseLength = 6000.0F;
+// Course progress is kept as the board keeps it: $2203 page, $2204:$2205
+// descending page offset, moved by the signed 8.8 command each frame.  Native
+// stores the same quantity as one signed value in 1/256 source pixel.
+constexpr std::int32_t kLevel1RightCommand = -0x0180;  // $FE80
+constexpr std::int32_t kLevel1LeftCommand = 0x0130;    // $0130
+constexpr float kLevel1PlayerStartX = 78.0F;
+// $7202-$7213: the goal triggers while airborne once $2203 == 7 with
+// $2204 < $28 (course progress above 1752 source pixels) and the new rider row
+// reaches $C5.  The plaque tiles for page 7 sit at 256 * 7 - 24 = 1768.
+constexpr std::int32_t kLevel1GoalProgressFixed = 7 * 0x10000 - 0x2800;
+constexpr float kLevel1GoalPlaqueSourceX = 1768.0F;
+constexpr float kCourseLength =
+    kLevel1RiderCollisionScreenX + kLevel1GoalPlaqueSourceX * kSourceToWorldX;
 constexpr float kGoalScreenX = 150.0F;
 constexpr float kGoalPlatformTop = kGroundY - 25.0F;
 constexpr float kGoalLandingY = kGoalPlatformTop + 12.0F;
@@ -207,6 +240,17 @@ struct Options {
   std::string tracePath;
   std::string traceMode = "hold-right";
   std::string riderDiagnosticDir;
+  std::vector<int> riderDiagnosticFrames;
+  // Deterministic replay of a MAME capture-state.csv input column.
+  std::string replayPath;
+  std::string replayOutput;
+  std::string replayCaptureDir;
+  std::vector<int> replayCaptureFrames;
+  int replayStart = -1;
+  int replayOffset = 0;
+  int replayCourseOffset = -1;
+  int replayCoinSelector = -1;
+  int replayFrameByte = -1;
 };
 
 struct Vec2 {
@@ -236,17 +280,24 @@ struct Hoop {
   std::uint16_t sourceXFixed = 0;
   bool active = false;
   Level1HoopKind kind = Level1HoopKind::Large;
+  // Record byte +$09: $7394 marks every object with X in [$40,$BF] at
+  // takeoff; $72D9 counts those that moved below $40 by the landing.
+  bool takeoffCandidate = false;
 };
 
+// circusc4 fire-pot records $24B0/$24F0/$2530 ($7750-$78F6).
 struct FirePot {
+  // +$00: 0 free, 1 pending (counting down), 2 visible.
+  std::uint8_t status = 0;
+  // +$01:+$02: 8.8 course countdown while pending.
+  std::uint16_t countdown = 0;
+  // +$06:+$07: 8.8 screen X while visible (spawns at $FE80 from 0).
+  std::uint16_t sourceXFixed = 0;
+  // +$08 flame timer and +$0F attribute (3..5) chosen from the frame byte.
+  std::uint8_t animationTimer = 0;
+  std::uint8_t flameVariant = 3;
   float worldX = 0.0F;
-  bool coinChanceResolved = false;
-  bool coinPending = false;
-  bool coinActive = false;
-  bool coinCollected = false;
-  int coinFrame = 0;
-  bool retired = false;
-  bool scored = false;
+  bool visible() const { return status == 2; }
 };
 
 struct BonusRing {
@@ -322,6 +373,11 @@ struct Player {
   // left, neutral, and right respectively.
   int level1AirborneDirection = 0;
   bool level1JumpPending = false;
+  // $7235-$7254: during the last four source pixels of the descent the board
+  // re-samples the joystick into $2243 and accepts a fresh jump press into
+  // $2246, so a buffered jump starts on the landing tick.
+  bool level1JumpBuffered = false;
+  int level1BufferedDirection = 0;
   bool grounded = true;
   bool alive = true;
   bool facingRight = true;
@@ -342,6 +398,12 @@ enum class Level1RiderState : std::uint8_t {
   RunA = 0,
   RunB = 1,
   RunC = 2,
+  // $73F4 selects the second six-byte table at $EEA6 while the rider walks
+  // backward: pose D shares A's cells, E and F keep C's and B's upper rows
+  // over distinct walking leg cells ($91/$92/$93 and $8F/$94/$D4).
+  BackD = 3,
+  BackE = 4,
+  BackF = 5,
 };
 
 // All accepted production poses use the same 1024x768 canvas and the same
@@ -357,22 +419,46 @@ constexpr const char* level1RiderStateName(Level1RiderState state) {
       return "B";
     case Level1RiderState::RunC:
       return "C";
+    case Level1RiderState::BackD:
+      return "D";
+    case Level1RiderState::BackE:
+      return "E";
+    case Level1RiderState::BackF:
+      return "F";
   }
   return "?";
 }
 
 constexpr int level1RiderProductionAsset(Level1RiderState state) {
-  return static_cast<int>(state) + 1;
+  switch (state) {
+    case Level1RiderState::RunA:
+    case Level1RiderState::BackD:
+      return 1;
+    case Level1RiderState::RunB:
+      return 2;
+    case Level1RiderState::RunC:
+      return 3;
+    case Level1RiderState::BackE:
+      return 4;
+    case Level1RiderState::BackF:
+      return 5;
+  }
+  return 1;
 }
 
 constexpr std::array<int, 6> level1RiderCodes(Level1RiderState state) {
   switch (state) {
     case Level1RiderState::RunA:
+    case Level1RiderState::BackD:
       return {0x62, 0x61, 0x60, 0x5f, 0x5e, 0x5d};
     case Level1RiderState::RunB:
       return {0xcd, 0xcc, 0xb6, 0xb5, 0x64, 0x63};
     case Level1RiderState::RunC:
       return {0x5c, 0x5b, 0x5a, 0x59, 0x58, 0x57};
+    case Level1RiderState::BackE:
+      return {0x93, 0x92, 0x91, 0x59, 0x58, 0x57};
+    case Level1RiderState::BackF:
+      return {0xd4, 0x94, 0x8f, 0xb5, 0x64, 0x63};
   }
   return {};
 }
@@ -423,6 +509,67 @@ struct Game {
   bool extraCharlieTriggered = false;
   bool extraCharliePending = false;
   int extraCharlieHoopIndex = -1;
+  // ---- circusc4 Level 1 board state ----
+  // $2203:$2204:$2205 as one signed value in 1/256 source pixel.  RIGHT adds
+  // $0180 per frame, LEFT subtracts $0130 unless the page byte is zero.
+  std::int32_t level1ProgressFixed = 0;
+  // Fire-pot records $24B0/$24F0/$2530 and the pointers kept at <$C6/<$C8
+  // for the two fixed pots of pages six and seven ($7799-$77FD).
+  std::array<FirePot, 3> level1Pots{};
+  int level1FixedPotC6 = 2;
+  int level1FixedPotC8 = 1;
+  // $2209 counts chain pots; <$C1 (frame byte & 3, three becomes zero)
+  // selects which of them hides the coin ($780D-$7816).
+  std::uint8_t level1PotCounter = 0;
+  int level1CoinPotSelector = 0;
+  // $2580 pointer, $220B state (0 idle, 1 launched, 2 caught), $2582 arm
+  // flag, $2584:$2585 8.8 row, $2587:$2588 8.8 velocity, $2589 spin.
+  int level1CoinPot = -1;
+  int level1CoinState = 0;
+  std::uint8_t level1CoinArmed = 0;
+  std::uint8_t level1CoinX = 0;
+  std::int32_t level1CoinYFixed = 0xd200;
+  std::int32_t level1CoinVelocityFixed = 0;
+  int level1CoinSpin = 0;
+  int level1CoinPopupTimer = 0;
+  // <$C4:$C5 distance since the last left-edge retirement and <$BD reserved
+  // retirement flag, used by $76FE to bring an object back from the left.
+  std::uint16_t level1RetireDistance = 0;
+  bool level1ReservedRetired = false;
+  // $25E0: $FF while the small ring carries its bag, then a popup countdown.
+  std::uint8_t level1BagState = 0;
+  // $2781: pot whose X is watched between takeoff and landing ($73AA/$72F7).
+  int level1PotMarker = -1;
+  int level1PotPopupTimer = 0;
+  float level1PotPopupWorldX = 0.0F;
+  // $220C: bags missed at ring retirement plus deaths.  Zero at the goal
+  // earns the bird and coin shower.
+  int level1MissedRewards = 0;
+  // <$BE counts fire-pot-only landings past page seven ($731D).
+  int level1LatePotLandings = 0;
+  // Goal presentation: $2500 phase count, <$CA counter, bird/bag/coins.
+  int level1GoalCounter = 0;
+  int level1GoalPhases = 0;
+  int level1BirdPhase = 0;
+  std::uint8_t level1BirdX = 0;
+  struct RewardCoin {
+    int timer = 0;
+    std::int32_t yFixed = 0;
+    std::int32_t velocityFixed = 0;
+    std::int32_t xFixed = 0;
+    std::int32_t driftFixed = 0;
+    int spin = 0;
+    bool active = false;
+  };
+  std::array<RewardCoin, 11> level1RewardCoins{};
+  int level1RewardCoinLaunches = 0;
+  // Rider pose table select (0 forward $EE94, 1 backward $EEA6).
+  bool level1RiderBackward = false;
+  int level1LandingDirection = 0;
+  // Replay overrides for deterministic comparison against MAME captures.
+  int replayCourseOffsetOverride = -1;
+  int replayCoinSelectorOverride = -1;
+  int replayInitialInput = 0xff;
   int stage2JumpClears = 0;
   bool stage2JumpBrown = false;
   bool stage2JumpPurple = false;
@@ -472,15 +619,14 @@ struct Game {
   bool debug = false;
   bool lionOnlyTest = false;
   // Event 1 object scheduler mirrors <$C2:$C3 / $20c2:$20c3 and the course
-  // byte index at $2208. Slot zero is already live when player control starts.
-  std::uint16_t level1HoopActivationAccumulator =
-      kLevel1InitialActivationAccumulator;
-  std::size_t level1HoopCourseIndex = 1;
-  std::size_t level1HoopActivations = 1;
+  // byte index at $2208.  $70AC seeds the accumulator with $10xx.
+  std::uint16_t level1HoopActivationAccumulator = 0x1000;
+  std::size_t level1HoopCourseIndex = 0;
+  std::size_t level1HoopActivations = 0;
   // circusc4 <$BC is the previous course byte/state used by $765c-$7666 to
   // select the reserved fourth object, and <$BB is the selector adjustment
   // advanced by that same branch.  They are not extra-Charlie state.
-  std::uint8_t level1HoopCourseState = 0xdc;
+  std::uint8_t level1HoopCourseState = 0x10;
   // Attract/Level 1 initializes <$BB to $5E. $765A adds this byte to the
   // course selector before BITB #$03, which makes stream indices 2, 6 and
   // 10 the reserved-$2760 decision points in the captured course.
@@ -691,6 +837,46 @@ std::optional<Options> parseOptions(int argc, char** argv) {
       }
     } else if (argument == "--rider-diagnostic-dir" && index + 1 < argc) {
       options.riderDiagnosticDir = argv[++index];
+    } else if (argument == "--rider-diagnostic-frames" && index + 1 < argc) {
+      std::string list = argv[++index];
+      std::size_t start = 0;
+      while (start <= list.size()) {
+        const std::size_t comma = list.find(',', start);
+        const std::string item =
+            list.substr(start, comma == std::string::npos ? std::string::npos
+                                                          : comma - start);
+        if (!item.empty()) options.riderDiagnosticFrames.push_back(std::stoi(item));
+        if (comma == std::string::npos) break;
+        start = comma + 1;
+      }
+    } else if (argument == "--replay" && index + 1 < argc) {
+      options.replayPath = argv[++index];
+    } else if (argument == "--replay-output" && index + 1 < argc) {
+      options.replayOutput = argv[++index];
+    } else if (argument == "--replay-capture-dir" && index + 1 < argc) {
+      options.replayCaptureDir = argv[++index];
+    } else if (argument == "--replay-capture-frames" && index + 1 < argc) {
+      std::string list = argv[++index];
+      std::size_t start = 0;
+      while (start <= list.size()) {
+        const std::size_t comma = list.find(',', start);
+        const std::string item =
+            list.substr(start, comma == std::string::npos ? std::string::npos
+                                                          : comma - start);
+        if (!item.empty()) options.replayCaptureFrames.push_back(std::stoi(item));
+        if (comma == std::string::npos) break;
+        start = comma + 1;
+      }
+    } else if (argument == "--replay-start" && index + 1 < argc) {
+      options.replayStart = std::stoi(argv[++index]);
+    } else if (argument == "--replay-offset" && index + 1 < argc) {
+      options.replayOffset = std::stoi(argv[++index]);
+    } else if (argument == "--replay-course-offset" && index + 1 < argc) {
+      options.replayCourseOffset = std::stoi(argv[++index], nullptr, 0);
+    } else if (argument == "--replay-coin-selector" && index + 1 < argc) {
+      options.replayCoinSelector = std::stoi(argv[++index], nullptr, 0);
+    } else if (argument == "--replay-frame-byte" && index + 1 < argc) {
+      options.replayFrameByte = std::stoi(argv[++index], nullptr, 0);
     } else if (argument == "--capture-scene" && index + 1 < argc) {
       options.captureScene = argv[++index];
       if (options.captureScene != "start" &&
@@ -1382,6 +1568,140 @@ std::uint32_t nextRandom(Game& game) {
   return value;
 }
 
+// Convert board object X (8.8, rider reference $40) into world units.
+float level1ObjectWorldX(const Game& game, std::uint16_t sourceXFixed) {
+  return game.cameraX + kLevel1RiderCollisionScreenX +
+         (static_cast<float>(sourceXFixed) / 256.0F - 64.0F) *
+             kSourceToWorldX;
+}
+
+// $2203 page byte: zero only while the course has not moved right of the
+// start line.  Progress is (page << 16) - ($2204:$2205).
+int level1Page(std::int32_t progressFixed) {
+  if (progressFixed <= 0) return 0;
+  return static_cast<int>((progressFixed + 0xffff) >> 16);
+}
+
+std::uint16_t level1PageOffset(std::int32_t progressFixed) {
+  const std::int32_t page = level1Page(progressFixed);
+  return static_cast<std::uint16_t>((page << 16) - progressFixed);
+}
+
+// $2204 alone: the descending page offset byte used by the fire-pot and goal
+// windows and by the grounded run-cycle sampler <$B3.
+std::uint8_t level1PageOffsetByte(std::int32_t progressFixed) {
+  return static_cast<std::uint8_t>(level1PageOffset(progressFixed) >> 8U);
+}
+
+float level1ProgressPixels(const Game& game) {
+  return static_cast<float>(game.level1ProgressFixed) / 256.0F;
+}
+
+// Derive the world/camera presentation from the board progress value.
+void syncLevel1World(Game& game) {
+  game.player.position.x =
+      kLevel1PlayerStartX + level1ProgressPixels(game) * kSourceToWorldX;
+  game.cameraX = std::max(0.0F, game.player.position.x - kLevel1PlayerStartX);
+  for (std::size_t index = 0; index < game.hoops.size(); ++index) {
+    auto& hoop = game.hoops[index];
+    hoop.worldX = level1ObjectWorldX(game, hoop.sourceXFixed);
+    auto& ring = game.bonusRings[index];
+    ring.active = hoop.active && hoop.kind == Level1HoopKind::PrizeRing;
+    // The visible rear cells are staged 16 source pixels left of the
+    // logical $2760 origin; collision continues to use $2766.
+    ring.sourceXFixed = static_cast<std::uint16_t>(
+        (hoop.sourceXFixed & 0xff00U) - 0x1000U);
+    ring.worldX = level1ObjectWorldX(game, ring.sourceXFixed);
+    ring.containsPrize = ring.active && game.level1BagState == 0xff;
+    ring.collected = !ring.containsPrize;
+  }
+  for (auto& pot : game.level1Pots) {
+    pot.worldX = level1ObjectWorldX(game, pot.sourceXFixed);
+  }
+}
+
+// $6E9F-$70DB: Level 1 board initialisation, executed at the course start
+// and again after every failure (the board clears $2400-$27FF first).
+void initializeLevel1Board(Game& game) {
+  game.hoops.assign(4, {});
+  for (auto& hoop : game.hoops) {
+    hoop.openingBottom = kBigHoopOpeningBottom;
+    hoop.openingTop = kBigHoopOpeningTop;
+  }
+  game.bonusRings.assign(game.hoops.size(), {});
+  for (auto& ring : game.bonusRings) {
+    ring.height = kBonusRingCenterHeight;
+    ring.active = false;
+    ring.containsPrize = false;
+  }
+  game.firePots.clear();
+  for (auto& pot : game.level1Pots) pot = FirePot{};
+  // <$B0-<$CB are cleared, then <$BB and <$C1 sample the free-running frame
+  // byte ($6EAC-$6EB7): the small-ring phase and the coin pot are random.
+  game.level1HoopCourseOffset =
+      game.replayCourseOffsetOverride >= 0
+          ? static_cast<std::uint8_t>(game.replayCourseOffsetOverride)
+          : game.level1BoardFrameByte;
+  {
+    int selector = game.level1BoardFrameByte & 0x03;
+    if (selector == 3) selector = 0;
+    game.level1CoinPotSelector = game.replayCoinSelectorOverride >= 0
+                                     ? game.replayCoinSelectorOverride
+                                     : selector;
+  }
+  game.level1RetireDistance = 0;
+  game.level1ReservedRetired = false;
+  game.level1CoinPot = -1;
+  game.level1CoinArmed = 0;
+  game.level1CoinX = 0;
+  game.level1CoinYFixed = 0xd200;
+  game.level1CoinVelocityFixed = 0;
+  game.level1CoinSpin = 0;
+  game.level1CoinPopupTimer = 0;
+  game.level1BagState = 0;
+  game.level1PotMarker = -1;
+  game.level1PotPopupTimer = 0;
+  game.level1RiderState = Level1RiderState::RunA;
+  game.level1RiderBackward = false;
+  game.level1RiderPositionSample = 0;
+  game.level1RiderCourseFixed = 0xfe80;
+  game.level1LandingDirection = 0;
+  game.level1ForwardProgressed = level1Page(game.level1ProgressFixed) != 0;
+  // $70A2-$70B0: fixed-pot pointers and a $10xx activation accumulator.
+  game.level1FixedPotC6 = 2;
+  game.level1FixedPotC8 = 1;
+  game.level1HoopActivationAccumulator = static_cast<std::uint16_t>(
+      0x1000U | (game.level1HoopActivationAccumulator & 0x00ffU));
+  game.level1HoopCourseState = 0x10;
+  // $70B2-$70C5: a restart inside pages two to four schedules the first chain
+  // pot 64 source pixels ahead immediately.
+  const int page = level1Page(game.level1ProgressFixed);
+  if (page >= 2 && page <= 4) {
+    game.level1Pots[0].status = 1;
+    game.level1Pots[0].countdown = 0x4000;
+  }
+  game.extraCharlieActive = false;
+  game.extraCharlieHoopIndex = -1;
+  if (game.extraCharliePending) game.extraCharlieTriggered = true;
+  game.player.level1JumpPending = false;
+  game.player.level1JumpBuffered = false;
+  game.player.level1AirborneDirection = 0;
+  game.player.grounded = true;
+  game.player.jumpFrame = -1;
+  game.player.verticalVelocity = 0.0F;
+  game.player.runSpeed = 0.0F;
+  game.player.position.y = kGroundY;
+  game.meterMarkers.clear();
+  // $EF07 sign table: 60M-10M sit at page * 256 - 24 for pages one to six.
+  for (int signPage = 1; signPage <= 6; ++signPage) {
+    game.meterMarkers.push_back(
+        {kLevel1RiderCollisionScreenX +
+             (static_cast<float>(signPage) * 256.0F - 24.0F) *
+                 kSourceToWorldX,
+         70 - signPage * 10});
+  }
+}
+
 void resetCourse(Game& game) {
   game.player = Player{};
   game.cameraX = 0.0F;
@@ -1602,66 +1922,18 @@ void resetCourse(Game& game) {
   }
 
   game.stage2Monkeys.clear();
-
-  // $6ee9-$7073 builds three reusable ordinary hoop composites plus the
-  // reserved $2760 small/prize-ring record. $7607-$76f8 admits them from a
-  // course-byte timer and seeds the selected record at X=$ff80;
-  // $7539-$7554 subsequently advances its object-local 8.8 X.
-  game.hoops.assign(4, {});
-  for (auto& hoop : game.hoops) {
-    hoop.openingBottom = kBigHoopOpeningBottom;
-    hoop.openingTop = kBigHoopOpeningTop;
-  }
-  game.level1HoopActivationAccumulator =
-      kLevel1InitialActivationAccumulator;
-  game.level1HoopCourseIndex = 1;
-  game.level1HoopActivations = 1;
-  game.level1HoopCourseState = kLevel1HoopActivationReload.front();
-  game.level1HoopCourseOffset = 0x5e;
-  game.level1ForwardProgressed = false;
-  game.level1RiderState = Level1RiderState::RunA;
-  game.level1RiderPositionSample = 0;
-  game.level1RiderCourseFixed = 0xfe80;
-  game.hoops.front().active = true;
-  game.hoops.front().kind = Level1HoopKind::Large;
-  game.hoops.front().sourceXFixed = kLevel1InitialHoopX;
-  game.hoops.front().worldX =
-      kLevel1RiderCollisionScreenX +
-      (static_cast<float>(kLevel1InitialHoopX) / 256.0F - 64.0F) *
-          kSourceToWorldX;
-  game.hoops.front().previousWorldX = game.hoops.front().worldX;
-  game.firePots = {
-      {1560.0F},
-      {2040.0F},
-      {2470.0F},
-      {2920.0F},
-      {3300.0F},
-      {3650.0F},
-      // The delayed second member of the close double-hoop set occupies the
-      // old 4260 lane at common play speeds. Leaving that pot in place creates
-      // the impossible hoop-over-fire combination seen in playtesting.
-      {4860.0F},
-      // The original final approach puts one pot beneath the last hoop and a
-      // second pot almost against the goal platform. At the native fixed-jump
-      // distance, these centers permit two distinct jumps, with the second
-      // jump descending directly onto the padded platform.
-      {5650.0F},
-      {5870.0F},
-  };
-  // Only $2760 is the logical small/prize-ring record. $75eb-$7606 writes
-  // additional hardware sprite cells for each large-hoop composite, but
-  // those cells are not separately scheduled small rings.
-  game.bonusRings.assign(game.hoops.size(), {});
-  game.meterMarkers = {
-      {620.0F, 60},  {1480.0F, 50}, {2340.0F, 40},
-      {3200.0F, 30}, {4060.0F, 20}, {4920.0F, 10},
-  };
-  for (auto& ring : game.bonusRings) {
-    ring.height = kBonusRingCenterHeight;
-    ring.active = false;
-    ring.containsPrize = false;
-  }
-  game.prizeBagsAvailable = 0;
+  game.level1ProgressFixed = 0;
+  game.level1HoopCourseIndex = 0;
+  game.level1HoopActivations = 0;
+  game.level1PotCounter = 0;
+  game.level1CoinState = 0;
+  game.level1MissedRewards = 0;
+  game.level1LatePotLandings = 0;
+  // The manual full-course capture starts with no object live: $2208 is
+  // zero, <$C2 holds $1000 and the first large hoop is admitted by the
+  // ordinary scheduler nine frames after RIGHT is first held.
+  initializeLevel1Board(game);
+  syncLevel1World(game);
 }
 
 void startGame(Game& game) {
@@ -1725,6 +1997,26 @@ void restartAfterCrash(Game& game) {
     return;
   }
   game.scene = Scene::Playing;
+  if (game.selectedEvent == 0) {
+    // $7CC5-$7CD4: the course page steps back by one (two from page seven
+    // onward) while the page offset is kept, every object record is cleared
+    // and $6E9F re-runs.  Course index, extra-Charlie and coin states persist.
+    const int page = level1Page(game.level1ProgressFixed);
+    if (page >= 7) {
+      game.level1ProgressFixed -= 2 * 0x10000;
+    } else if (page >= 1) {
+      game.level1ProgressFixed -= 0x10000;
+    }
+    if (game.level1ProgressFixed < 0) game.level1ProgressFixed = 0;
+    ++game.level1MissedRewards;
+    initializeLevel1Board(game);
+    game.player.alive = true;
+    game.crashFrame = 0;
+    syncLevel1World(game);
+    game.player.previous = game.player.position;
+    game.previousCameraX = game.cameraX;
+    return;
+  }
   game.player.position.x = std::max(78.0F, game.player.position.x - 145.0F);
   game.player.position.y = game.selectedEvent == 1
                                ? kStage2RopeY
@@ -1815,6 +2107,8 @@ void restartAfterCrash(Game& game) {
   }
 }
 
+// $C34D-$C3F8: row = 11 - 2 * (thousands + 1) + (hundreds < 5), values
+// from the word table at $FCC9.
 int timeBonusFor(int bonus) {
   if (bonus >= 4500) return 10000;
   if (bonus >= 4000) return 5000;
@@ -1823,7 +2117,7 @@ int timeBonusFor(int bonus) {
   if (bonus >= 2500) return 2000;
   if (bonus >= 2000) return 1000;
   if (bonus >= 1500) return 800;
-  if (bonus >= 1001) return 600;
+  if (bonus >= 1000) return 600;
   if (bonus >= 500) return 400;
   return 200;
 }
@@ -1867,10 +2161,6 @@ bool overlapsLevel1LargeHoop(const Player& player, const Hoop& hoop,
 
 void crashPlayer(Game& game) {
   if (game.scene != Scene::Playing) return;
-  for (auto& firePot : game.firePots) {
-    firePot.coinPending = false;
-    firePot.coinActive = false;
-  }
   game.player.alive = false;
   game.player.runSpeed = 0.0F;
   game.player.verticalVelocity = 0.0F;
@@ -1899,12 +2189,10 @@ void crashStage3Roof(Game& game) {
   --game.lives;
 }
 
-float firePotCoinY(const FirePot& firePot) {
-  const float progress = std::clamp(
-      static_cast<float>(firePot.coinFrame) /
-          static_cast<float>(kCoinFlightFrames),
-      0.0F, 1.0F);
-  return kGroundY - 30.0F - std::sin(progress * kPi) * kCoinArcHeight;
+// Board rows map onto the logical canvas through the rider's ground row.
+float level1RowToWorldY(float row) {
+  return kGroundY + (row - static_cast<float>(kLevel1RiderGroundSourceY)) *
+                        kSourceToLogicalY;
 }
 
 void showStage1Score(Game& game, int points, float worldX, float y) {
@@ -1947,10 +2235,17 @@ void finishStage(Game& game) {
                                  : (stage4 ? kStage4GoalScreenX
                                            : kGoalScreenX)));
   game.previousCameraX = game.cameraX;
-  game.perfectClear =
-      !stage2 && !game.deathOccurred && game.prizeBagsAvailable > 0 &&
-      game.prizeBagsCollected == game.prizeBagsAvailable;
-  game.score += stage2 ? 5000 : (stage3 ? 3000 : (stage4 ? 4000 : 500));
+  const bool stage1 = !stage2 && !stage3 && !stage4;
+  if (stage1) {
+    // $220C: any missed bag or failure cancels the bird; the goal itself
+    // awards no points on this board.
+    game.perfectClear = game.level1MissedRewards == 0;
+  } else {
+    game.perfectClear =
+        !stage2 && !game.deathOccurred && game.prizeBagsAvailable > 0 &&
+        game.prizeBagsCollected == game.prizeBagsAvailable;
+    game.score += stage2 ? 5000 : (stage3 ? 3000 : 4000);
+  }
   game.goalFrame = 0;
   if (stage3 && !game.stage3Tambourines.empty()) {
     // updateStage3 compresses a drum on the landing tick. Goal scenes no
@@ -2584,6 +2879,810 @@ void updateStage2(Game& game, const Uint8* keyboard, bool jumpPressed,
   }
 }
 
+// ---------------------------------------------------------------------------
+// Event 1 board model.  Every rule below names the circusc4 routine it
+// reproduces; see docs/level1-remaining-rom-fidelity.md and
+// docs/LEVEL1_ROM_MODEL.md.
+// ---------------------------------------------------------------------------
+
+std::int32_t level1MovementCommand(int direction) {
+  if (direction > 0) return kLevel1RightCommand;
+  if (direction < 0) return kLevel1LeftCommand;
+  return 0;
+}
+
+// $7539/$7607/$76FE: while $2203 is zero a LEFT command contributes nothing
+// to object movement or scheduling.
+std::int32_t level1ObjectCommand(const Game& game, std::int32_t command) {
+  if (command > 0 && level1Page(game.level1ProgressFixed) == 0) return 0;
+  return command;
+}
+
+int level1RiderDisplacement(const Player& player) {
+  if (player.grounded || player.jumpFrame < 0) return 0;
+  return kJumpSourceDisplacement[static_cast<std::size_t>(
+      std::clamp(player.jumpFrame, 0,
+                 static_cast<int>(kJumpSourceDisplacement.size()) - 1))];
+}
+
+void clearLevel1CoinObject(Game& game) {
+  // $78ED: $2580, $2586 and $2576 are cleared; the coin pot must be chosen
+  // again by a later chain spawn.
+  game.level1CoinPot = -1;
+  game.level1CoinX = 0;
+}
+
+void clearLevel1Pot(Game& game, int index) {
+  // $78F7: status and countdown cleared; the coin pointer is dropped when it
+  // referenced this record.
+  auto& pot = game.level1Pots[static_cast<std::size_t>(index)];
+  pot.status = 0;
+  pot.countdown = 0;
+  if (game.level1CoinPot == index) clearLevel1CoinObject(game);
+}
+
+void retireLevel1Hoop(Game& game, std::size_t index, bool exitedRight) {
+  auto& hoop = game.hoops[index];
+  if (exitedRight) {
+    // $759E: an object carried past the right edge by backtracking is
+    // un-admitted: the accumulator high byte is cleared and the course index
+    // steps back so the same course byte is read again.
+    game.level1HoopActivationAccumulator &= 0x00ffU;
+    if (game.level1HoopCourseIndex > 0) --game.level1HoopCourseIndex;
+    if (game.extraCharlieHoopIndex == static_cast<int>(index)) {
+      // $75A3-$75B5: an uncollected doll returns to the pending state and
+      // converts the next ordinary admission again.
+      if (game.extraCharlieActive && !game.extraCharlieCollected) {
+        game.extraCharliePending = true;
+      }
+      game.extraCharlieActive = false;
+      game.extraCharlieHoopIndex = -1;
+    }
+  } else {
+    // $7586: CLR <$C4 restarts only the high byte of the retirement
+    // distance; a retiring reserved ring with its bag still attached counts
+    // as a missed reward ($25EE == $FC).
+    game.level1RetireDistance &= 0x00ffU;
+    game.level1ReservedRetired = false;
+    if (index == 3) {
+      game.level1ReservedRetired = true;
+      if (game.level1BagState == 0xff) ++game.level1MissedRewards;
+    }
+    if (game.extraCharlieHoopIndex == static_cast<int>(index)) {
+      // $75B8-$75E2: the tracked object becomes an ordinary hoop again and
+      // $220A stays at two, so the reward is gone for this course.
+      game.extraCharlieActive = false;
+      game.extraCharlieHoopIndex = -1;
+    }
+  }
+  if (hoop.kind == Level1HoopKind::ExtraCharlie) {
+    hoop.kind = Level1HoopKind::Large;
+  }
+  hoop.active = false;
+  hoop.sourceXFixed = 0;
+  game.bonusRings[index].active = false;
+}
+
+void admitLevel1Hoop(Game& game, std::int32_t objectDelta) {
+  // $7633-$765A: course selector and byte.
+  const std::uint8_t courseByte =
+      level1CourseByte(game.level1HoopCourseIndex);
+  std::uint8_t selector =
+      static_cast<std::uint8_t>(0x10U + game.level1HoopCourseIndex);
+  if (selector >= 0x68U) selector = static_cast<std::uint8_t>((selector & 0x07U) + 0x60U);
+  selector = static_cast<std::uint8_t>(selector + game.level1HoopCourseOffset);
+  const bool selectorBoundary = (selector & 0x03U) == 0;
+  const bool reservedPrize =
+      selectorBoundary && game.level1HoopCourseState >= 0x60U;
+  if (selectorBoundary && !reservedPrize) ++game.level1HoopCourseOffset;
+
+  if (reservedPrize) {
+    // $76CA-$76F8: the reserved $2760 ring.
+    auto& hoop = game.hoops[3];
+    hoop.active = true;
+    hoop.kind = Level1HoopKind::PrizeRing;
+    hoop.sourceXFixed = 0xff80;
+    const std::uint8_t reload =
+        static_cast<std::uint8_t>(game.level1BoardFrameByte | 0x80U);
+    game.level1HoopActivationAccumulator =
+        static_cast<std::uint16_t>(reload) << 8U;
+    game.level1HoopCourseState = reload;
+    ++game.level1HoopCourseIndex;
+    ++game.level1HoopActivations;
+    game.level1BagState = 0xff;
+    ++game.prizeBagsAvailable;
+    game.bonusRings[3].active = true;
+    game.bonusRings[3].collected = false;
+    game.bonusRings[3].containsPrize = true;
+    (void)objectDelta;
+    return;
+  }
+
+  game.level1HoopActivationAccumulator =
+      static_cast<std::uint16_t>(courseByte) << 8U;
+  game.level1HoopCourseState = courseByte;
+  ++game.level1HoopCourseIndex;
+  ++game.level1HoopActivations;
+  // $7731: only $26D0/$2700/$2730 are searched; a full pool admits nothing
+  // but the stream still advanced.
+  for (std::size_t index = 0; index < 3; ++index) {
+    auto& hoop = game.hoops[index];
+    if (hoop.active) continue;
+    hoop.active = true;
+    hoop.kind = Level1HoopKind::Large;
+    hoop.sourceXFixed = 0xff80;
+    if (game.extraCharliePending) {
+      // $767E-$76C8: a pending reward converts this new ordinary record.
+      game.extraCharliePending = false;
+      game.extraCharlieActive = true;
+      game.extraCharlieHoopIndex = static_cast<int>(index);
+      hoop.kind = Level1HoopKind::ExtraCharlie;
+    }
+    return;
+  }
+}
+
+// $7607-$76FD: activation accumulator and course-stream admission.
+void updateLevel1Scheduler(Game& game, std::int32_t objectDelta) {
+  const std::int32_t delta = objectDelta - 0x80;
+  if (delta >= 0) {
+    game.level1HoopActivationAccumulator = static_cast<std::uint16_t>(
+        game.level1HoopActivationAccumulator + delta);
+    return;
+  }
+  const int page = level1Page(game.level1ProgressFixed);
+  const std::uint32_t sum =
+      static_cast<std::uint32_t>(game.level1HoopActivationAccumulator) +
+      static_cast<std::uint32_t>(static_cast<std::uint16_t>(delta));
+  if (page >= 7 && game.level1LatePotLandings < 5) {
+    game.level1HoopActivationAccumulator = static_cast<std::uint16_t>(sum);
+    return;
+  }
+  if (sum > 0xffffU) {
+    game.level1HoopActivationAccumulator = static_cast<std::uint16_t>(sum);
+    return;
+  }
+  admitLevel1Hoop(game, objectDelta);
+}
+
+// $76FE-$774F: bring the last retired object back from the left edge once
+// the rider has backtracked the distance it travelled since retirement.
+void updateLevel1ReEntry(Game& game, std::int32_t objectDelta) {
+  const std::int32_t delta = -objectDelta + 0x80;
+  if (delta >= 0) {
+    game.level1RetireDistance =
+        static_cast<std::uint16_t>(game.level1RetireDistance + delta);
+    return;
+  }
+  const std::int32_t sum = static_cast<std::int32_t>(game.level1RetireDistance) + delta;
+  if (sum >= 0) {
+    game.level1RetireDistance = static_cast<std::uint16_t>(sum);
+    return;
+  }
+  for (const auto& hoop : game.hoops) {
+    const std::uint8_t high = static_cast<std::uint8_t>(hoop.sourceXFixed >> 8U);
+    if (static_cast<std::uint8_t>(high - 1U) < 0x40U) return;
+  }
+  std::size_t index = game.hoops.size();
+  if (game.level1ReservedRetired) {
+    game.level1ReservedRetired = false;
+    index = 3;
+  } else {
+    for (std::size_t candidate = 0; candidate < 3; ++candidate) {
+      if (!game.hoops[candidate].active) {
+        index = candidate;
+        break;
+      }
+    }
+    if (index == game.hoops.size()) return;
+  }
+  auto& hoop = game.hoops[index];
+  hoop.active = true;
+  hoop.sourceXFixed = static_cast<std::uint16_t>(hoop.sourceXFixed + 0x0100U);
+  if (index == 3) {
+    hoop.kind = Level1HoopKind::PrizeRing;
+    game.bonusRings[3].active = true;
+  }
+}
+
+// $7539-$7585 for one active record.
+void moveLevel1Hoop(Game& game, std::size_t index, std::int32_t objectDelta) {
+  auto& hoop = game.hoops[index];
+  const std::int32_t delta = objectDelta - 0x80;
+  const std::int32_t x = hoop.sourceXFixed;
+  if (delta < 0) {
+    if (x + delta < 0) {
+      retireLevel1Hoop(game, index, false);
+      return;
+    }
+  } else if (x + delta > 0xffff) {
+    retireLevel1Hoop(game, index, true);
+    return;
+  }
+  hoop.sourceXFixed = static_cast<std::uint16_t>(x + delta);
+}
+
+void spawnLevel1Pot(Game& game, int index) {
+  auto& pot = game.level1Pots[static_cast<std::size_t>(index)];
+  // $780D-$7816: the counter-selected pot becomes the coin pot.
+  if (game.level1PotCounter == game.level1CoinPotSelector) {
+    game.level1CoinPot = index;
+  }
+  pot.status = 2;
+  pot.animationTimer = 1;
+  // $781F-$7868: schedule the next chain pot unless it would land beyond
+  // course progress $5F8.
+  int spacingIndex = 0x08 + game.level1PotCounter;
+  if (spacingIndex >= 0x34) spacingIndex = (spacingIndex & 0x03) + 0x30;
+  const std::uint8_t spacing =
+      kLevel1PotSpacing[static_cast<std::size_t>(spacingIndex)];
+  const int page = level1Page(game.level1ProgressFixed);
+  const int offsetByte = level1PageOffsetByte(game.level1ProgressFixed);
+  const int reach = page * 256 + (0xff - offsetByte) + spacing;
+  if (reach < 0x05f8) {
+    auto& next = game.level1Pots[static_cast<std::size_t>((index + 1) % 3)];
+    ++next.status;
+    next.countdown = static_cast<std::uint16_t>(spacing) << 8U;
+  }
+  ++game.level1PotCounter;
+}
+
+// $7750-$7902: the three fire-pot records and the fixed pots of the final
+// pages.
+void updateLevel1Pots(Game& game, std::int32_t command) {
+  const int page = level1Page(game.level1ProgressFixed);
+  const std::uint8_t offsetByte = level1PageOffsetByte(game.level1ProgressFixed);
+  for (int index = 0; index < 3; ++index) {
+    auto& pot = game.level1Pots[static_cast<std::size_t>(index)];
+    if (pot.status == 0) continue;
+    if (pot.status == 1) {
+      if (command < 0) {
+        if (page == 0) continue;
+        const std::int32_t sum = static_cast<std::int32_t>(pot.countdown) + command;
+        if (sum >= 0) {
+          pot.countdown = static_cast<std::uint16_t>(sum);
+        } else {
+          spawnLevel1Pot(game, index);
+        }
+      } else {
+        const std::int32_t sum = static_cast<std::int32_t>(pot.countdown) + command;
+        if (sum > 0xffff) {
+          clearLevel1Pot(game, index);
+        } else {
+          pot.countdown = static_cast<std::uint16_t>(sum);
+        }
+      }
+      continue;
+    }
+    // Visible ($7875).
+    if (command != 0) {
+      if (command > 0 && page == 0) continue;
+      const std::uint16_t next =
+          static_cast<std::uint16_t>(static_cast<std::int32_t>(pot.sourceXFixed) + command);
+      if ((next >> 8U) < 2U) {
+        // $78AB-$78F7: the object reached an edge.
+        if (page >= 6 && offsetByte < 0x80U) continue;
+        pot.sourceXFixed = 0;
+        if (page == 0 || command < 0) {
+          clearLevel1Pot(game, index);
+          continue;
+        }
+        // Carried past the right edge while backtracking: pending again,
+        // and the pot scheduled after it is withdrawn.
+        pot.status = 1;
+        auto& following = game.level1Pots[static_cast<std::size_t>((index + 1) % 3)];
+        if (following.status == 2) continue;
+        following.status = 0;
+        --game.level1PotCounter;
+        if (game.level1PotCounter == game.level1CoinPotSelector) {
+          clearLevel1CoinObject(game);
+        }
+        continue;
+      }
+      pot.sourceXFixed = next;
+    }
+    // $7893-$78A7 flame flicker.
+    if (--pot.animationTimer == 0) {
+      pot.animationTimer = 5;
+      int variant = game.level1BoardFrameByte & 0x03;
+      if (variant == 0) variant = 3;
+      pot.flameVariant = static_cast<std::uint8_t>(variant + 2);
+    }
+  }
+
+  // $776D-$7796: the chain restarts at the page boundaries of pages two to
+  // four while every record is idle and the rider moves right.
+  if (command < 0 && offsetByte < 2U && page >= 2 && page <= 4 &&
+      game.level1Pots[0].status == 0 && game.level1Pots[1].status == 0 &&
+      game.level1Pots[2].status == 0) {
+    game.level1Pots[0].status = 1;
+    game.level1Pots[0].countdown = 0x4000;
+    return;
+  }
+  // $7799-$77FD: page six onward places two fixed pots per page through the
+  // <$C8 and <$C6 pointers.
+  if (page < 6) return;
+  const auto activate = [&](int pointer) {
+    auto& pot = game.level1Pots[static_cast<std::size_t>(pointer)];
+    pot.status = 2;
+    pot.countdown = 0;
+    pot.animationTimer = 1;
+  };
+  const auto clearCells = [&](int pointer) {
+    // $77E2 clears the status, +$01 and the X high bytes of the four cells;
+    // the X low byte survives.
+    auto& pot = game.level1Pots[static_cast<std::size_t>(pointer)];
+    pot.status = 0;
+    pot.countdown &= 0x00ffU;
+    pot.sourceXFixed &= 0x00ffU;
+  };
+  const auto allocate = [&]() {
+    // $77CD tests $24B0 and $24F0 only; when both are busy the pointer
+    // falls through to $2530 untested.
+    if (game.level1Pots[0].status == 0) return 0;
+    if (game.level1Pots[1].status == 0) return 1;
+    return 2;
+  };
+  if (offsetByte >= 0x04U && offsetByte <= 0x05U) {
+    activate(game.level1FixedPotC8);
+  } else if (offsetByte >= 0x06U && offsetByte <= 0x07U) {
+    clearCells(game.level1FixedPotC8);
+  } else if (offsetByte >= 0x08U && offsetByte <= 0x09U) {
+    game.level1FixedPotC8 = allocate();
+  } else if (offsetByte >= 0x5cU && offsetByte <= 0x5dU) {
+    activate(game.level1FixedPotC6);
+  } else if (offsetByte >= 0x5eU && offsetByte <= 0x5fU) {
+    clearCells(game.level1FixedPotC6);
+  } else if (offsetByte >= 0x60U && offsetByte <= 0x63U) {
+    game.level1FixedPotC6 = allocate();
+  }
+}
+
+// $7965-$79D9: hidden coin follow, flight and popup timers.
+void updateLevel1Coin(Game& game) {
+  if (game.level1CoinPopupTimer > 0) --game.level1CoinPopupTimer;
+  if (game.level1CoinPot < 0) return;
+  const auto& pot = game.level1Pots[static_cast<std::size_t>(game.level1CoinPot)];
+  const std::uint8_t potX = static_cast<std::uint8_t>(pot.sourceXFixed >> 8U);
+  if (game.level1CoinState > 1) {
+    game.level1CoinX = static_cast<std::uint8_t>(potX + 0x0aU);
+    return;
+  }
+  game.level1CoinX = static_cast<std::uint8_t>(potX - 0x08U);
+  if (game.level1CoinState == 0) return;
+  const int row = static_cast<int>((game.level1CoinYFixed >> 8) & 0xff);
+  if (row > 0xd6) return;
+  if (row == 0xd6) {
+    // The coin has fallen back into the pot and is hidden ($7988).
+    game.level1CoinYFixed = 0xd700;
+    return;
+  }
+  game.level1CoinVelocityFixed += 0x1c;
+  game.level1CoinYFixed += game.level1CoinVelocityFixed;
+  game.level1CoinSpin = (game.level1CoinSpin + 1) % 0x18;
+}
+
+void updateLevel1RiderAnimation(Game& game, int liveDirection,
+                                std::uint8_t offsetByteBeforeScroll) {
+  // $73DC-$7422.  A stopped rider snaps to forward pose A; a moving one
+  // advances A->B->C every 11 source pixels forward or 7 backward, reading
+  // the second table while walking backward.
+  if (liveDirection == 0) {
+    game.level1RiderState = Level1RiderState::RunA;
+    game.level1RiderBackward = false;
+    return;
+  }
+  const std::uint8_t difference = static_cast<std::uint8_t>(
+      game.level1RiderPositionSample - offsetByteBeforeScroll + 0x07U);
+  if (difference < 0x12U) return;
+  const std::int8_t signedDifference =
+      static_cast<std::int8_t>(static_cast<std::uint8_t>(difference - 0x07U));
+  bool backward = false;
+  if (signedDifference >= 0) {
+    game.level1RiderPositionSample =
+        static_cast<std::uint8_t>(game.level1RiderPositionSample + 0xf5U);
+  } else {
+    backward = true;
+    game.level1RiderPositionSample =
+        static_cast<std::uint8_t>(game.level1RiderPositionSample + 0x07U);
+  }
+  int phase = static_cast<int>(game.level1RiderState) % 3;
+  phase = (phase + 1) % 3;
+  game.level1RiderBackward = backward;
+  game.level1RiderState = static_cast<Level1RiderState>(phase + (backward ? 3 : 0));
+}
+
+void beginLevel1Jump(Game& game, int direction) {
+  // $736C-$73DA.
+  game.player.grounded = false;
+  game.player.jumpFrame = 0;
+  game.player.verticalVelocity = 0.0F;
+  game.player.level1AirborneDirection = direction;
+  game.level1RiderState = Level1RiderState::RunC;
+  game.level1RiderBackward = false;
+  ++game.jumpAudioSerial;
+  // $7394: candidates are the objects currently in [$40,$BF].
+  for (auto& hoop : game.hoops) {
+    const std::uint8_t high = static_cast<std::uint8_t>(hoop.sourceXFixed >> 8U);
+    hoop.takeoffCandidate = high >= 0x40U && high < 0xc0U;
+  }
+  // $73AA-$73C1: the first pot within [$40,$9F] is watched.
+  game.level1PotMarker = -1;
+  for (int index = 0; index < 3; ++index) {
+    const std::uint8_t high = static_cast<std::uint8_t>(
+        game.level1Pots[static_cast<std::size_t>(index)].sourceXFixed >> 8U);
+    if (static_cast<std::uint8_t>(high - 0x40U) < 0x60U) {
+      game.level1PotMarker = index;
+      break;
+    }
+  }
+  // $73CC-$73DA: the coin is armed when it already sits at or behind the
+  // rider's reference column.
+  game.level1CoinArmed = 0;
+  if (static_cast<std::uint8_t>(game.level1CoinX - 1U) < 0x40U) {
+    game.level1CoinArmed = 1;
+  }
+}
+
+void finishLevel1Landing(Game& game, int direction) {
+  // $7257-$7335.
+  game.level1RiderState = Level1RiderState::RunA;
+  game.level1RiderBackward = false;
+  game.level1RiderPositionSample =
+      level1PageOffsetByte(game.level1ProgressFixed);
+  game.level1LandingDirection = direction;
+  const int page = level1Page(game.level1ProgressFixed);
+  if (direction < 0) {
+    // $728B-$72A9: a backward jump that carried an object from behind the
+    // rider to ahead of him earns the hanging Charlie.
+    if (!game.extraCharlieTriggered) {
+      for (const auto& hoop : game.hoops) {
+        if (hoop.takeoffCandidate) continue;
+        const std::uint8_t high = static_cast<std::uint8_t>(hoop.sourceXFixed >> 8U);
+        if (high >= 0x40U && high < 0xc0U) {
+          armStage1ExtraCharlie(game);
+          break;
+        }
+      }
+    }
+    // $72AB-$72D7: the hidden coin launches on the backward landing that
+    // follows an armed takeoff.
+    if (game.level1CoinState == 0) {
+      --game.level1CoinArmed;
+      if (game.level1CoinArmed == 0) {
+        game.level1CoinState = 1;
+        game.level1CoinVelocityFixed = -0x0460;
+        game.level1CoinYFixed = 0xd200;
+        game.level1CoinSpin = 0;
+        game.level1CoinPopupTimer = 0x30;
+        game.hiddenCoinTriggered = true;
+        game.score += 800;
+        showStage1Score(game, 800, level1ObjectWorldX(game, static_cast<std::uint16_t>(game.level1CoinX) << 8U), kGroundY - 118.0F);
+        ++game.hiddenCoinAudioSerial;
+      }
+    }
+    return;
+  }
+  if (direction == 0) return;
+  // $72D9-$7335: forward landing scoring.
+  int cleared = 0;
+  float clearedWorldX = 0.0F;
+  for (std::size_t index = 0; index < game.hoops.size(); ++index) {
+    const auto& hoop = game.hoops[index];
+    if (!hoop.takeoffCandidate) continue;
+    const std::uint8_t high = static_cast<std::uint8_t>(hoop.sourceXFixed >> 8U);
+    if (high >= 0x40U && high < 0xc0U) continue;
+    if (game.extraCharlieHoopIndex == static_cast<int>(index)) continue;
+    ++cleared;
+    clearedWorldX = hoop.worldX;
+  }
+  int potBonus = 0;
+  if (game.level1PotMarker >= 0) {
+    const auto& pot = game.level1Pots[static_cast<std::size_t>(game.level1PotMarker)];
+    if ((pot.sourceXFixed >> 8U) < 0x40U) potBonus = 2;
+  }
+  if (cleared > 0) {
+    const int points = (cleared + potBonus) * 100;
+    game.score += points;
+    game.level1HoopScoreAwarded += points;
+    showStage1Score(game, points, clearedWorldX,
+                    (kBigHoopOpeningTop + kBigHoopOpeningBottom) * 0.5F - 5.0F);
+    return;
+  }
+  if (potBonus == 0) return;
+  if (page >= 7) ++game.level1LatePotLandings;
+  game.score += 500;
+  game.level1PotPopupTimer = 0x30;
+  game.level1PotPopupWorldX =
+      game.level1Pots[static_cast<std::size_t>(game.level1PotMarker)].worldX;
+  showStage1Score(game, 500, game.level1PotPopupWorldX, kGroundY - 118.0F);
+}
+
+void enterLevel1Goal(Game& game) {
+  // $79DA-$7B39.
+  game.level1BagState = 0;
+  game.perfectClear = game.level1MissedRewards == 0;
+  game.level1GoalCounter = 0;
+  game.level1GoalPhases = 1;
+  game.level1BirdPhase = 0;
+  game.level1RewardCoinLaunches = 0;
+  for (auto& coin : game.level1RewardCoins) coin = Game::RewardCoin{};
+  if (game.perfectClear) {
+    game.level1GoalCounter = 0x80;
+    game.level1GoalPhases = 2;
+    game.level1BirdPhase = 2;
+    game.level1BirdX = 0;
+    // $7A40-$7A64 and the $7BC9 loop: eleven coin records ($2520-$25C0).
+    // $2520 keeps timer $2C and drift +$3C; each following record takes the
+    // previous timer minus four and a drift chained from the previous low
+    // byte: ((previous + $5D) & $7F) - $40.
+    int timer = 0x2c;
+    int driftSeed = 0x3c;
+    game.level1RewardCoins[0].timer = timer;
+    game.level1RewardCoins[0].driftFixed = 0x3c;
+    for (std::size_t index = 1; index < game.level1RewardCoins.size(); ++index) {
+      auto& coin = game.level1RewardCoins[index];
+      timer -= 4;
+      coin.timer = timer;
+      driftSeed = (driftSeed + 0x5d) & 0x7f;
+      coin.driftFixed = static_cast<std::int32_t>(driftSeed) - 0x40;
+      driftSeed = coin.driftFixed & 0xff;
+    }
+  }
+  finishStage(game);
+}
+
+void updateLevel1Goal(Game& game) {
+  // $7B3A-$7C41 once per frame while the crowd cheers.
+  ++game.level1GoalCounter;
+  if (game.level1GoalCounter >= 0x100) {
+    game.level1GoalCounter = 0;
+    --game.level1GoalPhases;
+    if (game.level1GoalPhases <= 0) {
+      game.scene = Scene::Tally;
+      game.tallyFrame = 0;
+      return;
+    }
+  }
+  if (game.level1BirdPhase == 0) return;
+  if (game.level1BirdPhase == 2) {
+    // $7B90-$7BAF: the bird enters from the right one pixel per frame until
+    // its bag reaches column $31.
+    game.level1BirdX = static_cast<std::uint8_t>(0x80 - game.level1GoalCounter);
+    // The bag cell sits at bird X - $10 + $08; the tear starts at column $31.
+    if (static_cast<std::uint8_t>(game.level1BirdX - 0x08U) != 0x31U) return;
+    game.level1BirdPhase = 1;
+    return;
+  }
+  // $7BC9-$7C23: coin launches and flight.
+  for (auto& coin : game.level1RewardCoins) {
+    if (coin.timer > 0) {
+      if (--coin.timer > 0) continue;
+      game.score += 40;
+      ++game.level1RewardCoinLaunches;
+      coin.active = true;
+      coin.yFixed = 0x6f00;
+      coin.xFixed = 0x3100;
+      coin.velocityFixed = 0;
+      coin.spin = 0;
+      continue;
+    }
+    if (!coin.active) continue;
+    coin.velocityFixed += 0x1c;
+    const std::int32_t nextY = coin.yFixed + coin.velocityFixed;
+    if (((nextY >> 8) & 0xff) > 0xd8) {
+      game.score += 40;
+      ++game.level1RewardCoinLaunches;
+      coin.yFixed = 0x6f00;
+      coin.xFixed = 0x3100;
+      coin.velocityFixed = 0;
+      coin.spin = 0;
+      continue;
+    }
+    coin.yFixed = nextY;
+    coin.xFixed += coin.driftFixed;
+    coin.spin = (coin.spin + 1) % 0x18;
+  }
+}
+
+void updateLevel1(Game& game, const Uint8* keyboard, bool jumpPressed,
+                  float controllerAxis) {
+  if (game.stage1ScorePopupFrame > 0) --game.stage1ScorePopupFrame;
+  if (game.level1PotPopupTimer > 0) --game.level1PotPopupTimer;
+
+  game.player.previous = game.player.position;
+  game.previousCameraX = game.cameraX;
+
+  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
+                        keyboard[SDL_SCANCODE_A] ||
+                        controllerAxis < -0.35F;
+  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
+                         keyboard[SDL_SCANCODE_D] ||
+                         controllerAxis > 0.35F;
+  const int liveDirection = moveLeft != moveRight ? (moveLeft ? -1 : 1) : 0;
+
+  // ---- $70EB: hidden coin catch ------------------------------------------
+  const int riderRowBefore = kLevel1RiderGroundSourceY - level1RiderDisplacement(game.player);
+  if (game.level1CoinState == 1) {
+    const int coinRow = static_cast<int>((game.level1CoinYFixed >> 8) & 0xff);
+    const std::uint8_t riderB7 = static_cast<std::uint8_t>(riderRowBefore + 8);
+    if (static_cast<std::uint8_t>(game.level1CoinX - 0x26U) < 0x20U &&
+        static_cast<std::uint8_t>(coinRow + 0x0c - riderB7) < 0x14U) {
+      game.level1CoinState = 2;
+      game.level1CoinPopupTimer = 0x30;
+      game.score += 3000;
+      showStage1Score(game, 3000, level1ObjectWorldX(game, static_cast<std::uint16_t>(game.level1CoinX) << 8U),
+                      kGroundY - (0xd0 - coinRow) * kSourceToLogicalY - 40.0F);
+      ++game.hiddenCoinAudioSerial;
+    }
+  }
+
+  // ---- $712D-$71C8: hoop scan --------------------------------------------
+  for (std::size_t hoopIndex = 0; hoopIndex < game.hoops.size(); ++hoopIndex) {
+    auto& hoop = game.hoops[hoopIndex];
+    if (!hoop.active) continue;
+    const int hoopSourceX = static_cast<int>(hoop.sourceXFixed >> 8U);
+    const int horizontalDistance =
+        std::abs(hoopSourceX - kLevel1RiderCollisionSourceX);
+    if (horizontalDistance >= kLevel1HoopHorizontalLimit) continue;
+    const bool trackedHoop =
+        game.extraCharlieHoopIndex == static_cast<int>(hoopIndex);
+    if (trackedHoop) {
+      // $71A0: collection needs the rider row above $A8.  The record keeps
+      // its slot (invisible) until it retires, exactly like <$BF.
+      if (game.extraCharlieActive && !game.extraCharlieCollected &&
+          riderRowBefore < 0xa8) {
+        game.extraCharlieActive = false;
+        game.extraCharlieCollected = true;
+        ++game.lives;
+        ++game.extraCharlieAudioSerial;
+      }
+      continue;
+    }
+    int riderRow = riderRowBefore;
+    if (hoopIndex == 3) riderRow += kLevel1FourthHoopYOffset;
+    const int verticalDistance = riderRow - kLevel1RiderCollisionBaseY;
+    if (verticalDistance < 0) {
+      if (hoopIndex == 3 && game.level1BagState == 0xff) {
+        // $7157-$718A: the bag reward.
+        game.level1BagState = 0x30;
+        const int points = (game.level1PrizeState + 1) * 1000;
+        game.level1PrizeState = std::min(4, game.level1PrizeState + 1);
+        game.score += points;
+        showStage1Score(game, points, game.bonusRings[3].worldX,
+                        kGroundY - kBonusRingCenterHeight - 5.0F);
+        ++game.prizeBagsCollected;
+        ++game.prizeBagAudioSerial;
+      }
+      continue;
+    }
+    if (verticalDistance + horizontalDistance <= kLevel1HoopCombinedLimit) {
+      crashPlayer(game);
+      return;
+    }
+  }
+  if (game.level1BagState != 0 && game.level1BagState != 0xff) {
+    --game.level1BagState;
+  }
+
+  // ---- $71C8-$71E2: fire-pot collision ------------------------------------
+  for (const auto& pot : game.level1Pots) {
+    const std::uint8_t high = static_cast<std::uint8_t>(pot.sourceXFixed >> 8U);
+    if (static_cast<std::uint8_t>(high - 0x29U) >= 0x2eU) continue;
+    if (riderRowBefore >= 0xc6) {
+      crashPlayer(game);
+      return;
+    }
+  }
+
+  // ---- $71E4-$7335: jump physics, goal, landing ---------------------------
+  const std::uint8_t offsetByteBeforeScroll =
+      level1PageOffsetByte(game.level1ProgressFixed);
+  bool landedThisFrame = false;
+  bool jumpActivatedThisFrame = false;
+  if (!game.player.grounded) {
+    const int nextFrame = std::min(
+        game.player.jumpFrame + 1,
+        static_cast<int>(kJumpSourceDisplacement.size()) - 1);
+    const float previousDisplacement =
+        static_cast<float>(kJumpSourceDisplacement[static_cast<std::size_t>(game.player.jumpFrame)]) *
+        kSourceToLogicalY;
+    const int sample = kJumpSourceDisplacement[static_cast<std::size_t>(nextFrame)];
+    const float displacement = static_cast<float>(sample) * kSourceToLogicalY;
+    game.player.jumpFrame = nextFrame;
+    game.player.position.y = kGroundY - displacement;
+    game.player.verticalVelocity =
+        (previousDisplacement - displacement) / static_cast<float>(kFixedDt);
+    // $7202-$7213: goal arrival.
+    if (game.level1ProgressFixed > kLevel1GoalProgressFixed &&
+        kLevel1RiderGroundSourceY - sample >= 0xc5) {
+      enterLevel1Goal(game);
+      return;
+    }
+    // $7235-$7254: the joystick and a fresh jump press are re-sampled in the
+    // last four source pixels of the descent.
+    if (nextFrame >= 62 && sample <= 4) {
+      game.player.level1BufferedDirection = liveDirection;
+      if (jumpPressed) game.player.level1JumpBuffered = true;
+    }
+    if (nextFrame == static_cast<int>(kJumpSourceDisplacement.size()) - 1) {
+      game.player.position.y = kGroundY;
+      game.player.verticalVelocity = 0.0F;
+      game.player.jumpFrame = -1;
+      game.player.grounded = true;
+      landedThisFrame = true;
+      finishLevel1Landing(game, game.player.level1AirborneDirection);
+      if (game.scene != Scene::Playing) return;
+      if (game.player.level1JumpBuffered) {
+        // $7344-$734E: $2246 restarts the jump on the landing tick using the
+        // direction re-sampled during the descent.
+        game.player.level1JumpBuffered = false;
+        beginLevel1Jump(game, game.player.level1BufferedDirection);
+        jumpActivatedThisFrame = true;
+      }
+    }
+  }
+
+  // ---- $7344-$7363: movement command ---------------------------------------
+  int effectiveDirection = liveDirection;
+  if (!game.player.grounded) {
+    effectiveDirection = game.player.level1AirborneDirection;
+  }
+  if (game.player.grounded && !jumpActivatedThisFrame && jumpPressed) {
+    // $7363-$736C: the press edge starts the jump in the same board update;
+    // the first displacement sample follows one update later because $71E4
+    // has already run.  The manual MAME capture shows $20B0 set in the frame
+    // of the press and row $CC in the next.
+    beginLevel1Jump(game, liveDirection);
+    jumpActivatedThisFrame = true;
+    effectiveDirection = liveDirection;
+  }
+  const std::int32_t command = level1MovementCommand(effectiveDirection);
+  game.player.runSpeed =
+      effectiveDirection > 0 ? kForwardSpeed : (effectiveDirection < 0 ? kBackSpeed : 0.0F);
+  if (effectiveDirection > 0) game.level1ForwardProgressed = true;
+
+  // ---- $73DC-$7422: grounded run cycle -------------------------------------
+  if (game.player.grounded && !jumpActivatedThisFrame) {
+    updateLevel1RiderAnimation(game, liveDirection, offsetByteBeforeScroll);
+  }
+
+  // ---- $7425-$744B: scroll -------------------------------------------------
+  const int pageBeforeScroll = level1Page(game.level1ProgressFixed);
+  if (command < 0) {
+    game.level1ProgressFixed -= command;
+  } else if (command > 0 && pageBeforeScroll != 0) {
+    game.level1ProgressFixed -= command;
+  }
+  game.player.position.x =
+      kLevel1PlayerStartX + level1ProgressPixels(game) * kSourceToWorldX;
+  game.cameraX = std::max(0.0F, game.player.position.x - kLevel1PlayerStartX);
+  game.level1ForwardProgressed = level1Page(game.level1ProgressFixed) != 0;
+
+  // ---- $751E-$7536: scheduler, re-entry, object movement ------------------
+  {
+    // $7539/$7607/$76FE read the command through the page test of the
+    // scroll value updated by this tick.
+    std::int32_t objectDelta = command;
+    if (command > 0 && level1Page(game.level1ProgressFixed) == 0) objectDelta = 0;
+    updateLevel1Scheduler(game, objectDelta);
+    updateLevel1ReEntry(game, objectDelta);
+    for (std::size_t index = 0; index < game.hoops.size(); ++index) {
+      if (!game.hoops[index].active) continue;
+      moveLevel1Hoop(game, index, objectDelta);
+    }
+    // ---- $7750: pots ----
+    std::int32_t potCommand = command;
+    updateLevel1Pots(game, potCommand);
+    updateLevel1Coin(game);
+  }
+
+  for (auto& hoop : game.hoops) hoop.previousWorldX = hoop.worldX;
+  syncLevel1World(game);
+
+  if (game.bonus > 0) --game.bonus;
+}
+
 void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
                 float controllerAxis) {
   // <$14 is the board's free-running frame byte.  It is not reset when a
@@ -2654,6 +3753,10 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
                           : (stage4 ? kStage4GoalScreenX : kGoalScreenX)));
     game.previousCameraX = game.cameraX;
     ++game.goalFrame;
+    if (game.selectedEvent == 0) {
+      updateLevel1Goal(game);
+      return;
+    }
 
     const int showerStart =
         kGoalArrivalFrames + kBirdArrivalFrames + kBagDropFrames;
@@ -2705,496 +3808,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     return;
   }
 
-  if (game.stage1ScorePopupFrame > 0) --game.stage1ScorePopupFrame;
-
-  game.player.previous = game.player.position;
-  game.previousCameraX = game.cameraX;
-
-  // The board calls $7130-$7192 before this logic tick's jump update,
-  // scheduler update, and active-hoop movement. Test the already staged
-  // rider/object bytes here; testing after movement is one board sample too
-  // early and then requires an artificial rollback of the jump sample.
-  for (std::size_t hoopIndex = 0; hoopIndex < game.hoops.size();
-       ++hoopIndex) {
-    auto& hoop = game.hoops[hoopIndex];
-    if (!hoop.active) continue;
-    const int hoopSourceX = static_cast<int>(hoop.sourceXFixed >> 8U);
-    const int horizontalDistance =
-        std::abs(hoopSourceX - kLevel1RiderCollisionSourceX);
-    const int riderSourceY = level1RiderCollisionSourceY(game.player);
-    const bool trackedHoop = hoop.kind == Level1HoopKind::ExtraCharlie;
-
-    // $7140/$71A0 handles the tracked hanging-Charlie object before the
-    // ordinary lethal boundary. Collection requires the same X window and
-    // the rider source row above $A8; the converted object remains invisible
-    // until its slot retires rather than turning back into a large hoop.
-    if (trackedHoop && game.extraCharlieActive &&
-        game.extraCharlieHoopIndex == static_cast<int>(hoopIndex) &&
-        horizontalDistance < kLevel1HoopHorizontalLimit &&
-        riderSourceY < 0xa8) {
-      game.extraCharlieActive = false;
-      game.extraCharlieHoopIndex = -1;
-      game.extraCharlieCollected = true;
-      ++game.lives;
-      ++game.extraCharlieAudioSerial;
-      continue;
-    }
-
-    // The reserved fourth record is still scanned by $7130. Its explicit
-    // +$10 Y adjustment makes the flame boundary lethal; only the branch
-    // above $B6 is safe and collects the prize. This restores small-ring
-    // collision without inventing HD hitbox extents.
-    if (hoop.kind == Level1HoopKind::PrizeRing &&
-        horizontalDistance < kLevel1HoopHorizontalLimit &&
-        riderSourceY + kLevel1FourthHoopYOffset <
-            kLevel1RiderCollisionBaseY) {
-      auto& ring = game.bonusRings[hoopIndex];
-      if (!ring.collected) {
-        ring.collected = true;
-        // $7165-$7174 reads $25E1, forms the display pointer through the
-        // word table at $EF82, and submits BCD 1000, 2000, ... 5000.  The
-        // selector increments after each reward and saturates at four.
-        const int points = (game.level1PrizeState + 1) * 1000;
-        game.level1PrizeState = std::min(4, game.level1PrizeState + 1);
-        game.score += points;
-        showStage1Score(game, points, ring.worldX,
-                        kGroundY - ring.height - 5.0F);
-        ++game.prizeBagsCollected;
-        ++game.prizeBagAudioSerial;
-      }
-      continue;
-    }
-    if (overlapsLevel1LargeHoop(game.player, hoop, hoopIndex,
-                                trackedHoop)) {
-      crashPlayer(game);
-      return;
-    }
-  }
-
-  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
-                        keyboard[SDL_SCANCODE_A] ||
-                        controllerAxis < -0.35F;
-  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
-                         keyboard[SDL_SCANCODE_D] ||
-                         controllerAxis > 0.35F;
-  const int liveDirection = moveLeft != moveRight ? (moveLeft ? -1 : 1) : 0;
-  // $7344 reloads <$b1:$b2 from the takeoff copy at $2243:$2244 while
-  // <$b0 is non-zero. Reversal and release are sampled but cannot alter
-  // displacement until the update after landing.
-  const int effectiveDirection =
-      game.player.grounded ? liveDirection : game.player.level1AirborneDirection;
-  if (effectiveDirection > 0) game.level1ForwardProgressed = true;
-  float targetSpeed = 0.0F;
-  if (effectiveDirection != 0) {
-    targetSpeed = effectiveDirection < 0 ? kBackSpeed : kForwardSpeed;
-  }
-  // The board clears <$B1:$B2 every sample, then copies one table value for
-  // the active direction.  Therefore press, release, and reversal are all
-  // immediate; retaining velocity here creates motion absent from the ROM.
-  game.player.runSpeed = targetSpeed;
-
-  // circusc4 $73dc-$7405 advances the grounded rider composite from course
-  // displacement, not wall-clock time.  <$b3 is the previous position sample
-  // and <$b4 is the A/B/C selector.  Read the staged course byte before this
-  // tick applies its scroll command, matching the board's update order.
-  const std::uint8_t level1RiderCourseBeforeUpdate =
-      static_cast<std::uint8_t>(game.level1RiderCourseFixed >> 8U);
-  if (game.player.grounded && !game.player.level1JumpPending &&
-      moveLeft != moveRight) {
-    std::uint8_t difference = static_cast<std::uint8_t>(
-        game.level1RiderPositionSample - level1RiderCourseBeforeUpdate +
-        0x07U);
-    if (difference >= 0x12U) {
-      std::uint8_t sampleDelta = 0xf5U;
-      difference = static_cast<std::uint8_t>(difference - 0x07U);
-      if (static_cast<std::int8_t>(difference) < 0) sampleDelta = 0x07U;
-      game.level1RiderPositionSample = static_cast<std::uint8_t>(
-          game.level1RiderPositionSample + sampleDelta);
-      game.level1RiderState = static_cast<Level1RiderState>(
-          (static_cast<unsigned>(game.level1RiderState) + 1U) % 3U);
-    }
-  }
-
-  game.player.position.x +=
-      game.player.runSpeed * static_cast<float>(kFixedDt);
-  if (game.player.position.x < 78.0F) {
-    game.player.position.x = 78.0F;
-    game.player.runSpeed = std::max(0.0F, game.player.runSpeed);
-  }
-  game.cameraX =
-      std::max(0.0F, game.player.position.x - 78.0F);
-
-  const std::int32_t riderAnimationCourseDelta =
-      effectiveDirection != 0 ? (effectiveDirection > 0 ? -0x0180 : 0x0130)
-                              : 0;
-  game.level1RiderCourseFixed = static_cast<std::uint16_t>(
-      static_cast<std::int32_t>(game.level1RiderCourseFixed) +
-      riderAnimationCourseDelta);
-
-  // $7539-$7554 adds (<$b1:$b2 - $0080) to every live hoop's own X.
-  // $7607-$766d applies that same signed delta to the independent activation
-  // accumulator; unsigned underflow allocates the first free object slot and
-  // reloads the accumulator from the course table at $f7c4 onward.
-  const int level1ObjectDirection =
-      (!game.level1ForwardProgressed && effectiveDirection < 0)
-          ? 0
-          : effectiveDirection;
-  const std::int32_t level1ObjectDelta =
-      level1ObjectDirection != 0
-          ? (level1ObjectDirection > 0 ? -0x0200 : 0x00b0)
-          : -0x0080;
-  for (std::size_t hoopIndex = 0; hoopIndex < game.hoops.size();
-       ++hoopIndex) {
-    auto& hoop = game.hoops[hoopIndex];
-    if (!hoop.active) continue;
-    hoop.previousWorldX = hoop.worldX;
-    const std::uint16_t previousFixed = hoop.sourceXFixed;
-    hoop.sourceXFixed = static_cast<std::uint16_t>(
-        static_cast<std::int32_t>(hoop.sourceXFixed) + level1ObjectDelta);
-    // $7586-$75e9 frees a reusable slot after its 8.8 X wraps past the left
-    // edge. Do not confuse that wrap with the freshly spawned $ff80 value.
-    if (previousFixed < 0x1000 && hoop.sourceXFixed > 0xf000) {
-      hoop.active = false;
-      game.bonusRings[hoopIndex].active = false;
-      // Missing the hanging Charlie consumes the same one-per-stage secret;
-      // recycling this hardware slot must not make that reward reappear.
-      if (game.extraCharlieActive &&
-          game.extraCharlieHoopIndex == static_cast<int>(hoopIndex)) {
-        game.extraCharlieActive = false;
-        game.extraCharlieHoopIndex = -1;
-      }
-      continue;
-    }
-    hoop.worldX = game.cameraX + kLevel1RiderCollisionScreenX +
-                  (static_cast<float>(hoop.sourceXFixed) / 256.0F - 64.0F) *
-                      kSourceToWorldX;
-    if (hoop.kind == Level1HoopKind::PrizeRing) {
-      auto& ring = game.bonusRings[hoopIndex];
-      ring.active = true;
-      // The visible rear cells are staged 16 source pixels left of the
-      // logical $2760 object origin; collision continues to use $2766.
-      ring.sourceXFixed = static_cast<std::uint16_t>(
-          (hoop.sourceXFixed & 0xff00U) - 0x1000U);
-      ring.worldX = game.cameraX + kLevel1RiderCollisionScreenX +
-                    (static_cast<float>(ring.sourceXFixed) / 256.0F - 64.0F) *
-                        kSourceToWorldX;
-    }
-  }
-  const std::uint32_t activationAddend = static_cast<std::uint16_t>(
-      level1ObjectDelta);
-  const std::uint32_t activationWide =
-      static_cast<std::uint32_t>(game.level1HoopActivationAccumulator) +
-      activationAddend;
-  const std::uint16_t activationSum =
-      static_cast<std::uint16_t>(activationWide);
-  // $7614 first requires the signed movement delta to be negative. $762D
-  // then adds the 8.8 activation accumulator and schedules only when that
-  // ADDD produces no carry. Testing signed(activationSum) instead admits
-  // objects while Charlie reverses and was the remaining scheduler error.
-  if (level1ObjectDelta < 0 && activationWide <= 0xffffU &&
-      game.level1HoopCourseIndex < kLevel1HoopActivationReload.size()) {
-    const std::size_t courseIndex = game.level1HoopCourseIndex;
-    const std::uint8_t courseByte = kLevel1HoopActivationReload[courseIndex];
-    std::uint8_t selector = static_cast<std::uint8_t>(0x10U + courseIndex);
-    selector = static_cast<std::uint8_t>(selector +
-                                         game.level1HoopCourseOffset);
-    const bool selectorBoundary = (selector & 0x03U) == 0;
-    const bool reservedPrize =
-        selectorBoundary && game.level1HoopCourseState >= 0x60U;
-    if (selectorBoundary && !reservedPrize) {
-      ++game.level1HoopCourseOffset;
-    }
-
-    Hoop* admitted = nullptr;
-    std::size_t hoopIndex = 0;
-    if (reservedPrize) {
-      hoopIndex = 3;
-      admitted = &game.hoops[hoopIndex];
-      const std::uint8_t reservedReload = static_cast<std::uint8_t>(
-          game.level1BoardFrameByte | 0x80U);
-      game.level1HoopActivationAccumulator =
-          static_cast<std::uint16_t>(reservedReload) << 8U;
-      game.level1HoopCourseState = reservedReload;
-    } else {
-      const auto freeHoop = std::find_if(
-          game.hoops.begin(), game.hoops.begin() + 3,
-          [](const Hoop& hoop) { return !hoop.active; });
-      if (freeHoop != game.hoops.begin() + 3) {
-        hoopIndex = static_cast<std::size_t>(
-            std::distance(game.hoops.begin(), freeHoop));
-        admitted = &*freeHoop;
-      }
-      game.level1HoopActivationAccumulator =
-          static_cast<std::uint16_t>(courseByte) << 8U;
-      game.level1HoopCourseState = courseByte;
-    }
-
-    // The ROM advances the course stream even if all three ordinary slots
-    // are occupied. It must not wait for native object availability.
-    ++game.level1HoopCourseIndex;
-    ++game.level1HoopActivations;
-    if (admitted) {
-      auto& hoop = *admitted;
-      hoop.active = true;
-      hoop.cleared = false;
-      hoop.kind = reservedPrize ? Level1HoopKind::PrizeRing
-                                : Level1HoopKind::Large;
-      // $767e seeds $ff80 before the ordinary active-object pass later in the
-      // same board frame. The trace therefore presents $ff00 for an idle spawn
-      // and $fd80 for the second, forward-moving spawn.
-      hoop.sourceXFixed =
-          static_cast<std::uint16_t>(0xff80 + level1ObjectDelta);
-      hoop.worldX =
-          game.cameraX + kLevel1RiderCollisionScreenX +
-          (static_cast<float>(hoop.sourceXFixed) / 256.0F - 64.0F) *
-              kSourceToWorldX;
-      hoop.previousWorldX = hoop.worldX;
-      auto& ring = game.bonusRings[hoopIndex];
-      ring.active = reservedPrize;
-      ring.collected = false;
-      ring.containsPrize = reservedPrize;
-      ring.sourceXFixed = static_cast<std::uint16_t>(
-          (hoop.sourceXFixed & 0xff00U) - 0x1000U);
-      ring.worldX =
-          game.cameraX + kLevel1RiderCollisionScreenX +
-          (static_cast<float>(ring.sourceXFixed) / 256.0F - 64.0F) *
-              kSourceToWorldX;
-      if (reservedPrize) {
-        ++game.prizeBagsAvailable;
-      } else if (game.extraCharliePending) {
-        game.extraCharliePending = false;
-        game.extraCharlieActive = true;
-        game.extraCharlieHoopIndex = static_cast<int>(hoopIndex);
-        hoop.kind = Level1HoopKind::ExtraCharlie;
-      }
-    }
-  } else {
-    game.level1HoopActivationAccumulator =
-        static_cast<std::uint16_t>(activationSum);
-  }
-  bool level1JumpActivatedThisFrame = false;
-  if (game.player.level1JumpPending && game.player.grounded) {
-    game.player.level1JumpPending = false;
-    game.player.grounded = false;
-    game.player.jumpFrame = 0;
-    game.player.verticalVelocity = 0.0F;
-    level1JumpActivatedThisFrame = true;
-    // $7376-$7391 loads the Run C six-slot composite directly at takeoff.
-    // It remains unchanged for every airborne sample.
-    game.level1RiderState = Level1RiderState::RunC;
-    ++game.jumpAudioSerial;
-  }
-
-  if (jumpPressed && game.player.grounded &&
-      !game.player.level1JumpPending) {
-    // In the recorded Event 1 opening, three reverse jumps summon a Charlie
-    // doll on the overhead rail. The player earns the extra life only by
-    // intercepting that moving doll, not at the instant of the third jump.
-    const bool openingReverseJump =
-        moveLeft && game.player.position.x < 240.0F &&
-        !game.extraCharlieTriggered;
-    if (openingReverseJump) {
-      ++game.openingBackwardJumps;
-      if (game.openingBackwardJumps >= 3) {
-        armStage1ExtraCharlie(game);
-      }
-    }
-    // $20b0 is not asserted until the board update after the input sample.
-    // The first displacement is consumed one further update later. Keeping
-    // those as two explicit states preserves the ROM's input -> airborne ->
-    // first-motion order without changing any jump-table sample.
-    game.player.level1AirborneDirection = liveDirection;
-    game.player.level1JumpPending = true;
-  }
-
-  bool landedThisFrame = false;
-  if (!game.player.grounded && !level1JumpActivatedThisFrame) {
-    const int previousFrame = game.player.jumpFrame;
-    const int nextFrame = std::min(
-        previousFrame + 1,
-        static_cast<int>(kJumpSourceDisplacement.size()) - 1);
-    const float previousDisplacement =
-        static_cast<float>(kJumpSourceDisplacement[previousFrame]) *
-        kSourceToLogicalY;
-    const float displacement =
-        static_cast<float>(kJumpSourceDisplacement[nextFrame]) *
-        kSourceToLogicalY;
-    game.player.jumpFrame = nextFrame;
-    game.player.position.y = kGroundY - displacement;
-    game.player.verticalVelocity =
-        (previousDisplacement - displacement) /
-        static_cast<float>(kFixedDt);
-    if (nextFrame ==
-        static_cast<int>(kJumpSourceDisplacement.size()) - 1) {
-      game.player.position.y = kGroundY;
-      game.player.verticalVelocity = 0.0F;
-      game.player.jumpFrame = -1;
-      game.player.grounded = true;
-      landedThisFrame = true;
-      // $7257-$727f restores Run A and reseeds <$b3 from the current course
-      // byte. The next grounded transition is therefore displacement-based.
-      game.level1RiderState = Level1RiderState::RunA;
-      game.level1RiderPositionSample = level1RiderCourseBeforeUpdate;
-    }
-  }
-
-  if (landedThisFrame && game.level1PendingHoopScore > 0) {
-    game.score += game.level1PendingHoopScore;
-    game.level1HoopScoreAwarded += game.level1PendingHoopScore;
-    showStage1Score(game, game.level1PendingHoopScore,
-                    game.level1PendingHoopScoreWorldX,
-                    game.level1PendingHoopScoreY);
-    game.level1PendingHoopScore = 0;
-  }
-
-  for (std::size_t hoopIndex = 0; hoopIndex < game.hoops.size();
-       ++hoopIndex) {
-    auto& hoop = game.hoops[hoopIndex];
-    if (!hoop.active) continue;
-    // $2760 prize-ring rewards and $7684 converted hanging-Charlie objects
-    // have their own $7130 branches. They are not ordinary clearable hoops
-    // and never queue the ordinary landing award.
-    if (hoop.kind != Level1HoopKind::Large) continue;
-    const float previousRelativeX =
-        game.player.previous.x + kLionCollisionCenterOffset -
-        hoop.previousWorldX;
-    const float relativeX =
-        game.player.position.x + kLionCollisionCenterOffset - hoop.worldX;
-    const bool crossedForward =
-        previousRelativeX <= 0.0F && relativeX > 0.0F;
-    const bool crossedBackward =
-        previousRelativeX >= 0.0F && relativeX < 0.0F;
-    if (!crossedForward && !crossedBackward) continue;
-
-    const bool previouslyCleared = hoop.cleared;
-    hoop.cleared = true;
-    // $7257-$7270 queues the $0100 award on the landing transition. The
-    // center crossing marks the hoop clear, but does not update score yet.
-    game.level1PendingHoopScore += 100;
-    game.level1PendingHoopScoreWorldX = hoop.worldX;
-    game.level1PendingHoopScoreY =
-        (hoop.openingTop + hoop.openingBottom) * 0.5F - 5.0F;
-
-    // The opening three reverse jumps and a reverse crossing of a cleared
-    // hoop share one Event 1 entitlement. A death/restart does not re-arm it.
-    if (crossedBackward && previouslyCleared &&
-        !game.extraCharlieTriggered) {
-      armStage1ExtraCharlie(game);
-    }
-  }
-
-  for (auto& firePot : game.firePots) {
-    if (firePot.retired) continue;
-    if (firePot.worldX - game.cameraX < -80.0F) {
-      firePot.retired = true;
-      firePot.coinPending = false;
-      firePot.coinActive = false;
-      continue;
-    }
-    const float playerCenterX =
-        game.player.position.x + kLionCollisionCenterOffset;
-    const float potDistance = playerCenterX - firePot.worldX;
-    const bool sharesHoopLane = std::any_of(
-        game.hoops.begin(), game.hoops.end(),
-        [&firePot](const Hoop& hoop) {
-          return hoop.active &&
-                 std::abs(hoop.worldX - firePot.worldX) <
-                 kHoopPotSafetyDistance;
-        });
-    const bool backwardJump =
-        !game.player.grounded && game.player.runSpeed < -20.0F;
-    if (!sharesHoopLane && !game.hiddenCoinTriggered &&
-        !firePot.coinChanceResolved &&
-        backwardJump && potDistance > -20.0F && potDistance < 62.0F) {
-      firePot.coinChanceResolved = true;
-      const bool revealCoin = nextRandom(game) % 3U == 0U;
-      if (revealCoin) {
-        // MAME's Event 1 trace issues the reverse-jump command at frame 2775
-        // and the coin command at frame 2838: exactly one complete 63-frame
-        // jump later. Arm the reward while crossing, but do not launch it
-        // until Charlie has landed on the far side of the pot.
-        firePot.coinPending = true;
-        game.hiddenCoinTriggered = true;
-      }
-    }
-
-    if (firePot.coinPending && game.player.grounded &&
-        playerCenterX <
-            firePot.worldX - kFirePotCollisionHalfWidth) {
-      firePot.coinPending = false;
-      firePot.coinActive = true;
-      firePot.coinFrame = 0;
-      ++game.hiddenCoinAudioSerial;
-    }
-
-    if (firePot.coinActive) {
-      ++firePot.coinFrame;
-      const float coinY = firePotCoinY(firePot);
-      const float riderCenterY = game.player.position.y - 40.0F;
-      // The launch happens after the reverse jump has finished. Collection
-      // therefore requires a distinct forward jump, just as the MAME demo
-      // does at frames 2886–2904. Running underneath or waiting lets the coin
-      // finish its arc and fall silently back into the pot.
-      const bool forwardCatchAttempt =
-          !game.player.grounded && game.player.runSpeed > 20.0F;
-      if (!firePot.coinCollected && forwardCatchAttempt &&
-          std::abs(playerCenterX - firePot.worldX) < 44.0F &&
-          std::abs(riderCenterY - coinY) < 44.0F) {
-        firePot.coinCollected = true;
-        firePot.coinActive = false;
-        game.score += 5000;
-        showStage1Score(game, 5000, firePot.worldX, coinY - 18.0F);
-        ++game.hiddenCoinAudioSerial;
-      } else if (firePot.coinFrame >= kCoinFlightFrames) {
-        firePot.coinActive = false;
-      }
-    }
-
-    if (!sharesHoopLane &&
-        std::abs(playerCenterX - firePot.worldX) <
-            kFirePotCollisionHalfWidth &&
-        game.player.position.y > kGroundY - kFirePotClearance) {
-      crashPlayer(game);
-      return;
-    }
-    if (!firePot.scored &&
-        playerCenterX >
-            firePot.worldX + kFirePotCollisionHalfWidth) {
-      firePot.scored = true;
-      game.score += 200;
-      showStage1Score(game, 200, firePot.worldX, kGroundY - 118.0F);
-    }
-  }
-
-  if (game.bonus > 0) --game.bonus;
-  game.score =
-      std::max(game.score, static_cast<int>(game.player.position.x / 10.0F));
-
-  constexpr float kGoalPlatformHalfWidth = 72.0F;
-  const float goalLeft = kCourseLength - kGoalPlatformHalfWidth;
-  const float goalRight = kCourseLength + kGoalPlatformHalfWidth;
-  const float groundedStopX = goalLeft - kLionCollisionRight;
-  const bool horizontallyOverPlatform =
-      game.player.position.x + kLionCollisionRight >= goalLeft &&
-      game.player.position.x - kLionCollisionLeft <= goalRight;
-  const bool descendingOntoPlatform =
-      !game.player.grounded && game.player.verticalVelocity >= 0.0F &&
-      game.player.position.y >= kGoalLandingY &&
-      horizontallyOverPlatform;
-
-  if (descendingOntoPlatform) {
-    finishStage(game);
-  } else if (game.player.grounded &&
-             game.player.position.x > groundedStopX) {
-    // A grounded lion meets the padded side of the platform instead of
-    // walking through it. The player must jump; the descending jump then
-    // lands on the green top and starts the goal presentation.
-    game.player.position.x = groundedStopX;
-    game.player.previous.x = groundedStopX;
-    game.player.runSpeed = std::min(0.0F, game.player.runSpeed);
-    game.cameraX = std::max(0.0F, game.player.position.x - 78.0F);
-    game.previousCameraX = game.cameraX;
-  }
+  updateLevel1(game, keyboard, jumpPressed, controllerAxis);
 }
 
 RenderSurface buildRenderSurface(SDL_Renderer* renderer, SDL_Window* window,
@@ -3499,19 +4113,27 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
   const int cellWidth = textureWidth / 3;
   const SDL_Rect fireSource{0, 0, cellWidth, textureHeight};
   const SDL_Rect bagSource{cellWidth, 0, cellWidth, textureHeight};
-  for (const auto& firePot : game.firePots) {
-    if (firePot.retired) continue;
+  for (const auto& firePot : game.level1Pots) {
+    if (!firePot.visible()) continue;
     const float screenX = firePot.worldX - cameraX;
     if (screenX < -80.0F || screenX > kWorldWidth + 80.0F) continue;
     const SDL_FRect destination{screenX - 31.0F, kGroundY - 102.0F, 62.0F,
                                 124.0F};
     SDL_RenderCopyF(renderer, propsTexture, &fireSource, &destination);
-    if (firePot.coinActive && !firePot.coinCollected) {
-      const float coinY = firePotCoinY(firePot);
+  }
+  // $2580 hidden coin: it rides with its pot before the launch and spins
+  // through the $F9CE frames while in flight.
+  if (game.level1CoinPot >= 0 && game.level1CoinState == 1) {
+    const int row = static_cast<int>((game.level1CoinYFixed >> 8) & 0xff);
+    if (row < 0xd6) {
+      const float coinScreenX =
+          kLevel1RiderCollisionScreenX +
+          (static_cast<float>(game.level1CoinX) - 64.0F) * kSourceToWorldX;
+      const float coinY = level1RowToWorldY(static_cast<float>(row)) - 12.0F;
       const float flip = std::max(
-          0.16F, std::abs(std::cos(static_cast<float>(firePot.coinFrame) *
-                                  0.34F)));
-      drawCoin(renderer, screenX, coinY, flip);
+          0.16F, std::abs(std::cos(static_cast<float>(game.level1CoinSpin) *
+                                  (kPi / 12.0F))));
+      drawCoin(renderer, coinScreenX, coinY, flip);
     }
   }
 
@@ -5189,6 +5811,97 @@ int main(int argc, char** argv) {
     game.selectedEvent = 0;
     startGame(game);
   }
+  // ---- MAME replay --------------------------------------------------------
+  struct ReplayRow {
+    int frame = 0;
+    int input = 0xff;
+    int playerState = 0;
+  };
+  std::vector<ReplayRow> replayRows;
+  std::size_t replayIndex = 0;
+  std::ofstream replayOutput;
+  if (!options.replayPath.empty()) {
+    std::ifstream replayFile(options.replayPath);
+    std::string line;
+    int inputColumn = -1;
+    int stateColumn = -1;
+    int frameColumn = -1;
+    while (std::getline(replayFile, line)) {
+      std::vector<std::string> cells;
+      std::string cell;
+      std::stringstream lineStream(line);
+      while (std::getline(lineStream, cell, ',')) cells.push_back(cell);
+      if (inputColumn < 0) {
+        for (std::size_t column = 0; column < cells.size(); ++column) {
+          if (cells[column] == "player_input") inputColumn = static_cast<int>(column);
+          if (cells[column] == "player_state_2800") stateColumn = static_cast<int>(column);
+          if (cells[column] == "frame") frameColumn = static_cast<int>(column);
+        }
+        if (inputColumn < 0 || stateColumn < 0 || frameColumn < 0) {
+          std::cerr << "Replay file lacks frame/player_input/player_state_2800 columns.\n";
+          return 1;
+        }
+        continue;
+      }
+      if (static_cast<int>(cells.size()) <= std::max(inputColumn, stateColumn)) continue;
+      ReplayRow row;
+      row.frame = std::stoi(cells[static_cast<std::size_t>(frameColumn)]);
+      row.input = std::stoi(cells[static_cast<std::size_t>(inputColumn)], nullptr, 16);
+      row.playerState = std::stoi(cells[static_cast<std::size_t>(stateColumn)], nullptr, 16);
+      replayRows.push_back(row);
+    }
+    int startFrame = options.replayStart;
+    if (startFrame < 0) {
+      for (std::size_t row = 1; row < replayRows.size(); ++row) {
+        if (replayRows[row].playerState == 1 && replayRows[row - 1].playerState != 1) {
+          // The frame that turns $2800 to one runs the board initialisation;
+          // the first movement tick is the following frame.
+          startFrame = replayRows[row].frame + 1;
+          break;
+        }
+      }
+    }
+    if (startFrame < 0) {
+      std::cerr << "Replay file has no player-state transition.\n";
+      return 1;
+    }
+    for (std::size_t row = 0; row < replayRows.size(); ++row) {
+      if (replayRows[row].frame == startFrame + options.replayOffset) {
+        replayIndex = row;
+        break;
+      }
+    }
+    // $7363 compares the port with its previous-frame copy, so a button held
+    // across the course start is not an edge.
+    if (replayIndex > 0) {
+      game.replayInitialInput = replayRows[replayIndex - 1].input;
+    }
+    if (options.replayFrameByte >= 0) {
+      game.level1BoardFrameByte = static_cast<std::uint8_t>(options.replayFrameByte);
+    }
+    game.replayCourseOffsetOverride = options.replayCourseOffset;
+    game.replayCoinSelectorOverride = options.replayCoinSelector;
+    game.selectedEvent = 0;
+    startGame(game);
+    if (!options.replayOutput.empty()) {
+      replayOutput.open(options.replayOutput);
+      replayOutput << "native_frame,mame_frame,input,left,right,jump,progress_fixed,"
+                      "page,offset_byte,progress_px,airborne,jump_frame,rider_row,"
+                      "score,bonus,lives,scene,course_index,course_state,"
+                      "course_offset,activation,retire_distance,"
+                      "hoop0,hoop0_x,hoop1,hoop1_x,hoop2,hoop2_x,hoop3,hoop3_x,"
+                      "pot0,pot0_x,pot0_cd,pot1,pot1_x,pot1_cd,pot2,pot2_x,pot2_cd,"
+                      "pot_counter,coin_pot,coin_state,coin_x,coin_row,"
+                      "extra_state,bag_state,rider_state,goal_counter\n";
+    }
+    if (!options.replayCaptureDir.empty()) {
+      std::error_code error;
+      std::filesystem::create_directories(options.replayCaptureDir, error);
+    }
+  }
+  const bool replaying = !options.replayPath.empty();
+  int replayFrame = 0;
+  int replayPreviousInput = game.replayInitialInput;
   if (!options.capturePath.empty()) {
     if (options.captureScene == "start") {
       game.credits = 1;
@@ -5371,7 +6084,7 @@ int main(int argc, char** argv) {
         hoop.kind = Level1HoopKind::Large;
       }
       for (auto& ring : game.bonusRings) ring.worldX = -10000.0F;
-      for (auto& firePot : game.firePots) firePot.retired = true;
+      for (auto& firePot : game.level1Pots) firePot = FirePot{};
       game.extraCharlieActive = false;
     } else if (options.captureScene == "large") {
       game.player.position = {800.0F, kGroundY};
@@ -5390,7 +6103,7 @@ int main(int argc, char** argv) {
       game.hoops.front().active = true;
       game.hoops.front().kind = Level1HoopKind::Large;
       for (auto& ring : game.bonusRings) ring.worldX = -10000.0F;
-      for (auto& firePot : game.firePots) firePot.retired = true;
+      for (auto& firePot : game.level1Pots) firePot = FirePot{};
       game.extraCharlieActive = false;
     } else if (options.captureScene == "prize") {
       game.player.position = {800.0F, kGroundY};
@@ -5409,7 +6122,7 @@ int main(int argc, char** argv) {
       game.bonusRings.front().active = true;
       game.bonusRings.front().containsPrize = true;
       game.bonusRings.front().collected = false;
-      for (auto& firePot : game.firePots) firePot.retired = true;
+      for (auto& firePot : game.level1Pots) firePot = FirePot{};
       game.extraCharlieActive = false;
     } else if (options.captureScene == "ring") {
       game.player.position = {800.0F, kGroundY - 137.0F};
@@ -5695,7 +6408,7 @@ int main(int argc, char** argv) {
         static_cast<double>(frequency);
     previousCounter = currentCounter;
     frameTime = std::min(frameTime, 0.1);
-    if (!options.tracePath.empty()) frameTime = kFixedDt;
+    if (!options.tracePath.empty() || replaying) frameTime = kFixedDt;
     accumulator += frameTime;
 
     const Uint8* keyboard = SDL_GetKeyboardState(nullptr);
@@ -5747,6 +6460,23 @@ int main(int argc, char** argv) {
       traceKeyboard[SDL_SCANCODE_RIGHT] = traceRight ? 1 : 0;
       keyboard = traceKeyboard.data();
     }
+    int replayInput = 0xff;
+    if (replaying) {
+      if (replayIndex >= replayRows.size()) {
+        running = false;
+        break;
+      }
+      replayInput = replayRows[replayIndex].input;
+      // Active-low P1 port: bit 0 LEFT, bit 1 RIGHT, bit 4 JUMP.
+      traceLeft = (replayInput & 0x01) == 0;
+      traceRight = (replayInput & 0x02) == 0;
+      traceJump = (replayInput & 0x10) == 0 && (replayPreviousInput & 0x10) != 0;
+      replayPreviousInput = replayInput;
+      traceKeyboard[SDL_SCANCODE_LEFT] = traceLeft ? 1 : 0;
+      traceKeyboard[SDL_SCANCODE_RIGHT] = traceRight ? 1 : 0;
+      keyboard = traceKeyboard.data();
+      accumulator = kFixedDt;
+    }
     float controllerAxis = 0.0F;
     if (controller) {
       controllerAxis =
@@ -5774,6 +6504,49 @@ int main(int argc, char** argv) {
       jumpForStep = false;
       jumpQueued = false;
       accumulator -= kFixedDt;
+      if (replaying) {
+        if (replayOutput) {
+          const int riderRow =
+              kLevel1RiderGroundSourceY - level1RiderDisplacement(game.player);
+          replayOutput << replayFrame << ',' << replayRows[replayIndex].frame
+                       << ',' << std::hex << replayInput << std::dec << ','
+                       << (traceLeft ? 1 : 0) << ',' << (traceRight ? 1 : 0)
+                       << ',' << (traceJump ? 1 : 0) << ','
+                       << game.level1ProgressFixed << ','
+                       << level1Page(game.level1ProgressFixed) << ','
+                       << static_cast<int>(level1PageOffsetByte(game.level1ProgressFixed))
+                       << ',' << std::fixed << std::setprecision(4)
+                       << level1ProgressPixels(game) << ','
+                       << (game.player.grounded ? 0 : 1) << ','
+                       << game.player.jumpFrame << ',' << riderRow << ','
+                       << game.score << ',' << game.bonus << ',' << game.lives
+                       << ',' << static_cast<int>(game.scene) << ','
+                       << game.level1HoopCourseIndex << ','
+                       << static_cast<int>(game.level1HoopCourseState) << ','
+                       << static_cast<int>(game.level1HoopCourseOffset) << ','
+                       << game.level1HoopActivationAccumulator << ','
+                       << game.level1RetireDistance;
+          for (const auto& hoop : game.hoops) {
+            replayOutput << ',' << (hoop.active ? static_cast<int>(hoop.kind) + 1 : 0)
+                         << ',' << hoop.sourceXFixed;
+          }
+          for (const auto& pot : game.level1Pots) {
+            replayOutput << ',' << static_cast<int>(pot.status) << ','
+                         << pot.sourceXFixed << ',' << pot.countdown;
+          }
+          replayOutput << ',' << static_cast<int>(game.level1PotCounter) << ','
+                       << game.level1CoinPot << ',' << game.level1CoinState
+                       << ',' << static_cast<int>(game.level1CoinX) << ','
+                       << ((game.level1CoinYFixed >> 8) & 0xff) << ','
+                       << (game.extraCharlieCollected ? 3 : (game.extraCharlieActive ? 2 : (game.extraCharliePending ? 1 : 0)))
+                       << ',' << static_cast<int>(game.level1BagState) << ','
+                       << level1RiderStateName(game.level1RiderState) << ','
+                       << game.level1GoalCounter << '\n';
+        }
+        ++replayFrame;
+        ++replayIndex;
+        accumulator = 0.0;
+      }
       if (movementTrace) {
         std::size_t nearestHoop = 0;
         float nearestDistance = std::numeric_limits<float>::max();
@@ -6005,9 +6778,14 @@ int main(int argc, char** argv) {
       const int tracedFrame = movementTraceFrame - 1;
       const std::array<int, 12> captureFrames{
           0, 6, 14, 21, 25, 33, 57, 73, 87, 88, 96, 103};
-      if (tracedFrame != lastRiderDiagnosticFrame &&
-          std::find(captureFrames.begin(), captureFrames.end(), tracedFrame) !=
-              captureFrames.end()) {
+      const bool wanted =
+          options.riderDiagnosticFrames.empty()
+              ? std::find(captureFrames.begin(), captureFrames.end(),
+                          tracedFrame) != captureFrames.end()
+              : std::find(options.riderDiagnosticFrames.begin(),
+                          options.riderDiagnosticFrames.end(),
+                          tracedFrame) != options.riderDiagnosticFrames.end();
+      if (tracedFrame != lastRiderDiagnosticFrame && wanted) {
         const int mameFrame = tracedFrame + 1322;
         std::ostringstream filename;
         filename << options.riderDiagnosticDir << "/native-frame-"
@@ -6019,6 +6797,16 @@ int main(int argc, char** argv) {
         }
         lastRiderDiagnosticFrame = tracedFrame;
       }
+    }
+    if (replaying && !options.replayCaptureDir.empty() && replayFrame > 0 &&
+        std::find(options.replayCaptureFrames.begin(),
+                  options.replayCaptureFrames.end(), replayFrame - 1) !=
+            options.replayCaptureFrames.end()) {
+      std::ostringstream filename;
+      filename << options.replayCaptureDir << "/replay-" << std::setw(5)
+               << std::setfill('0') << (replayFrame - 1) << "-mame-"
+               << replayRows[replayIndex - 1].frame << ".png";
+      captureRenderer(renderer, filename.str());
     }
     if (!options.capturePath.empty()) {
       if (!captureRenderer(renderer, options.capturePath)) {
