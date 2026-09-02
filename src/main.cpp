@@ -665,6 +665,8 @@ struct Assets {
   SDL_Texture* riderRunA = nullptr;
   SDL_Texture* riderRunB = nullptr;
   SDL_Texture* riderRunC = nullptr;
+  SDL_Texture* riderBackE = nullptr;
+  SDL_Texture* riderBackF = nullptr;
   SDL_Texture* burnRider = nullptr;
   SDL_Texture* hoop = nullptr;
   SDL_Texture* hoopFlare = nullptr;
@@ -981,6 +983,10 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.riderRunA = loadAsset(renderer, "stage1-rider-run-a-hd.png");
   assets.riderRunB = loadAsset(renderer, "stage1-rider-run-b-hd.png");
   assets.riderRunC = loadAsset(renderer, "stage1-rider-run-c-hd.png");
+  // Backward walk poses E/F ($EEA6 table): the walking lion from the
+  // lion-walk atlas carrying the production Charlie/saddle cut from Run A.
+  assets.riderBackE = loadAsset(renderer, "stage1-rider-back-e-hd.png");
+  assets.riderBackF = loadAsset(renderer, "stage1-rider-back-f-hd.png");
   assets.burnRider = loadAsset(renderer, "stage1-burn-rider-v1.png");
   assets.hoop = loadAsset(renderer, "stage1-hoop.png");
   assets.hoopFlare = loadAsset(renderer, "stage1-hoop-flare.png");
@@ -1066,6 +1072,8 @@ void destroyAssets(Assets& assets) {
   if (assets.riderRunA) SDL_DestroyTexture(assets.riderRunA);
   if (assets.riderRunB) SDL_DestroyTexture(assets.riderRunB);
   if (assets.riderRunC) SDL_DestroyTexture(assets.riderRunC);
+  if (assets.riderBackE) SDL_DestroyTexture(assets.riderBackE);
+  if (assets.riderBackF) SDL_DestroyTexture(assets.riderBackF);
   if (assets.burnRider) SDL_DestroyTexture(assets.burnRider);
   if (assets.hoop) SDL_DestroyTexture(assets.hoop);
   if (assets.hoopFlare) SDL_DestroyTexture(assets.hoopFlare);
@@ -2224,16 +2232,22 @@ void finishStage(Game& game) {
                                : (stage3 ? kStage3TambourineTopY
                                          : (stage4 ? kStage4GoalTopY
                                                    : kGoalLandingY));
-  game.player.position = {finishX, finishY};
+  if (stage2 || stage3 || stage4) {
+    game.player.position = {finishX, finishY};
+    game.cameraX = finishX -
+        (stage2 ? 340.0F : (stage3 ? kStage3GoalScreenX
+                                   : kStage4GoalScreenX));
+  } else {
+    // Level 1 keeps the course position of the landing frame ($79DA does not
+    // move the scroll); only the row snaps onto the platform top.
+    game.player.position.y = finishY;
+    game.cameraX = std::max(0.0F, game.player.position.x - kLevel1PlayerStartX);
+  }
   game.player.previous = game.player.position;
   game.player.runSpeed = 0.0F;
   game.player.verticalVelocity = 0.0F;
   game.player.jumpFrame = -1;
   game.player.grounded = true;
-  game.cameraX = finishX -
-      (stage2 ? 340.0F : (stage3 ? kStage3GoalScreenX
-                                 : (stage4 ? kStage4GoalScreenX
-                                           : kGoalScreenX)));
   game.previousCameraX = game.cameraX;
   const bool stage1 = !stage2 && !stage3 && !stage4;
   if (stage1) {
@@ -3751,6 +3765,11 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         (stage2 ? 340.0F
                 : (stage3 ? kStage3GoalScreenX
                           : (stage4 ? kStage4GoalScreenX : kGoalScreenX)));
+    if (game.selectedEvent == 0) {
+      // The board freezes the scroll where the goal triggered; the rider stays
+      // at his fixed column.
+      game.cameraX = std::max(0.0F, game.player.position.x - kLevel1PlayerStartX);
+    }
     game.previousCameraX = game.cameraX;
     ++game.goalFrame;
     if (game.selectedEvent == 0) {
@@ -4082,8 +4101,22 @@ void drawHoop(SDL_Renderer* renderer, const Hoop& hoop, float cameraX,
     fillRect(renderer, x - 2.0F, kTrackY + 10.0F, 4.0F,
              std::max(0.0F, ringTop - kTrackY - 6.0F),
              color(184, 151, 83));
-    // The animated ring itself is drawn in the foreground tile pass after the
-    // rider. This pass supplies only its rail hardware and hanger.
+    // The HD ring is painted in three-quarter view, so unlike the 16-pixel
+    // arcade tile it has a visible near rim and far rim.  The far (left) half
+    // is drawn here, behind the rider; the near (right) half follows him in
+    // drawHoopForeground.  Drawing the whole oval in front read as the lion
+    // passing beside the ring instead of through it.
+    const SDL_Rect ringSource{
+        0,
+        static_cast<int>(textureHeight * (500.0F / 1774.0F)),
+        textureWidth / 2,
+        static_cast<int>(textureHeight * (1120.0F / 1774.0F)),
+    };
+    const float ringBottom = hoop.openingBottom + 20.0F;
+    const SDL_FRect ringDestination{
+        x - kBigRingVisualHalfWidth, ringTop,
+        kBigRingVisualHalfWidth, ringBottom - ringTop};
+    SDL_RenderCopyF(renderer, hoopTexture, &ringSource, &ringDestination);
   } else {
     // Each ring travels with a hanger riding the ceiling track.
     fillRect(renderer, x - 5.0F, kTrackY + 4.0F, 10.0F,
@@ -4146,10 +4179,17 @@ void drawStageProps(SDL_Renderer* renderer, const Game& game, float cameraX,
     // Connect the trolley to the visible flame crown, not the target top.
     line(renderer, screenX, kTrackY + 5.0F, screenX,
          ringCenterY - 58.0F, color(119, 101, 73));
-    // Hardware slots 45-47 draw after rider slots 31-36. The transparent
-    // center exposes the rider while the flame rim remains in front, creating
-    // the original through-the-hoop presentation. Keep the hanger/prize here
-    // and defer only the rim to the fixed-slot foreground pass.
+    // Far (left) half of the small ring behind the bag and the rider; the
+    // near half is drawn after the rider in drawBonusRingForegrounds.
+    {
+      const int ringCell = textureWidth / 3;
+      const SDL_Rect farSource{ringCell * 2, 0, ringCell / 2, textureHeight};
+      const SDL_FRect farDestination{
+          screenX - kBonusRingVisualHalfWidth,
+          ringCenterY - kBonusRingVisualHalfHeight,
+          kBonusRingVisualHalfWidth, kBonusRingVisualHalfHeight * 2.0F};
+      SDL_RenderCopyF(renderer, propsTexture, &farSource, &farDestination);
+    }
     if (ring.containsPrize && !ring.collected) {
       const SDL_FRect bagDestination{screenX - 26.0F, ringCenterY - 24.0F,
                                      52.0F, 48.0F};
@@ -4175,19 +4215,16 @@ void drawHoopForeground(SDL_Renderer* renderer, const Hoop& hoop,
   SDL_QueryTexture(hoopTexture, nullptr, nullptr, &textureWidth,
                    &textureHeight);
   const SDL_Rect ringSource{
-      0,
+      textureWidth / 2,
       static_cast<int>(textureHeight * (500.0F / 1774.0F)),
-      textureWidth,
+      textureWidth - textureWidth / 2,
       static_cast<int>(textureHeight * (1120.0F / 1774.0F)),
   };
   const float ringTop = hoop.openingTop - 25.0F;
   const float ringBottom = hoop.openingBottom + 20.0F;
   const SDL_FRect ringDestination{
-      x - kBigRingVisualHalfWidth, ringTop,
-      kBigRingVisualHalfWidth * 2.0F, ringBottom - ringTop};
-  // MAME confirms the hoop's fixed hardware sprite slots follow the six
-  // Charlie/lion slots. The complete hoop therefore draws over the rider,
-  // while its transparent center exposes him during the crossing.
+      x, ringTop, kBigRingVisualHalfWidth, ringBottom - ringTop};
+  // Near rim only: the far half was drawn behind the rider in drawHoop.
   SDL_RenderCopyF(renderer, hoopTexture, &ringSource, &ringDestination);
 }
 
@@ -4199,7 +4236,8 @@ void drawBonusRingForegrounds(SDL_Renderer* renderer, const Game& game,
   SDL_QueryTexture(propsTexture, nullptr, nullptr, &textureWidth,
                    &textureHeight);
   const int cellWidth = textureWidth / 3;
-  const SDL_Rect ringSource{cellWidth * 2, 0, cellWidth, textureHeight};
+  const SDL_Rect ringSource{cellWidth * 2 + cellWidth / 2, 0,
+                            cellWidth - cellWidth / 2, textureHeight};
 
   for (const auto& ring : game.bonusRings) {
     if (!ring.active) continue;
@@ -4207,12 +4245,9 @@ void drawBonusRingForegrounds(SDL_Renderer* renderer, const Game& game,
     if (screenX < -110.0F || screenX > kWorldWidth + 110.0F) continue;
     const float ringCenterY = kGroundY - ring.height;
     const SDL_FRect destination{
-        screenX - kBonusRingVisualHalfWidth,
-        ringCenterY - kBonusRingVisualHalfHeight,
-        kBonusRingVisualHalfWidth * 2.0F,
-        kBonusRingVisualHalfHeight * 2.0F};
-    // The narrow full-height foreground rim crosses only a thin slice of the
-    // much wider lion/rider composite, reproducing the arcade depth illusion.
+        screenX, ringCenterY - kBonusRingVisualHalfHeight,
+        kBonusRingVisualHalfWidth, kBonusRingVisualHalfHeight * 2.0F};
+    // Near rim only; the far half is behind the bag and the rider.
     SDL_RenderCopyF(renderer, propsTexture, &ringSource, &destination);
   }
 }
@@ -4421,6 +4456,59 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
     return;
   }
 
+  if (game.selectedEvent == 0) {
+    // circusc4 goal presentation ($79DA/$7B68-$7C23): the bird records
+    // $25E0/$25F0 fly at row $5F carrying the bag ($25D0, row $6F) from the
+    // right edge one column per frame; once the bag reaches column $31 the
+    // eleven $2520-$25C0 coin records launch from the bag.
+    if (game.level1BirdPhase == 0) {
+      drawCheerCallouts();
+      return;
+    }
+    const auto columnToScreen = [](float column) {
+      return kLevel1RiderCollisionScreenX + (column - 64.0F) * kSourceToWorldX;
+    };
+    const float birdCenterX =
+        columnToScreen(static_cast<float>(game.level1BirdX) - 8.0F);
+    const float birdY = level1RowToWorldY(0x5f);
+    const float bagY = level1RowToWorldY(0x6f);
+    for (const auto& coin : game.level1RewardCoins) {
+      if (!coin.active) continue;
+      const float coinX =
+          columnToScreen(static_cast<float>(coin.xFixed) / 256.0F);
+      const float coinY = level1RowToWorldY(
+          static_cast<float>(coin.yFixed) / 256.0F);
+      drawCoin(renderer, coinX, coinY,
+               std::abs(std::cos(static_cast<float>(coin.spin) *
+                                 (kPi / 12.0F))));
+    }
+    if (birdTexture) {
+      int textureWidth = 0;
+      int textureHeight = 0;
+      SDL_QueryTexture(birdTexture, nullptr, nullptr, &textureWidth,
+                       &textureHeight);
+      const int cellWidth = textureWidth / 4;
+      // $7B72-$7B88: wing frames $44/$46/$48/$46 change every eight frames.
+      const int flap = (game.level1GoalCounter / 8) & 3;
+      const int cell = game.level1BirdPhase == 2 ? (flap & 1) : 2 + (flap & 1);
+      const SDL_Rect source{cell * cellWidth, 0, cellWidth, textureHeight};
+      const SDL_FRect destination{birdCenterX - 45.0F, birdY - 60.0F, 90.0F,
+                                  120.0F};
+      SDL_RenderCopyExF(renderer, birdTexture, &source, &destination, 0.0,
+                        nullptr, SDL_FLIP_NONE);
+    }
+    if (rewardBagTexture) {
+      const SDL_FRect bagDestination{birdCenterX - 24.0F, bagY - 10.0F, 48.0F,
+                                     59.0F};
+      SDL_RenderCopyF(renderer, rewardBagTexture, nullptr, &bagDestination);
+    } else {
+      ellipse(renderer, birdCenterX, bagY + 20.0F, 18.0F, 24.0F,
+              color(223, 158, 39), 4);
+    }
+    drawCheerCallouts();
+    return;
+  }
+
   const int birdStart = kGoalArrivalFrames;
   const int bagDropStart = birdStart + kBirdArrivalFrames;
   const int showerStart = bagDropStart + kBagDropFrames;
@@ -4518,18 +4606,33 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
 void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
                       double timeSeconds, bool alive, bool lowDetail,
                       SDL_Texture* riderRunA, SDL_Texture* riderRunB,
-                      SDL_Texture* riderRunC,
+                      SDL_Texture* riderRunC, SDL_Texture* riderBackE,
+                      SDL_Texture* riderBackF,
                       bool /*lionOnlyTest*/, float runSpeed, bool grounded,
                       bool facingRight, Level1RiderState riderState) {
   (void)timeSeconds;
   (void)lowDetail;
   (void)runSpeed;
   if (!grounded) riderState = Level1RiderState::RunC;
-  SDL_Texture* riderTexture = riderState == Level1RiderState::RunA
-                                  ? riderRunA
-                              : riderState == Level1RiderState::RunB
-                                  ? riderRunB
-                                  : riderRunC;
+  SDL_Texture* riderTexture = nullptr;
+  switch (riderState) {
+    case Level1RiderState::RunA:
+    case Level1RiderState::BackD:
+      riderTexture = riderRunA;
+      break;
+    case Level1RiderState::RunB:
+      riderTexture = riderRunB;
+      break;
+    case Level1RiderState::RunC:
+      riderTexture = riderRunC;
+      break;
+    case Level1RiderState::BackE:
+      riderTexture = riderBackE ? riderBackE : riderRunB;
+      break;
+    case Level1RiderState::BackF:
+      riderTexture = riderBackF ? riderBackF : riderRunA;
+      break;
+  }
   if (riderTexture) {
     // Production A/B/C use a larger transparent canvas so the corrected
     // rider/lion set can match the burning composite without cropping Run C.
@@ -5687,7 +5790,8 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
                  game.crashFrame < kCrashBurnFrames && assets.burnRider)) {
       drawLionAndRider(renderer, playerWorldX - camera, playerY, timeSeconds,
                        game.player.alive, lowDetail, assets.riderRunA,
-                       assets.riderRunB, assets.riderRunC, game.lionOnlyTest,
+                       assets.riderRunB, assets.riderRunC, assets.riderBackE,
+                       assets.riderBackF, game.lionOnlyTest,
                        game.player.runSpeed, game.player.grounded,
                        game.player.facingRight, game.level1RiderState);
     }
@@ -6665,7 +6769,7 @@ int main(int argc, char** argv) {
 
     const bool shouldPlayStageMusic = game.scene == Scene::Playing;
     const bool shouldUseFastStageMusic =
-        shouldPlayStageMusic && game.bonus <= 999;
+        shouldPlayStageMusic && game.bonus <= 499;
     if (!shouldPlayEventSelectMusic &&
         shouldPlayStageMusic != stageMusicPlaying) {
       if (shouldPlayStageMusic) {
