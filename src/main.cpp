@@ -33,31 +33,68 @@ constexpr float kStage2MonkeySpeed = 52.0F;
 constexpr float kStage2PurpleSpeed = 61.0F;
 constexpr float kStage2GoalTopY = kStage2RopeY - 76.0F;
 constexpr float kStage2GoalX = 5700.0F;
+// ---- circusc4 Level 3 (trampolines) board geometry -----------------------
+// Everything in Level 3 is kept in the board's own units: sprite columns
+// ($6 bytes, 224-wide screen) and rows ($4 bytes, 256-tall screen).  The
+// logical canvas maps a board row r to 2.5 * r - 8 so that a performer's feet
+// (row $E0 + 32) land on the grass line and Charlie's feet (row $B4 + 32) on
+// the drum tops.  Columns use the same 480/224 scale as every other event.
 constexpr float kStage3GroundY = 592.0F;
 constexpr float kStage3TambourineTopY = 482.0F;
-// The bag's painted bottom clears bounce two but overlaps Charlie's hands and
-// head on bounce three, matching the collection rule visually.
-constexpr float kStage3PrizeBagY = kStage3TambourineTopY - 236.0F;
-constexpr float kStage3TambourineSpacing = 180.0F;
-// The arcade opening frames keep Charlie on the left drum of one centered
-// pair.  Holding that drum at x=150 leaves its partner at x=330.
-constexpr float kStage3PlayerScreenX = 150.0F;
-// The arcade stops scrolling on the final approach. The last tambourine
-// remains against the right edge while Charlie crosses the final two gaps.
-constexpr float kStage3GoalScreenX = 390.0F;
-constexpr float kStage3FirstTambourineX = kStage3PlayerScreenX;
-constexpr float kStage3CourseLength =
-    kStage3FirstTambourineX + 24.0F * kStage3TambourineSpacing;
-// A slightly quicker rebound keeps Charlie buoyant without changing any of
-// the ROM-calibrated apex heights or collision windows.
-constexpr int kStage3BounceFrames = 44;
-// Transfers are ten percent quicker than a stationary rebound, while still
-// using one continuous center-to-center arc.
-constexpr int kStage3TransferFrames = 40;
-constexpr int kStage3DirectionWindowFrames = 8;
-// Trigger height for the fourth rebound. The ROM then removes the arena
-// sprite and presents the separate roof-burst tile in the fixed marquee.
-constexpr float kStage3RoofImpactY = 251.0F;
+constexpr float kLevel3RowScale = 2.5F;
+constexpr float kLevel3RowOffset = -8.0F;
+// $8D9D scrolls $2203:$2204 two columns per frame; the scroll stops once the
+// page byte reaches $F8 (1794 columns) and Charlie then walks from column
+// $50 to $C0 himself.  Drums are the tile rows 6-11, 17-22 and 27-0 of the
+// 256-column tilemap page: centres 80, 168 and 256 (+256 per page).
+constexpr int kLevel3PlayerColumn = 0x50;
+constexpr int kLevel3StandRow = 0xb4;
+constexpr int kLevel3PerformerRow = 0xe0;
+constexpr int kLevel3BagRow = 0x50;
+constexpr int kLevel3ScrollEnd = 1794;
+constexpr std::array<int, 3> kLevel3DrumCentres{80, 168, 256};
+// $FA65: launch velocities of the stationary rebounds (8.8 rows per frame).
+constexpr std::array<std::uint16_t, 5> kLevel3StationaryLaunch{
+    0x0450, 0x0510, 0x0630, 0x0810, 0x0810};
+// $FA43: bag spawn points as ($2203, $2204) pairs.  $8AC7 stops at the first
+// entry whose page byte matches, so the second $F9 entry can never trigger.
+constexpr std::array<std::pair<std::uint8_t, std::uint8_t>, 8> kLevel3BagSpawns{{
+    {0xff, 0x40}, {0xfe, 0x98}, {0xfd, 0x98}, {0xfc, 0x40},
+    {0xfb, 0x98}, {0xfa, 0x40}, {0xf9, 0x98}, {0xf9, 0x08}}};
+// $FAA1/$FAAB: performer attack period, indexed by dip difficulty / 2 plus
+// the number of bag thresholds already passed in this game.
+constexpr std::array<int, 9> kLevel3BagThresholds{8, 10, 12, 14, 16, 19, 22, 25, 28};
+constexpr std::array<std::uint8_t, 10> kLevel3AttackPeriods{
+    0x3a, 0x39, 0x38, 0x34, 0x30, 0x2c, 0x28, 0x24, 0x22, 0x20};
+// $F517: six difficulty tables of nine pages, three performer slots per page
+// (0 none, 1 fire breather, 2 juggler with one knife, 3 juggler with two).
+// Slot 0 spawns at $2204 == $C4, slot 1 at $74 and slot 2 at $18.
+constexpr std::array<std::array<std::array<std::uint8_t, 3>, 9>, 6> kLevel3PerformerTables{{
+    {{{0,0,1},{0,0,1},{0,0,2},{0,1,1},{2,2,1},{0,0,2},{0,1,1},{1,2,0},{1,2,0}}},
+    {{{0,1,0},{0,1,0},{2,0,0},{2,0,1},{0,1,1},{0,1,1},{0,1,1},{1,3,0},{1,3,0}}},
+    {{{0,1,0},{0,1,0},{3,3,0},{3,2,1},{1,3,2},{3,2,1},{0,1,1},{2,3,0},{2,3,0}}},
+    {{{0,1,1},{0,1,1},{2,2,0},{1,2,0},{3,3,0},{1,3,2},{0,1,1},{3,3,0},{3,3,0}}},
+    {{{0,1,1},{0,1,1},{1,2,0},{1,3,2},{0,1,2},{1,3,2},{1,2,0},{3,3,0},{3,3,0}}},
+    {{{0,1,1},{0,1,1},{2,2,1},{2,2,1},{1,3,1},{1,3,2},{3,2,1},{3,3,0},{3,3,0}}}}};
+// $F9B0: coin shower columns offsets and 8.8 drift speeds (bit 7 = leftward).
+constexpr std::array<std::pair<std::uint8_t, std::uint8_t>, 13> kLevel3CoinLanes{{
+    {0x00, 0x00}, {0x01, 0x20}, {0xff, 0xe0}, {0x00, 0x00}, {0x01, 0x14},
+    {0xff, 0xe4}, {0x00, 0x00}, {0x01, 0x1c}, {0xff, 0xec}, {0x00, 0x00},
+    {0x01, 0x18}, {0xff, 0xe8}, {0x00, 0x00}}};
+// $8509: forty frames after the fallen pose the board enters the 96-frame
+// restart phase (phase 5 to the first movement tick of the re-initialised
+// stage), exactly like Level 1.
+constexpr int kLevel3FallenFrames = 0x28;
+constexpr int kLevel3RestartFrames = 96;
+// Distance plaques are the three $26C0-$26E0 prop cells re-entering at
+// $2204 == $80/$70/$60 with the tile words of the next page ($EB5C+).
+struct Level3Sign {
+  int worldColumn;  // centre of the 48-column plaque
+  const char* text;
+};
+constexpr std::array<Level3Sign, 8> kLevel3Signs{{
+    {120, "START"}, {376, "60M"}, {632, "50M"}, {888, "40M"},
+    {1144, "30M"}, {1400, "20M"}, {1656, "10M"}, {1912, "GOAL"}}};
 constexpr float kStage4BallCenterY = 526.0F;
 constexpr float kStage4BallRadius = 40.0F;
 constexpr float kStage4CharlieBaselineY = kStage4BallCenterY - kStage4BallRadius;
@@ -76,12 +113,8 @@ constexpr int kBootDurationFrames = static_cast<int>(
         static_cast<float>(kBoardRefresh) +
     0.5F);
 
-float stage3CameraFor(float playerWorldX) {
-  const float followingCamera =
-      std::max(0.0F, playerWorldX - kStage3PlayerScreenX);
-  const float finalCamera =
-      std::max(0.0F, kStage3CourseLength - kStage3GoalScreenX);
-  return std::min(followingCamera, finalCamera);
+float level3RowToY(float row) {
+  return row * kLevel3RowScale + kLevel3RowOffset;
 }
 // The original board places the ring tube directly below the crowd fascia
 // (about source y=140), not at the top of the crowd.
@@ -244,6 +277,10 @@ struct Options {
   int replayCourseOffset = -1;
   int replayCoinSelector = -1;
   int replayFrameByte = -1;
+  // Level 3 replays read tools/autoplay_level3_headless.lua captures.
+  int replayEvent = 0;
+  bool replayInvulnerable = false;
+  bool replayClearProjectiles = false;
 };
 
 struct Vec2 {
@@ -322,29 +359,80 @@ struct Stage2Monkey {
   int leapFrame = 0;
 };
 
-struct Stage3Tambourine {
-  float worldX = 0.0F;
-  bool bagAvailable = false;
-  int compressionFrame = 0;
-};
-
-enum class Stage3PerformerKind {
-  KnifeThrower,
-  FlameThrower,
-};
-
-struct Stage3Performer {
-  float worldX = 0.0F;
-  Stage3PerformerKind kind = Stage3PerformerKind::KnifeThrower;
-  int actionFrame = 0;
-};
-
-struct Stage3Projectile {
-  Vec2 position{};
-  Vec2 velocity{};
-  Stage3PerformerKind kind = Stage3PerformerKind::KnifeThrower;
-  int age = 0;
+// ---- circusc4 Level 3 records ---------------------------------------------
+// Performer records $2440/$2480/$24C0/$2500 ($93F8 spawn, $95B7 state 0).
+struct Level3Performer {
   bool active = false;
+  std::uint8_t x = 0;         // $6: column of the 32-column composite
+  int type = 0;               // $3C: 0 fire breather, 1/2 juggler knives
+  int remaining = 0;          // $38: knives still to be thrown
+  std::uint8_t timer = 0;     // $39
+  std::uint8_t timerReload = 0;  // $37
+  int pose = 0;               // 0 idle, 1 breathing, 2 throwing, 3 catching
+  int poseFrame = 0;
+};
+
+// Flame records $2580/$25A0/$25C0 ($9273): two cells, bottom cell at y.
+struct Level3Flame {
+  bool active = false;
+  int state = 0;              // 0 at the mouth, 1 rising, 4 frozen by a hit
+  std::uint8_t x = 0;
+  std::uint8_t y = 0;
+  std::uint16_t velocity = 0; // $7:$8
+  bool apex = false;          // $9
+  std::uint8_t hold = 0;      // $3
+  int age = 0;
+};
+
+// Knife records $2540-$2570 ($9343): one cell, thrown up and caught again.
+struct Level3Knife {
+  bool active = false;
+  int state = 0;              // 0 rising, 1 falling, 2 held, 4 frozen
+  std::uint8_t x = 0;
+  std::uint8_t y = 0;
+  std::uint16_t velocity = 0;
+  bool apex = false;
+  std::uint8_t sway = 0;      // $A: drifts one column right every 8 frames
+  std::uint8_t hold = 0;      // $3
+  int owner = -1;             // $1: performer record
+  int age = 0;
+};
+
+// Bag records $2690/$26A0/$26B0 ($7DAE state 3, $7DC9 state 4 popup, and the
+// state-6 coin piles of the perfect-clear presentation).
+struct Level3Bag {
+  bool active = false;
+  int state = 0;
+  std::uint8_t x = 0;
+  std::uint8_t y = 0;
+  std::uint8_t key = 0;       // $9: $2204 at the spawn
+  std::uint8_t timer = 0;     // $A
+  int value = 0;
+  int age = 0;
+};
+
+// Coin records $2730-$27FF ($7E7B).  Slot 8 ($27B0) receives the copy of the
+// bird's bag record and stays occupied for the rest of the shower.
+struct Level3Coin {
+  bool active = false;
+  bool bagCopy = false;
+  std::uint8_t x = 0;
+  std::uint8_t y = 0;
+  std::uint8_t xFraction = 0;
+  std::uint8_t yFraction = 0;
+  std::uint8_t xSpeed = 0;
+  bool xNegative = false;
+  int yVelocity = 0;
+  int age = 0;
+};
+
+enum class Level3Pose : std::uint8_t {
+  Stationary,   // $EC4E
+  MovingRight,  // $EC93
+  MovingLeft,   // $EC6C
+  Cheer,        // $EAAA
+  Roof,         // $ECBA
+  Fallen,       // $EA9E
 };
 
 struct Stage4Ball {
@@ -464,9 +552,6 @@ struct Game {
   std::vector<BonusRing> bonusRings;
   std::vector<MeterMarker> meterMarkers;
   std::vector<Stage2Monkey> stage2Monkeys;
-  std::vector<Stage3Tambourine> stage3Tambourines;
-  std::vector<Stage3Performer> stage3Performers;
-  std::vector<Stage3Projectile> stage3Projectiles;
   std::vector<Stage4Ball> stage4Balls;
   float cameraX = 0.0F;
   float previousCameraX = 0.0F;
@@ -578,17 +663,47 @@ struct Game {
   int level1HoopScoreAwarded = 0;
   float level1PendingHoopScoreWorldX = 0.0F;
   float level1PendingHoopScoreY = 0.0F;
-  int stage3BounceLevel = 0;
-  int stage3BounceFrame = 0;
-  float stage3BounceBaseY = kStage3GroundY;
-  bool stage3OnTambourine = false;
-  int stage3CurrentTambourine = 0;
-  int stage3TargetTambourine = 0;
-  bool stage3Traveling = false;
-  bool stage3DirectionArmed = true;
-  int stage3TravelStartFrame = 0;
-  float stage3TravelStartX = 78.0F;
-  bool stage3RoofCrash = false;
+  // ---- circusc4 Level 3 board state ($8A6C) ----
+  std::uint16_t level3Scroll = 0;         // $2203:$2204 (progress = -scroll)
+  int level3State = 1;                    // $2402: 1 play, 4 goal, 7 hit, 8 fallen
+  std::uint8_t level3Y = kLevel3StandRow; // $2404: row of the lower cells
+  std::uint8_t level3X = kLevel3PlayerColumn;  // $2406
+  int level3Phase = 1;                    // $2407: 1 rising, 2 falling
+  std::uint16_t level3Velocity = 0x0420;  // $2417:$2418 (8.8)
+  std::uint16_t level3Target = 0x0420;    // $2408:$243A landing velocity
+  int level3Bounce = 0;                   // $2437 stationary rebound count
+  int level3Direction = 0;                // $240A: 0 none, 1 left, 2 right
+  int level3Stick = 0;                    // $241B
+  int level3Countdown = 0;                // $242D
+  Level3Pose level3Pose = Level3Pose::Stationary;
+  int level3PoseFrame = 0;
+  std::array<Level3Performer, 4> level3Performers{};
+  std::array<Level3Flame, 3> level3Flames{};
+  std::array<Level3Knife, 4> level3Knives{};
+  std::array<Level3Bag, 3> level3Bags{};
+  int level3BagValueIndex = 0;            // $28F1 (300 + 100 * index, max 900)
+  int level3BagsTotal = 0;                // $28F2
+  int level3Missed = 0;                   // $220A: bags scrolled off (+ shower end)
+  int level3TileTimer = 0;                // $28F4 pressed-drum frames
+  int level3PressedDrum = -1;
+  int level3DeathKind = 0;                // 1 flame, 2 knife, 3 roof, 4 time
+  int level3RestartPage = 0;              // $2203 after $8517
+  bool level3Died = false;                // $2258
+  int level3BonusTimeout = 0;             // $2263
+  bool level3BirdActive = false;          // $2700-$2720 presentation records
+  int level3BirdState = 0;
+  std::uint8_t level3BirdX = 0;           // $2706 (leading cell)
+  std::uint8_t level3BirdBagX = 0;        // $2726
+  std::array<Level3Coin, 13> level3Coins{};
+  int level3CoinIndex = 0;                // $28DC
+  int level3CoinCount = 0;                // $28DD
+  bool level3CoinStarted = false;         // $28DE
+  int level3PileFrame = 0;
+  int level3Difficulty = 2;               // $28F3 (default dip setting)
+  int level3Visits = 1;                   // $2210
+  int level3Level2Visits = 1;             // $220F selects the coin value
+  bool level3Invulnerable = false;        // replay aid: mirrors the MAME taps
+  bool level3ClearProjectiles = false;    // replay aid: projectiles wiped
   int stage4CurrentBall = 0;
   bool stage4Airborne = false;
   bool stage4PinnedCrash = false;
@@ -608,6 +723,7 @@ struct Game {
   std::uint32_t eventSelectConfirmAudioSerial = 0;
   std::uint32_t stage3BounceAudioSerial = 0;
   std::uint32_t stage3OverjumpAudioSerial = 0;
+  std::uint32_t level3ShowerAudioSerial = 0;
   std::uint32_t randomState = 0x6d2b79f5U;
   bool highScoreDirty = false;
   bool debug = false;
@@ -873,6 +989,12 @@ std::optional<Options> parseOptions(int argc, char** argv) {
       options.replayCoinSelector = std::stoi(argv[++index], nullptr, 0);
     } else if (argument == "--replay-frame-byte" && index + 1 < argc) {
       options.replayFrameByte = std::stoi(argv[++index], nullptr, 0);
+    } else if (argument == "--replay-event" && index + 1 < argc) {
+      options.replayEvent = std::stoi(argv[++index]) - 1;
+    } else if (argument == "--replay-invulnerable") {
+      options.replayInvulnerable = true;
+    } else if (argument == "--replay-clear-projectiles") {
+      options.replayClearProjectiles = true;
     } else if (argument == "--capture-scene" && index + 1 < argc) {
       options.captureScene = argv[++index];
       if (options.captureScene != "start" &&
@@ -1703,6 +1825,9 @@ void initializeLevel1Board(Game& game) {
   }
 }
 
+void initializeLevel3Board(Game& game, int pageByte);
+void syncLevel3World(Game& game);
+
 void resetCourse(Game& game) {
   game.player = Player{};
   game.cameraX = 0.0F;
@@ -1740,20 +1865,6 @@ void resetCourse(Game& game) {
   game.level1HoopScoreAwarded = 0;
   game.level1PendingHoopScoreWorldX = 0.0F;
   game.level1PendingHoopScoreY = 0.0F;
-  game.stage3BounceLevel = 0;
-  game.stage3BounceFrame = 0;
-  game.stage3BounceBaseY = kStage3GroundY;
-  game.stage3OnTambourine = false;
-  game.stage3CurrentTambourine = 0;
-  game.stage3TargetTambourine = 0;
-  game.stage3Traveling = false;
-  game.stage3DirectionArmed = true;
-  game.stage3TravelStartFrame = 0;
-  game.stage3TravelStartX = 78.0F;
-  game.stage3RoofCrash = false;
-  game.stage3Tambourines.clear();
-  game.stage3Performers.clear();
-  game.stage3Projectiles.clear();
   game.stage4Balls.clear();
   game.stage4CurrentBall = 0;
   game.stage4Airborne = false;
@@ -1808,59 +1919,22 @@ void resetCourse(Game& game) {
   }
 
   if (game.selectedEvent == 2) {
-    game.player.position = {78.0F, kStage3TambourineTopY};
-    game.player.previous = game.player.position;
-    game.player.grounded = false;
-    game.player.jumpFrame = 0;
-    game.stage3BounceFrame = 0;
-    game.stage3BounceLevel = 1;
-    game.stage3BounceBaseY = kStage3TambourineTopY;
-    game.stage3OnTambourine = true;
-    game.stage3CurrentTambourine = 0;
-    game.stage3TargetTambourine = 0;
-    game.stage3Traveling = false;
-    game.stage3DirectionArmed = true;
-    game.stage3TravelStartFrame = 0;
-    game.stage3TravelStartX = game.player.position.x;
-    game.stage3RoofCrash = false;
     game.hoops.clear();
     game.firePots.clear();
     game.bonusRings.clear();
     game.stage2Monkeys.clear();
-    game.meterMarkers = {
-        {780.0F, 50}, {1500.0F, 40}, {2220.0F, 30},
-        {2940.0F, 20}, {3660.0F, 10},
-    };
-    // Event 3's drums are tall leather cylinders, not flattened versions of
-    // the Event 1 goal pad. Their measured spacing leaves a clear performer
-    // lane between successive bounce targets.
-    game.stage3Tambourines.reserve(25);
-    for (int index = 0; index < 25; ++index) {
-      const bool bag = index > 0 && index < 24 && index % 4 == 3;
-      game.stage3Tambourines.push_back(
-          {kStage3FirstTambourineX +
-               static_cast<float>(index) * kStage3TambourineSpacing,
-           bag});
-      if (bag) ++game.prizeBagsAvailable;
-    }
-    // The ROM frames place each act exactly halfway between its surrounding
-    // drums. The opening gap remains clear; acts then alternate every other
-    // gap through the final approach.
-    game.stage3Performers.reserve(12);
-    for (int index = 0; index < 12; ++index) {
-      game.stage3Performers.push_back({
-          kStage3FirstTambourineX + 1.5F * kStage3TambourineSpacing +
-              static_cast<float>(index) *
-                  (kStage3TambourineSpacing * 2.0F),
-          (index & 1) == 0 ? Stage3PerformerKind::KnifeThrower
-                           : Stage3PerformerKind::FlameThrower});
-      // Keep every lane on a deterministic but staggered 150-frame cycle.
-      // The ROM does not wait for a hazard to enter the camera before it
-      // starts its toss; approaching players must read the existing rhythm.
-      game.stage3Performers.back().actionFrame =
-          static_cast<int>((index * 37U) % 150U);
-    }
-    game.stage3Projectiles.resize(game.stage3Performers.size());
+    game.meterMarkers.clear();
+    // $FB7A: the Level 3 bonus digits start at 5830 on a fresh start.
+    game.bonus = 5830;
+    game.level3Died = false;
+    game.level3Missed = 0;
+    game.level3BagValueIndex = 0;
+    game.level3BagsTotal = 0;
+    // Seven bags can be collected ($FA43 has eight entries but $8AC7 never
+    // reaches the second $F9 pair); the count is only used by the HUD/tally.
+    game.prizeBagsAvailable = 7;
+    initializeLevel3Board(game, 0);
+    syncLevel3World(game);
     return;
   }
 
@@ -2009,6 +2083,10 @@ void restartAfterCrash(Game& game) {
     page = page >= 7 ? page - 2 : std::max(0, page - 1);
     game.level1ProgressFixed = static_cast<std::int32_t>(page) << 16;
     ++game.level1MissedRewards;
+    // $BB25/$BCFA: the re-initialisation restarts the bonus digits at 4000
+    // for pages zero ($2258 set by the first start) and one, 3500 for pages
+    // two and three, and 3000 beyond (Level 3 capture: 5552 -> 3999).
+    game.bonus = page <= 1 ? 4000 : (page <= 3 ? 3500 : 3000);
     initializeLevel1Board(game);
     game.player.alive = true;
     game.crashFrame = 0;
@@ -2017,14 +2095,27 @@ void restartAfterCrash(Game& game) {
     game.previousCameraX = game.cameraX;
     return;
   }
+  if (game.selectedEvent == 2) {
+    // $8517-$8525 stepped the page byte back when the fallen pose ended; the
+    // restart phase re-runs $8C61 with the saved page and a zero offset.
+    // $BB25 then restarts the bonus at 4000 (pages 0-2), 3500 (3-4) or 3000.
+    const int pageByte = game.level3RestartPage;
+    game.bonus = pageByte == 0 || pageByte >= 0xfe ? 4000
+                 : (pageByte >= 0xfc ? 3500 : 3000);
+    initializeLevel3Board(game, pageByte);
+    game.player.alive = true;
+    game.crashFrame = 0;
+    syncLevel3World(game);
+    game.player.previous = game.player.position;
+    game.previousCameraX = game.cameraX;
+    return;
+  }
   game.player.position.x = std::max(78.0F, game.player.position.x - 145.0F);
   game.player.position.y = game.selectedEvent == 1
                                ? kStage2RopeY
-                               : (game.selectedEvent == 2
-                                      ? kStage3TambourineTopY
-                                      : (game.selectedEvent == 3
-                                             ? kStage4CharlieBaselineY
-                                             : kGroundY));
+                               : (game.selectedEvent == 3
+                                      ? kStage4CharlieBaselineY
+                                      : kGroundY);
   game.player.previous = game.player.position;
   game.player.verticalVelocity = 0.0F;
   game.player.runSpeed = 0.0F;
@@ -2034,27 +2125,6 @@ void restartAfterCrash(Game& game) {
   game.crashFrame = 0;
   game.cameraX = std::max(0.0F, game.player.position.x - 78.0F);
   game.previousCameraX = game.cameraX;
-  if (game.selectedEvent == 2) {
-    game.player.grounded = false;
-    game.stage3CurrentTambourine = std::clamp(
-        game.stage3CurrentTambourine, 0,
-        static_cast<int>(game.stage3Tambourines.size()) - 1);
-    game.stage3TargetTambourine = game.stage3CurrentTambourine;
-    game.player.position.x =
-        game.stage3Tambourines[static_cast<std::size_t>(
-            game.stage3CurrentTambourine)].worldX;
-    game.player.previous = game.player.position;
-    game.stage3BounceLevel = 1;
-    game.stage3BounceFrame = 0;
-    game.stage3BounceBaseY = kStage3TambourineTopY;
-    game.stage3Traveling = false;
-    game.stage3DirectionArmed = true;
-    game.stage3TravelStartFrame = 0;
-    game.stage3TravelStartX = game.player.position.x;
-    game.stage3RoofCrash = false;
-    game.cameraX = stage3CameraFor(game.player.position.x);
-    game.previousCameraX = game.cameraX;
-  }
   if (game.selectedEvent == 3 && !game.stage4Balls.empty()) {
     game.stage4CurrentBall = std::clamp(
         game.stage4CurrentBall, 0,
@@ -2178,22 +2248,6 @@ void crashPlayer(Game& game) {
   --game.lives;
 }
 
-void crashStage3Roof(Game& game) {
-  if (game.scene != Scene::Playing) return;
-  game.stage3RoofCrash = true;
-  game.stage3Traveling = false;
-  game.player.alive = false;
-  game.player.position.y = kStage3RoofImpactY;
-  game.player.previous = game.player.position;
-  game.player.runSpeed = 0.0F;
-  game.player.verticalVelocity = 0.0F;
-  game.scene = Scene::Crashed;
-  game.crashFrame = 0;
-  game.deathOccurred = true;
-  ++game.crashAudioSerial;
-  --game.lives;
-}
-
 // Board rows map onto the logical canvas through the rider's ground row.
 float level1RowToWorldY(float row) {
   return kGroundY + (row - static_cast<float>(kLevel1RiderGroundSourceY)) *
@@ -2217,22 +2271,19 @@ void armStage1ExtraCharlie(Game& game) {
 }
 
 void finishStage(Game& game) {
+  // Level 3 enters its goal state inside updateLevel3 ($9160).
   const bool stage2 = game.selectedEvent == 1;
-  const bool stage3 = game.selectedEvent == 2;
+  const bool stage3 = false;
   const bool stage4 = game.selectedEvent == 3;
   const float finishX = stage2 ? kStage2GoalX
-                               : (stage3 ? kStage3CourseLength
-                                         : (stage4 ? kStage4CourseLength
-                                                   : kCourseLength));
+                               : (stage4 ? kStage4CourseLength
+                                         : kCourseLength);
   const float finishY = stage2 ? kStage2GoalTopY
-                               : (stage3 ? kStage3TambourineTopY
-                                         : (stage4 ? kStage4GoalTopY
-                                                   : kGoalLandingY));
-  if (stage2 || stage3 || stage4) {
+                               : (stage4 ? kStage4GoalTopY
+                                         : kGoalLandingY);
+  if (stage2 || stage4) {
     game.player.position = {finishX, finishY};
-    game.cameraX = finishX -
-        (stage2 ? 340.0F : (stage3 ? kStage3GoalScreenX
-                                   : kStage4GoalScreenX));
+    game.cameraX = finishX - (stage2 ? 340.0F : kStage4GoalScreenX);
   } else {
     // Level 1 keeps the course position of the landing frame ($79DA does not
     // move the scroll); only the row snaps onto the platform top.
@@ -2257,12 +2308,6 @@ void finishStage(Game& game) {
     game.score += stage2 ? 5000 : (stage3 ? 3000 : 4000);
   }
   game.goalFrame = 0;
-  if (stage3 && !game.stage3Tambourines.empty()) {
-    // updateStage3 compresses a drum on the landing tick. Goal scenes no
-    // longer run the stage update, so leaving this set freezes the final drum
-    // below Charlie and creates the large floating gap seen in play tests.
-    game.stage3Tambourines.back().compressionFrame = 0;
-  }
   game.scene = Scene::Goal;
 }
 
@@ -2276,20 +2321,704 @@ float stage2MonkeyY(const Stage2Monkey& monkey) {
   return kStage2RopeY - std::sin(progress * kPi) * 82.0F;
 }
 
-float stage3BounceHeight(int level) {
-  constexpr std::array<float, 4> heights{72.0F, 108.0F, 152.0F, 245.0F};
-  return heights[static_cast<std::size_t>(std::clamp(level, 1, 4) - 1)];
+// ===========================================================================
+// circusc4 Level 3: the trampoline stage ($8A6C-$97D7).
+//
+// The board keeps Charlie at column $50 while $2203:$2204 scrolls two
+// columns per frame.  Every rebound is a fixed 8.8 vertical launch: $0420
+// moving (44 frames = 88 columns, one drum), $03C0 for the 80-column gap
+// between the third drum of a page and the first of the next, or the
+// stationary series $0450/$0510/$0630/$0810 whose fourth apex is the roof.
+// Fire breathers and jugglers spawn from $F517 at fixed scroll positions,
+// bags hang at row $50 over seven drums, and the goal is the landing on
+// column $A0-$C9 of page $F8.  See docs/LEVEL3_ROM_MODEL.md.
+// ===========================================================================
+
+int level3Progress(const Game& game) {
+  return static_cast<int>((0x10000 - game.level3Scroll) & 0xffff);
 }
 
-void updateStage3(Game& game, const Uint8* keyboard, bool,
-                  float controllerAxis) {
+std::uint8_t level3PageByte(const Game& game) {
+  return static_cast<std::uint8_t>(game.level3Scroll >> 8);
+}
+
+std::uint8_t level3OffsetByte(const Game& game) {
+  return static_cast<std::uint8_t>(game.level3Scroll & 0xff);
+}
+
+int level3PageIndex(const Game& game) {
+  return static_cast<int>(static_cast<std::uint8_t>(-level3PageByte(game)));
+}
+
+std::uint8_t level3Abs8(std::uint8_t value) {
+  return value >= 0x80 ? static_cast<std::uint8_t>(-value) : value;
+}
+
+// Drum n (0-based) is centred on world column 80 + 88 * (n % 3) + 256 * (n / 3).
+int level3DrumCentre(int index) {
+  return kLevel3DrumCentres[static_cast<std::size_t>(index % 3)] +
+         256 * (index / 3);
+}
+
+constexpr int kLevel3DrumCount = 23;  // the last reachable drum is the goal
+
+void syncLevel3World(Game& game) {
+  const float progress = static_cast<float>(level3Progress(game));
+  game.player.position = {
+      (progress + static_cast<float>(game.level3X)) * kSourceToWorldX,
+      level3RowToY(static_cast<float>(game.level3Y) + 16.0F)};
+  game.cameraX = progress * kSourceToWorldX;
+  game.player.runSpeed = game.level3Direction == 2
+                             ? 2.0F * static_cast<float>(kBoardRefresh) * kSourceToWorldX
+                             : (game.level3Direction == 1
+                                    ? -2.0F * static_cast<float>(kBoardRefresh) * kSourceToWorldX
+                                    : 0.0F);
+  game.player.facingRight = game.level3Direction != 1;
+  game.player.grounded = false;
+  game.player.jumpFrame = game.level3PoseFrame;
+}
+
+// $6B32/$8C61: (re)initialise the board with the page byte kept from a
+// restart ($2204 zeroed) and Charlie launched from the standing row.
+void initializeLevel3Board(Game& game, int pageByte) {
+  game.level3Scroll = static_cast<std::uint16_t>((pageByte & 0xff) << 8);
+  game.level3State = 1;
+  game.level3Y = kLevel3StandRow;
+  game.level3X = kLevel3PlayerColumn;
+  game.level3Phase = 1;
+  game.level3Velocity = 0x0420;
+  game.level3Target = 0x0420;
+  game.level3Bounce = 0;
+  game.level3Direction = 0;
+  game.level3Stick = 0;
+  game.level3Countdown = 0;
+  game.level3Pose = Level3Pose::Stationary;
+  game.level3PoseFrame = 0;
+  for (auto& performer : game.level3Performers) performer = Level3Performer{};
+  for (auto& flame : game.level3Flames) flame = Level3Flame{};
+  for (auto& knife : game.level3Knives) knife = Level3Knife{};
+  for (auto& bag : game.level3Bags) bag = Level3Bag{};
+  for (auto& coin : game.level3Coins) coin = Level3Coin{};
+  game.level3TileTimer = 0;
+  game.level3PressedDrum = -1;
+  game.level3DeathKind = 0;
+  game.level3RestartPage = pageByte;
+  game.level3BonusTimeout = 0;
+  game.level3BirdActive = false;
+  game.level3BirdState = 0;
+  game.level3BirdX = 0;
+  game.level3BirdBagX = 0;
+  game.level3CoinIndex = 0;
+  game.level3CoinCount = 0;
+  game.level3CoinStarted = false;
+  game.level3PileFrame = 0;
+  game.player.alive = true;
+  game.player.verticalVelocity = 0.0F;
+  game.goalFrame = 0;
+}
+
+// $8B93: a flame or knife hit.  The record freezes (state 4) and Charlie
+// enters state 7: seven frames still, then a fall to row $D8.
+void level3Hit(Game& game, int kind) {
+  game.level3State = 7;
+  // $BC8B (the bonus running out) only writes the state, so $2D stays zero
+  // and the fall starts at once.
+  game.level3Countdown = kind == 4 ? 0 : 7;
+  game.level3Direction = 0;
+  game.level3DeathKind = kind;
+  game.player.alive = false;
+  game.deathOccurred = true;
+  ++game.crashAudioSerial;
+}
+
+// $8B3E/$8BA9: projectile collisions run before anything moves, so they use
+// the previous frame's positions.
+void level3Collisions(Game& game) {
+  if (game.level3State >= 2 || !game.player.alive) return;
+  for (auto& flame : game.level3Flames) {
+    if (!flame.active) continue;
+    const std::uint8_t dx = level3Abs8(static_cast<std::uint8_t>(
+        game.level3X + 0x10 - static_cast<std::uint8_t>(flame.x + 8)));
+    if (dx >= 8) continue;
+    const std::uint8_t dy = level3Abs8(static_cast<std::uint8_t>(
+        static_cast<std::uint8_t>(flame.y - 4) - game.level3Y));
+    if (dy >= 0x0a) continue;
+    // $8B8C adds the stale $28FF (0 or 1) and tests < $10: always true.
+    if (game.level3Invulnerable) continue;
+    flame.state = 4;
+    level3Hit(game, 1);
+    return;
+  }
+  for (auto& knife : game.level3Knives) {
+    if (!knife.active) continue;
+    const std::uint8_t dx = level3Abs8(static_cast<std::uint8_t>(
+        game.level3X + 0x10 - static_cast<std::uint8_t>(knife.x + 8)));
+    if (dx >= 9) continue;
+    const std::uint8_t dy = level3Abs8(static_cast<std::uint8_t>(
+        game.level3Y - static_cast<std::uint8_t>(knife.y + 8)));
+    if (dy >= 8) continue;
+    if (game.level3Invulnerable) continue;
+    knife.state = 4;
+    level3Hit(game, 2);
+    return;
+  }
+}
+
+// $93F8-$9549: the first free performer record is the only candidate; it is
+// filled when $2204 (before this frame's scroll) equals a slot key and the
+// difficulty table has a performer for the current page and slot.
+void level3SpawnPerformer(Game& game) {
+  if (game.level3Direction == 0) return;
+  for (auto& performer : game.level3Performers) {
+    if (performer.active) continue;
+    const std::uint8_t low = level3OffsetByte(game);
+    int slot = -1;
+    if (low == 0xc4) slot = 0;
+    else if (low == 0x18) slot = 2;
+    else if (low == 0x74) slot = 1;
+    if (slot < 0) return;
+    int difficulty = game.level3Difficulty +
+                     (game.level3Visits == 0 ? 0 : (game.level3Visits - 1) * 2);
+    difficulty = std::min(difficulty, 10);
+    int page = level3PageIndex(game);
+    if (game.level3Direction == 1 && page != 0) --page;
+    if (page > 8) return;
+    const int kind = kLevel3PerformerTables[static_cast<std::size_t>(difficulty / 2)]
+                                           [static_cast<std::size_t>(page)]
+                                           [static_cast<std::size_t>(slot)];
+    if (kind == 0) return;
+    performer.active = true;
+    performer.x = 0xf1;
+    performer.type = kind - 1;
+    performer.remaining = kind - 1;
+    int period = (game.level3Difficulty >> 1) +
+                 (game.level3Visits == 0 ? 0 : game.level3Visits - 1);
+    for (const int threshold : kLevel3BagThresholds) {
+      if (game.level3BagsTotal >= threshold) ++period;
+    }
+    period = std::min(period, 9);
+    performer.timerReload = kLevel3AttackPeriods[static_cast<std::size_t>(period)];
+    performer.timer = performer.timerReload;
+    performer.pose = 0;
+    performer.poseFrame = 0;
+    return;
+  }
+}
+
+void level3ClearPerformer(Level3Performer& performer) {
+  performer = Level3Performer{};
+}
+
+// $95B7: attack timer, then the performer follows the scroll and retires
+// once it wraps back to column $F1.
+void level3UpdatePerformer(Game& game, std::size_t index) {
+  auto& performer = game.level3Performers[index];
+  if (!performer.active) return;
+  ++performer.poseFrame;
+  if (performer.type == 0) {
+    performer.timer = static_cast<std::uint8_t>(performer.timer - 1);
+    if (performer.timer == 0) {
+      for (auto& flame : game.level3Flames) {
+        if (flame.active) continue;
+        flame = Level3Flame{};
+        flame.active = true;
+        flame.y = static_cast<std::uint8_t>(kLevel3PerformerRow - 14);
+        flame.x = static_cast<std::uint8_t>(performer.x + 4);
+        flame.state = 0;
+        flame.hold = 8;
+        performer.pose = 1;
+        performer.poseFrame = 0;
+        performer.timer = performer.timerReload;
+        break;
+      }
+    }
+  } else if (performer.remaining != 0) {
+    performer.timer = static_cast<std::uint8_t>(performer.timer - 1);
+    if (performer.timer == 0) {
+      for (auto& knife : game.level3Knives) {
+        if (knife.active) continue;
+        knife = Level3Knife{};
+        knife.active = true;
+        knife.y = static_cast<std::uint8_t>(kLevel3PerformerRow - 16);
+        knife.x = performer.x;
+        knife.state = 0;
+        knife.hold = 8;
+        knife.velocity = 0x0400;
+        knife.owner = static_cast<int>(index);
+        performer.pose = 2;
+        performer.poseFrame = 0;
+        performer.timer = performer.timerReload;
+        --performer.remaining;
+        break;
+      }
+    }
+  }
+  const std::uint8_t page = level3PageByte(game);
+  if (page == 0 || page == 0xf8 || game.level3Direction == 0) return;
+  performer.x = static_cast<std::uint8_t>(
+      performer.x + (game.level3Direction == 1 ? 2 : -2));
+  if (performer.x == 0xf1) level3ClearPerformer(performer);
+}
+
+// $9293: projectiles and bags follow the scroll; a column in [$F0,$F4)
+// (wrapped past the left edge) retires the record.  Returns false when
+// the record was cleared.
+template <typename Record>
+bool level3ScrollFollow(const Game& game, Record& record) {
+  if (record.x >= 0xf0 && record.x < 0xf4) {
+    record = Record{};
+    return false;
+  }
+  const std::uint8_t page = level3PageByte(game);
+  if (page == 0 || page == 0xf8 || game.level3Direction == 0) return true;
+  record.x = static_cast<std::uint8_t>(
+      record.x + (game.level3Direction == 1 ? 2 : -2));
+  return true;
+}
+
+// $92E4: rise by the velocity high byte, minus $10 per frame; the apex is
+// the first frame with a zero high byte, followed by an eight-frame hold.
+template <typename Record>
+bool level3Rise(Record& record) {
+  if (!record.apex) {
+    record.y = static_cast<std::uint8_t>(record.y - (record.velocity >> 8));
+    if ((record.velocity >> 8) != 0) {
+      record.velocity = static_cast<std::uint16_t>(record.velocity - 0x10);
+      if (record.velocity != 0) return true;
+    }
+    record.velocity = 0;
+    record.apex = true;
+    record.hold = 8;
+    return true;
+  }
+  record.hold = static_cast<std::uint8_t>(record.hold - 1);
+  if (record.hold == 0) {
+    record = Record{};
+    return false;
+  }
+  return true;
+}
+
+// $9273: eight frames at the mouth, then a 100-row rise and an eight-frame
+// hover before the record clears (65 frames in all).
+void level3UpdateFlame(Game& game, Level3Flame& flame) {
+  if (!flame.active) return;
+  ++flame.age;
+  if (flame.state == 0) {
+    if (!level3ScrollFollow(game, flame)) return;
+    flame.hold = static_cast<std::uint8_t>(flame.hold - 1);
+    if (flame.hold == 0) {
+      flame.state = 1;
+      flame.apex = false;
+      flame.velocity = 0x0400;
+    }
+  } else if (flame.state == 1) {
+    if (!level3Rise(flame)) return;
+    level3ScrollFollow(game, flame);
+  }
+}
+
+void level3KnifeSway(Level3Knife& knife) {
+  knife.sway = static_cast<std::uint8_t>(knife.sway + 0x20);
+  if (knife.sway == 0) knife.x = static_cast<std::uint8_t>(knife.x + 1);
+}
+
+// $9343: rise ($0400 minus $10 per frame), fall until the velocity is back
+// at $0400 (caught), sixteen frames in the hand, then thrown again.
+void level3UpdateKnife(Game& game, Level3Knife& knife) {
+  if (!knife.active) return;
+  ++knife.age;
+  auto ownerActive = [&]() {
+    return knife.owner >= 0 &&
+           game.level3Performers[static_cast<std::size_t>(knife.owner)].active;
+  };
+  if (knife.state == 0) {
+    level3Rise(knife);
+    if (!knife.active) return;
+    level3KnifeSway(knife);
+    if (!level3ScrollFollow(game, knife)) return;
+    if (knife.apex) knife.state = 1;
+  } else if (knife.state == 1) {
+    level3KnifeSway(knife);
+    if (!level3ScrollFollow(game, knife)) return;
+    knife.y = static_cast<std::uint8_t>(knife.y + (knife.velocity >> 8));
+    knife.velocity = static_cast<std::uint16_t>(knife.velocity + 0x10);
+    if (knife.velocity == 0x0300) {
+      if (!ownerActive()) {
+        knife = Level3Knife{};
+        return;
+      }
+      auto& owner = game.level3Performers[static_cast<std::size_t>(knife.owner)];
+      owner.pose = 3;
+      owner.poseFrame = 0;
+    }
+    if ((knife.velocity >> 8) == 4) {
+      knife.apex = false;
+      knife.velocity = 0x0400;
+      if (ownerActive() &&
+          game.level3Performers[static_cast<std::size_t>(knife.owner)].type != 0) {
+        const auto& owner = game.level3Performers[static_cast<std::size_t>(knife.owner)];
+        knife.y = static_cast<std::uint8_t>(kLevel3PerformerRow - 16);
+        knife.x = owner.x;
+        knife.hold = 0x10;
+        knife.state = 2;
+      } else {
+        knife = Level3Knife{};
+      }
+    } else if (!ownerActive()) {
+      knife = Level3Knife{};
+    }
+  } else if (knife.state == 2) {
+    if (!level3ScrollFollow(game, knife)) return;
+    if (!ownerActive()) {
+      knife = Level3Knife{};
+      return;
+    }
+    knife.hold = static_cast<std::uint8_t>(knife.hold - 1);
+    if (knife.hold == 0) knife.state = 0;
+  }
+}
+
+// $929D/$7DBD: bags follow the scroll; one that wraps to column $F2/$F4
+// while moving right counts as missed ($220A).
+void level3BagFollow(Game& game, Level3Bag& bag) {
+  const std::uint8_t page = level3PageByte(game);
+  if (!(page == 0 || page == 0xf8 || game.level3Direction == 0)) {
+    bag.x = static_cast<std::uint8_t>(
+        bag.x + (game.level3Direction == 1 ? 2 : -2));
+  }
+  if (bag.x == 0xf2 || bag.x == 0xf4) {
+    if (game.level3Direction != 1) ++game.level3Missed;
+    bag = Level3Bag{};
+  }
+}
+
+void level3UpdateBag(Game& game, Level3Bag& bag) {
+  if (!bag.active) return;
+  ++bag.age;
+  if (bag.state == 3) {
+    level3BagFollow(game, bag);
+  } else if (bag.state == 4) {
+    bag.timer = static_cast<std::uint8_t>(bag.timer - 1);
+    if (bag.timer == 0) {
+      bag = Level3Bag{};
+      return;
+    }
+    level3BagFollow(game, bag);
+  }
+}
+
+// $8AA8: after the scroll update, moving right, the first $FA43 entry whose
+// page byte matches must also match the offset byte exactly.
+void level3SpawnBag(Game& game) {
+  if (game.level3Direction != 2) return;
+  const int limit = game.level3Visits < 2 ? 0x20 : 0x40;
+  if (limit < game.level3BagsTotal) return;
+  const std::uint8_t high = level3PageByte(game);
+  const std::uint8_t low = level3OffsetByte(game);
+  bool matched = false;
+  for (const auto& spawn : kLevel3BagSpawns) {
+    if (spawn.first != high) continue;
+    matched = spawn.second == low;
+    break;
+  }
+  if (!matched) return;
+  for (const auto& bag : game.level3Bags) {
+    if (bag.active && bag.key == low) return;
+  }
+  for (auto& bag : game.level3Bags) {
+    if (bag.active) continue;
+    bag = Level3Bag{};
+    bag.active = true;
+    bag.key = low;
+    bag.state = 3;
+    bag.x = 0xf0;
+    bag.y = static_cast<std::uint8_t>(kLevel3BagRow);
+    return;
+  }
+}
+
+// $8E5A-$8ED1: on the third stationary rebound, while rising through rows
+// $50-$67, a hanging bag within reach becomes a score popup worth
+// (index + 3) * 100, capped at 900.
+void level3CollectBag(Game& game) {
+  if (game.level3Y < 0x50 || game.level3Y >= 0x68) return;
+  for (auto& bag : game.level3Bags) {
+    if (!bag.active || bag.state != 3) continue;
+    if (level3Abs8(static_cast<std::uint8_t>(bag.x - game.level3X)) >= 0x10) continue;
+    const std::uint8_t dx = level3Abs8(static_cast<std::uint8_t>(
+        static_cast<std::uint8_t>(bag.x + 8) -
+        static_cast<std::uint8_t>(game.level3X + 0x10)));
+    if (dx >= 0x13) continue;
+    const int valueIndex = std::min(game.level3BagValueIndex + 2, 8);
+    bag.timer = 0x20;
+    bag.state = 4;
+    bag.value = (valueIndex + 1) * 100;
+    bag.age = 0;
+    ++game.level3BagValueIndex;
+    ++game.level3BagsTotal;
+    game.score += bag.value;
+    ++game.prizeBagsCollected;
+    ++game.prizeBagAudioSerial;
+    return;
+  }
+}
+
+// $9160/$7F14: the goal landing.  Charlie hops onto the last drum, the
+// crowd callouts appear for 160 frames and, with no bag missed or still
+// hanging, the bird brings the coin shower in from the left.
+void level3EnterGoal(Game& game) {
+  game.level3Y = static_cast<std::uint8_t>(game.level3Y - 10);
+  game.level3X = static_cast<std::uint8_t>(game.level3X + 4);
+  game.level3State = 4;
+  game.level3Countdown = 0xa0;
+  game.level3Pose = Level3Pose::Cheer;
+  game.level3PoseFrame = 0;
+  game.goalFrame = 0;
+  game.scene = Scene::Goal;
+  game.perfectClear = false;
+  if (game.level3Missed != 0) return;
+  for (const auto& bag : game.level3Bags) {
+    if (bag.active && bag.state == 3) {
+      ++game.level3Missed;
+      return;
+    }
+  }
+  game.perfectClear = true;
+  game.level3BirdActive = true;
+  game.level3BirdState = 3;
+  game.level3BirdX = 0xe8;
+  game.level3BirdBagX = 0xf0;
+}
+
+// $8D9D + $8DE7: scroll or walk, then the vertical rebound.
+void level3MovePlayer(Game& game) {
+  const std::uint8_t page = level3PageByte(game);
+  if (game.level3Direction == 2) {
+    if (page == 0xf8) {
+      if (game.level3X < 0xc0) game.level3X = static_cast<std::uint8_t>(game.level3X + 2);
+    } else {
+      game.level3Scroll = static_cast<std::uint16_t>(game.level3Scroll - 2);
+    }
+  } else if (game.level3Direction == 1) {
+    if (page != 0) {
+      if (page == 0xf8 && game.level3X != kLevel3PlayerColumn) {
+        game.level3X = static_cast<std::uint8_t>(game.level3X - 2);
+      } else {
+        game.level3Scroll = static_cast<std::uint16_t>(game.level3Scroll + 2);
+      }
+    }
+  }
+  if (game.level3Phase == 0) return;
+  if (game.level3Phase == 2) {
+    // Falling ($8DEE).
+    game.level3Y = static_cast<std::uint8_t>(game.level3Y + (game.level3Velocity >> 8));
+    game.level3Velocity = static_cast<std::uint16_t>(game.level3Velocity + 0x30);
+    if (game.level3Velocity != game.level3Target) return;
+    game.level3Y = static_cast<std::uint8_t>(game.level3Y + (game.level3Target >> 8));
+    // $8ED2: twenty points for every landing while moving right.
+    if (game.level3Direction == 2) game.score += 20;
+    // $8F8D: the drum under Charlie shows its pressed tiles for 8 frames.
+    game.level3TileTimer = 8;
+    {
+      const int charlieWorld = level3Progress(game) + game.level3X;
+      int nearest = 0;
+      int nearestDistance = 1 << 30;
+      for (int index = 0; index < kLevel3DrumCount + 1; ++index) {
+        const int distance = std::abs(level3DrumCentre(index) - charlieWorld);
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearest = index;
+        }
+      }
+      game.level3PressedDrum = nearest;
+    }
+    // $8F54: the next rebound takes the joystick sampled this frame.
+    game.level3Phase = 1;
+    game.level3Direction = game.level3Stick;
+    game.level3Pose = game.level3Stick == 2 ? Level3Pose::MovingRight
+                      : (game.level3Stick == 1 ? Level3Pose::MovingLeft
+                                               : Level3Pose::Stationary);
+    game.level3PoseFrame = 0;
+    ++game.stage3BounceAudioSerial;
+    // $8EFC: launch velocity.
+    const std::uint8_t low = level3OffsetByte(game);
+    if (game.level3Direction != 0) {
+      game.level3Velocity = game.level3Target = 0x0420;
+      game.level3Bounce = 0;
+      const bool shortHop = game.level3Direction == 1
+                                ? (low >= 0xf8 || low < 0x08)
+                                : (low >= 0x48 && low < 0x58);
+      if (shortHop) game.level3Velocity = game.level3Target = 0x03c0;
+    } else {
+      const int index = std::min(game.level3Bounce, 4);
+      ++game.level3Bounce;
+      game.level3Velocity = game.level3Target =
+          kLevel3StationaryLaunch[static_cast<std::size_t>(index)];
+    }
+    // $9160: the goal.
+    if (page == 0xf8 && game.level3X >= 0xa0 && game.level3X < 0xca) {
+      level3EnterGoal(game);
+    }
+    return;
+  }
+  // Rising ($8E1D).
+  game.level3Y = static_cast<std::uint8_t>(game.level3Y - (game.level3Velocity >> 8));
+  bool apex = false;
+  if (game.level3Bounce != 0 && (game.level3Velocity >> 8) == 0) {
+    apex = true;
+  } else {
+    game.level3Velocity = static_cast<std::uint16_t>(game.level3Velocity - 0x30);
+    if (game.level3Velocity == 0) apex = true;
+  }
+  if (apex) {
+    game.level3Velocity = 0;
+    game.level3Phase = 2;
+    if (game.level3Bounce == 4) {
+      // $8E43: the fourth stationary apex meets the roof.
+      game.level3Y = static_cast<std::uint8_t>(game.level3Y + 2);
+      game.level3State = 8;
+      game.level3Countdown = kLevel3FallenFrames;
+      game.level3Pose = Level3Pose::Roof;
+      game.level3PoseFrame = 0;
+      game.level3DeathKind = 3;
+      game.player.alive = false;
+      game.deathOccurred = true;
+      ++game.stage3OverjumpAudioSerial;
+      ++game.crashAudioSerial;
+    }
+    return;
+  }
+  if (game.level3Bounce == 3) level3CollectBag(game);
+}
+
+// $8FD7: the celebration lasts 160 frames and then waits for $220A, which
+// the coin shower raises after forty scoring coins.
+void level3UpdateGoal(Game& game) {
+  ++game.goalFrame;
+  game.level3Countdown = (game.level3Countdown - 1) & 0xff;
+  if (game.level3Countdown != 0) return;
+  if (game.level3Missed != 0) {
+    game.scene = Scene::Tally;
+    game.tallyFrame = 0;
+    return;
+  }
+  game.level3Countdown = 1;
+}
+
+// $9015 (state 7) and $8509 (state 8).
+void level3UpdateDeath(Game& game) {
+  if (game.level3State == 7) {
+    if (game.level3Countdown != 0) {
+      --game.level3Countdown;
+      game.level3Velocity &= 0xff;
+      return;
+    }
+    game.level3Velocity = static_cast<std::uint16_t>(game.level3Velocity + 0x20);
+    game.level3Y = static_cast<std::uint8_t>(game.level3Y + (game.level3Velocity >> 8));
+    if (game.level3Y >= 0xd8) {
+      game.level3State = 8;
+      game.level3Countdown = kLevel3FallenFrames;
+      game.level3Pose = Level3Pose::Fallen;
+      game.level3PoseFrame = 0;
+    }
+    return;
+  }
+  if (game.level3State != 8) return;
+  --game.level3Countdown;
+  if (game.level3Countdown > 0) return;
+  // $8517-$8525: one page back, two from page byte $F9/$F8.
+  int pageByte = level3PageByte(game);
+  if (pageByte != 0) {
+    if (pageByte < 0xfa) pageByte = (pageByte + 1) & 0xff;
+    pageByte = (pageByte + 1) & 0xff;
+  }
+  game.level3RestartPage = pageByte;
+  game.level3Died = true;
+  game.scene = Scene::Crashed;
+  game.crashFrame = 0;
+  game.crashDurationFrames = kLevel3RestartFrames;
+  --game.lives;
+}
+
+// $7E67/$7E7B/$7F3B: the bird carries the bag from the left edge to column
+// $B4 (196 frames), then a coin leaves the bag every eighth frame.
+void level3UpdatePresentation(Game& game) {
+  if (!game.level3BirdActive) return;
+  if (game.level3BirdState == 3) {
+    game.level3BirdX = static_cast<std::uint8_t>(game.level3BirdX + 1);
+    game.level3BirdBagX = static_cast<std::uint8_t>(game.level3BirdBagX + 1);
+    if (game.level3BirdBagX == 0xb4) game.level3BirdState = 4;
+  }
+  if (game.level3CoinStarted) ++game.level3PileFrame;
+  for (auto& coin : game.level3Coins) {
+    if (!coin.active || coin.bagCopy) continue;
+    ++coin.age;
+    coin.yFraction = static_cast<std::uint8_t>(coin.yFraction + 8);
+    if (coin.yFraction < 8) ++coin.yVelocity;
+    coin.y = static_cast<std::uint8_t>(coin.y + coin.yVelocity);
+    // $7E8E: the fraction carry moves the coin one column sideways.
+    const std::uint8_t previous = coin.xFraction;
+    coin.xFraction = static_cast<std::uint8_t>(coin.xFraction + coin.xSpeed);
+    if (coin.xFraction < previous) {
+      coin.x = static_cast<std::uint8_t>(coin.x + (coin.xNegative ? -1 : 1));
+    }
+    if (coin.y >= 0xb0) coin = Level3Coin{};
+  }
+}
+
+void level3SpawnCoin(Game& game) {
+  if (!game.level3BirdActive || game.level3BirdState != 4) return;
+  if ((game.level1BoardFrameByte & 7) != 0) return;
+  Level3Coin* free = nullptr;
+  for (auto& coin : game.level3Coins) {
+    if (!coin.active) {
+      free = &coin;
+      break;
+    }
+  }
+  if (!free) return;
+  const auto lane = kLevel3CoinLanes[static_cast<std::size_t>(game.level3CoinIndex)];
+  *free = Level3Coin{};
+  free->active = true;
+  free->x = static_cast<std::uint8_t>(lane.first + game.level3BirdBagX);
+  free->xNegative = lane.second >= 0x80;
+  free->xSpeed = free->xNegative ? static_cast<std::uint8_t>(-lane.second) : lane.second;
+  free->y = static_cast<std::uint8_t>(kLevel3BagRow);
+  if (!game.level3CoinStarted) {
+    // $7F94: the bag opens, the coin pile records take bag slots 1 and 2 and
+    // the bag record is copied into coin slot 8, which stays occupied.
+    game.level3CoinStarted = true;
+    game.level3PileFrame = 0;
+    for (std::size_t index = 1; index <= 2; ++index) {
+      auto& pile = game.level3Bags[index];
+      pile = Level3Bag{};
+      pile.active = true;
+      pile.state = 6;
+      pile.x = static_cast<std::uint8_t>(game.level3BirdX + (index == 1 ? 0 : 0x10));
+      pile.y = 0xac;
+    }
+    auto& copy = game.level3Coins[8];
+    copy = Level3Coin{};
+    copy.active = true;
+    copy.bagCopy = true;
+    copy.x = game.level3BirdBagX;
+    copy.y = static_cast<std::uint8_t>(kLevel3BagRow);
+    ++game.level3ShowerAudioSerial;
+    return;
+  }
+  game.level3CoinIndex = (game.level3CoinIndex + 1) % 13;
+  const int value = std::min(game.level3Level2Visits, 5);
+  game.score += value > 0 ? value * 100 : 20;
+  ++game.rewardCoinsAwarded;
+  ++game.level3CoinCount;
+  if (game.level3CoinCount >= 0x28) ++game.level3Missed;
+}
+
+void updateLevel3(Game& game, const Uint8* keyboard, float controllerAxis) {
   game.player.previous = game.player.position;
   game.previousCameraX = game.cameraX;
-  if (game.stage3Tambourines.empty()) return;
-
-  for (auto& drum : game.stage3Tambourines) {
-    if (drum.compressionFrame > 0) --drum.compressionFrame;
-  }
+  if (game.stage1ScorePopupFrame > 0) --game.stage1ScorePopupFrame;
 
   const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
                         keyboard[SDL_SCANCODE_A] ||
@@ -2298,195 +3027,59 @@ void updateStage3(Game& game, const Uint8* keyboard, bool,
                          keyboard[SDL_SCANCODE_D] ||
                          controllerAxis > 0.35F;
 
-  if (!moveLeft && !moveRight) game.stage3DirectionArmed = true;
+  if (game.level3TileTimer > 0) --game.level3TileTimer;
+  ++game.level3PoseFrame;
 
-  // Event 3 is node based in the ROM: the joystick chooses an adjacent
-  // tambourine during the first beats of a rebound. Once chosen, the whole
-  // arc is committed and ends exactly at that drum's center. There is no
-  // free horizontal drift and the grass is never a landing surface.
-  if (!game.stage3Traveling &&
-      game.stage3DirectionArmed &&
-      game.stage3BounceFrame < kStage3DirectionWindowFrames &&
-      moveLeft != moveRight) {
-    const int direction = moveLeft ? -1 : 1;
-    const int requested = game.stage3CurrentTambourine + direction;
-    if (requested >= 0 &&
-        requested < static_cast<int>(game.stage3Tambourines.size())) {
-      game.stage3TargetTambourine = requested;
-      game.stage3Traveling = true;
-      game.stage3TravelStartFrame = game.stage3BounceFrame;
-      game.stage3TravelStartX = game.player.position.x;
-      game.player.facingRight = direction > 0;
-      game.stage3DirectionArmed = false;
+  // $8B3E/$8BA9
+  level3Collisions(game);
+  // $923E
+  level3SpawnPerformer(game);
+  for (std::size_t index = 0; index < game.level3Performers.size(); ++index) {
+    level3UpdatePerformer(game, index);
+  }
+  for (auto& flame : game.level3Flames) level3UpdateFlame(game, flame);
+  for (auto& knife : game.level3Knives) level3UpdateKnife(game, knife);
+  // $7D65
+  for (auto& bag : game.level3Bags) level3UpdateBag(game, bag);
+  // $8C50
+  if (game.level3State == 1) {
+    // $8532: the stick is latched every frame; $8F54 reads it at a landing.
+    game.level3Stick = (moveLeft ? 1 : 0) | (moveRight ? 2 : 0);
+    level3MovePlayer(game);
+  } else if (game.level3State == 4) {
+    level3UpdateGoal(game);
+  } else if (game.level3State == 7 || game.level3State == 8) {
+    level3UpdateDeath(game);
+  }
+  // $7DF2/$7F3B
+  level3UpdatePresentation(game);
+  level3SpawnCoin(game);
+  // $8AA8
+  level3SpawnBag(game);
+  if (game.level3ClearProjectiles) {
+    for (auto& flame : game.level3Flames) flame = Level3Flame{};
+    for (auto& knife : game.level3Knives) knife = Level3Knife{};
+  }
+
+  // $BB73/$BC12: the bonus counts down every frame except during the
+  // celebration; sixty-two frames after it reaches zero Charlie is dropped
+  // like a projectile hit.
+  if (game.level3State != 4) {
+    if (game.bonus > 0) --game.bonus;
+    if (game.bonus == 0 && game.level3State == 1) {
+      // $BC64/$BC6D: the countdown ($2263, from $40) starts in the frame the
+      // digits reach zero; the frame that reads two drops Charlie.
+      if (game.level3BonusTimeout == 0) game.level3BonusTimeout = 0x40;
+      const int before = game.level3BonusTimeout--;
+      if (before == 2) level3Hit(game, 4);
     }
   }
 
-  const int bounceDuration =
-      game.stage3Traveling ? kStage3TransferFrames : kStage3BounceFrames;
-  const int previousBounceFrame = game.stage3BounceFrame;
-  game.stage3BounceFrame =
-      std::min(game.stage3BounceFrame + 1, bounceDuration);
-  const float progress = static_cast<float>(game.stage3BounceFrame) /
-                         static_cast<float>(bounceDuration);
-  const float oldProgress = static_cast<float>(previousBounceFrame) /
-                            static_cast<float>(bounceDuration);
-  const auto& currentDrum = game.stage3Tambourines[static_cast<std::size_t>(
-      game.stage3CurrentTambourine)];
-  const auto& targetDrum = game.stage3Tambourines[static_cast<std::size_t>(
-      game.stage3TargetTambourine)];
-  if (game.stage3Traveling) {
-    // Input is accepted only during the opening rise, but the committed
-    // transfer itself lasts for the complete bounce.  Finishing all sideways
-    // travel at the apex produced the visible "rocket launch" followed by a
-    // straight drop that the arcade never performs.
-    const int remainingFrames =
-        std::max(1, kStage3TransferFrames - game.stage3TravelStartFrame);
-    const float travelProgress = std::clamp(
-        static_cast<float>(game.stage3BounceFrame -
-                           game.stage3TravelStartFrame) /
-            static_cast<float>(remainingFrames),
-        0.0F, 1.0F);
-    const float eased = 0.5F - 0.5F * std::cos(travelProgress * kPi);
-    game.player.position.x =
-        game.stage3TravelStartX +
-        (targetDrum.worldX - game.stage3TravelStartX) * eased;
-  } else {
-    game.player.position.x = currentDrum.worldX;
-    game.stage3TargetTambourine = game.stage3CurrentTambourine;
-    game.stage3TravelStartFrame = 0;
-    game.stage3TravelStartX = game.player.position.x;
-  }
-  game.player.runSpeed = 0.0F;
-  game.cameraX = stage3CameraFor(game.player.position.x);
-
-  const float height = game.stage3Traveling
-                           ? 118.0F
-                           : stage3BounceHeight(game.stage3BounceLevel);
-  game.player.position.y =
-      game.stage3BounceBaseY - std::sin(progress * kPi) * height;
-  game.player.verticalVelocity =
-      (std::sin(oldProgress * kPi) - std::sin(progress * kPi)) * height /
-      static_cast<float>(kFixedDt);
-  game.player.jumpFrame = game.stage3BounceFrame;
-  game.player.grounded = false;
-
-  // The fourth stationary rebound stays front-facing and ends when Charlie's
-  // head reaches the underside of the circus fascia. Moving to a neighboring
-  // drum before that rebound commits instead produces the normal spiral arc.
-  if (!game.stage3Traveling && game.stage3BounceLevel == 4 &&
-      (game.player.position.y <= kStage3RoofImpactY || progress >= 0.5F)) {
-    crashStage3Roof(game);
-    return;
-  }
-
-  // Only the third stationary bounce reaches the suspended money bag.
-  if (!game.stage3Traveling && game.stage3BounceLevel == 3) {
-    for (auto& drum : game.stage3Tambourines) {
-      if (!drum.bagAvailable) continue;
-      const float bagY = kStage3PrizeBagY;
-      if (std::abs(game.player.position.x - drum.worldX) < 34.0F &&
-          std::abs((game.player.position.y - 60.0F) - bagY) < 40.0F) {
-        drum.bagAvailable = false;
-        game.score += 500;
-        showStage1Score(game, 500, drum.worldX, bagY);
-        ++game.prizeBagsCollected;
-        ++game.prizeBagAudioSerial;
-      }
-    }
-  }
-
-  if (game.stage3BounceFrame >= bounceDuration) {
-    if (game.stage3Traveling) {
-      game.stage3CurrentTambourine = game.stage3TargetTambourine;
-      game.stage3Traveling = false;
-      // A held direction is the arcade's continuous-travel control: landing
-      // re-arms the next adjacent transfer. Releasing the stick still leaves
-      // Charlie bouncing vertically on the current drum.
-      game.stage3DirectionArmed = true;
-      game.stage3BounceLevel = 1;
-    } else {
-      game.stage3BounceLevel =
-          std::min(4, game.stage3BounceLevel + 1);
-    }
-    auto& landingDrum = game.stage3Tambourines[static_cast<std::size_t>(
-        game.stage3CurrentTambourine)];
-    landingDrum.compressionFrame = 10;
-    game.player.position = {landingDrum.worldX, kStage3TambourineTopY};
+  syncLevel3World(game);
+  if (game.scene == Scene::Crashed) {
     game.player.previous = game.player.position;
-    game.stage3TargetTambourine = game.stage3CurrentTambourine;
-    game.stage3BounceBaseY = kStage3TambourineTopY;
-    game.stage3BounceFrame = 0;
-    ++game.stage3BounceAudioSerial;
-    if (game.stage3CurrentTambourine ==
-        static_cast<int>(game.stage3Tambourines.size()) - 1) {
-      finishStage(game);
-      return;
-    }
+    game.previousCameraX = game.cameraX;
   }
-
-  // Both Event 3 performers throw straight upward in their own lane. Knives
-  // complete the arcade up/down toss, but the fire-breather's flame is a
-  // one-way burst: it rises to its cutoff height, disappears, and leaves a
-  // deliberate clear interval long enough for Charlie to cross one drum.
-  constexpr int kKnifeProjectileFrames = 108;
-  constexpr int kFlameProjectileFrames = 46;
-  constexpr int kHazardCycleFrames = 150;
-  for (std::size_t index = 0; index < game.stage3Performers.size(); ++index) {
-    auto& performer = game.stage3Performers[index];
-    auto& projectile = game.stage3Projectiles[index];
-    ++performer.actionFrame;
-    if (!projectile.active &&
-        performer.actionFrame >= kHazardCycleFrames) {
-      projectile.active = true;
-      projectile.age = 0;
-      projectile.kind = performer.kind;
-      projectile.position = {performer.worldX, kStage3GroundY - 72.0F};
-      performer.actionFrame = 0;
-    }
-    if (!projectile.active) continue;
-    ++projectile.age;
-    const bool knife =
-        performer.kind == Stage3PerformerKind::KnifeThrower;
-    const int projectileFrames =
-        knife ? kKnifeProjectileFrames : kFlameProjectileFrames;
-    const float projectileProgress = std::clamp(
-        static_cast<float>(projectile.age) /
-            static_cast<float>(projectileFrames),
-        0.0F, 1.0F);
-    projectile.position.x = performer.worldX;
-    projectile.position.y =
-        kStage3GroundY - 72.0F -
-        (knife ? std::sin(projectileProgress * kPi) * 286.0F
-               : projectileProgress * 220.0F);
-    // The original fireball is narrow, and only its bright core is lethal.
-    // Keeping the collision area inside the painted flame leaves the same
-    // pass-by timing window visible in the arcade recording.
-    const float collisionHalfWidth = knife ? 18.0F : 11.0F;
-    const float collisionHalfHeight = knife ? 24.0F : 28.0F;
-    if (std::abs(game.player.position.x - projectile.position.x) <
-            collisionHalfWidth &&
-        std::abs((game.player.position.y - 44.0F) -
-                 projectile.position.y) < collisionHalfHeight) {
-      crashPlayer(game);
-      return;
-    }
-    if (projectile.age >= projectileFrames) {
-      projectile.active = false;
-      // Keep counting from the end of the active flight. The remainder of
-      // the fixed cycle is the readable clear window before the next toss.
-    }
-  }
-
-  if (game.stage1ScorePopupFrame > 0) --game.stage1ScorePopupFrame;
-  if (game.bonus > 0) --game.bonus;
-  if (game.bonus <= 0) {
-    // Event 3's timer is an absolute game limit in the recorded ROM run.
-    // Do not restart into an already-expired timer and crash repeatedly.
-    game.lives = 1;
-    crashPlayer(game);
-    return;
-  }
-  awardScoreLives(game);
 }
 
 void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
@@ -3732,7 +4325,18 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         game.selectedEvent == 0 ? kLevel1FailureFrames : game.crashDurationFrames;
     if (game.crashFrame >= failureFrames) {
       restartAfterCrash(game);
+      if (game.selectedEvent == 2 && game.scene == Scene::Playing) {
+        // $8C61 initialises the board and runs the first rebound tick in
+        // the same frame (the capture shows row $B0 on the re-init frame).
+        updateLevel3(game, keyboard, controllerAxis);
+      }
     }
+    return;
+  }
+
+  if (game.scene == Scene::Goal && game.selectedEvent == 2) {
+    // $8FD7: the stage handler keeps running through the celebration.
+    updateLevel3(game, keyboard, controllerAxis);
     return;
   }
 
@@ -3741,20 +4345,18 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     game.previousCameraX = game.cameraX;
     game.player.runSpeed = 0.0F;
     const bool stage2 = game.selectedEvent == 1;
-    const bool stage3 = game.selectedEvent == 2;
+    const bool stage3 = false;
     const bool stage4 = game.selectedEvent == 3;
     game.player.position.y = stage2 ? kStage2GoalTopY
-                                    : (stage3 ? kStage3TambourineTopY
-                                              : (stage4 ? kStage4GoalTopY
-                                                        : kGoalLandingY));
+                                    : (stage4 ? kStage4GoalTopY
+                                              : kGoalLandingY);
     game.player.previous.y = game.player.position.y;
     game.player.grounded = true;
     game.player.jumpFrame = -1;
     game.cameraX =
         game.player.position.x -
         (stage2 ? 340.0F
-                : (stage3 ? kStage3GoalScreenX
-                          : (stage4 ? kStage4GoalScreenX : kGoalScreenX)));
+                : (stage4 ? kStage4GoalScreenX : kGoalScreenX));
     if (game.selectedEvent == 0) {
       // The board freezes the scroll where the goal triggered; the rider stays
       // at his fixed column.
@@ -3809,7 +4411,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     return;
   }
   if (game.selectedEvent == 2) {
-    updateStage3(game, keyboard, jumpPressed, controllerAxis);
+    updateLevel3(game, keyboard, controllerAxis);
     return;
   }
   if (game.selectedEvent == 3) {
@@ -4502,8 +5104,8 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
   const int birdStart = kGoalArrivalFrames;
   const int bagDropStart = birdStart + kBirdArrivalFrames;
   const int showerStart = bagDropStart + kBagDropFrames;
-  const bool stage3 = game.selectedEvent == 2;
-  const float goalScreenX = stage3 ? kStage3GoalScreenX : kGoalScreenX;
+  const bool stage3 = false;
+  const float goalScreenX = kGoalScreenX;
   if (birdTexture && game.goalFrame >= birdStart) {
     int textureWidth = 0;
     int textureHeight = 0;
@@ -5269,225 +5871,330 @@ void drawSheetFrame(SDL_Renderer* renderer, SDL_Texture* texture,
                     flip);
 }
 
+// ---- Level 3 drawing ------------------------------------------------------
+// Board columns are drawn relative to the interpolated camera: every scrolled
+// record keeps a constant world column (progress + column), so only the camera
+// needs interpolating.
+
+float level3ScreenX(int progress, int column, float camera) {
+  return static_cast<float>(progress + column) * kSourceToWorldX - camera;
+}
+
 void drawStage3Tambourine(SDL_Renderer* renderer, SDL_Texture* texture,
-                          float x, int compressionFrame, bool goal) {
-  if (!texture) return;
+                          float x, float squash, bool goal) {
+  if (!texture) {
+    const float width = 48.0F * kSourceToWorldX;
+    fillRect(renderer, x - width * 0.5F, kStage3TambourineTopY, width,
+             kStage3GroundY - kStage3TambourineTopY, color(236, 88, 173));
+    return;
+  }
   const float normalHeight = kStage3GroundY - kStage3TambourineTopY;
-  const float compression =
-      static_cast<float>(std::clamp(compressionFrame, 0, 10)) / 10.0F;
-  const float height = normalHeight * (1.0F - compression * 0.18F);
-  const float width = goal ? 172.0F : 94.0F;
-  // Hold the cylinder's bottom fixed while the padded top compresses and
-  // recovers after every landing, matching the ROM's rebound sprite family.
-  const SDL_FRect destination{x - width * 0.5F,
-                              kStage3GroundY - height,
+  const float height = normalHeight * (1.0F - squash * 0.18F);
+  // The arcade drum is six tiles (48 columns) wide; the goal painting keeps
+  // the wider silhouette chosen for the finish.
+  const float width = goal ? 172.0F : 48.0F * kSourceToWorldX;
+  const SDL_FRect destination{x - width * 0.5F, kStage3GroundY - height,
                               width, height};
   SDL_RenderCopyF(renderer, texture, nullptr, &destination);
+}
+
+void drawLevel3Sign(SDL_Renderer* renderer, float screenX,
+                    std::string_view label) {
+  // $26C0-$26E0 props: three 16-column cells at row $F0, the bottom of the
+  // board's screen.
+  const float width = 48.0F * kSourceToWorldX;
+  const float top = level3RowToY(0xf0) + 4.0F;
+  const float height = 30.0F;
+  fillRect(renderer, screenX - width * 0.5F, top, width, height,
+           color(29, 179, 239));
+  fillRect(renderer, screenX - width * 0.5F + 4.0F, top + 4.0F,
+           width - 8.0F, height - 8.0F, color(239, 238, 196));
+  drawText(renderer, label, screenX, top + 8.0F, 1.1F,
+           color(245, 83, 24), true);
+}
+
+int level3PerformerFrame(const Level3Performer& performer) {
+  // Fire breather: $ECE7 idle (torch flicker every 8 frames), $ECC3 breathing
+  // (32 frames).  Juggler: $ED17 idle, $ED0E throw (14 frames), $ECFC catch
+  // (14 catch, 10 idle, 14 throw).
+  const int frame = performer.poseFrame;
+  if (performer.type == 0) {
+    if (performer.pose == 1 && frame < 32) {
+      return 3 + std::min(frame / 8, 3);
+    }
+    constexpr std::array<int, 4> idle{0, 8, 10, 11};
+    return idle[static_cast<std::size_t>((frame / 8) & 3)];
+  }
+  if (performer.pose == 2) {
+    if (frame < 7) return 3;
+    if (frame < 14) return 4;
+    return 0;
+  }
+  if (performer.pose == 3) {
+    if (frame < 14) return 6;
+    if (frame < 24) return 5;
+    if (frame < 31) return 3;
+    if (frame < 38) return 4;
+    return 0;
+  }
+  return 0;
+}
+
+void drawLevel3Charlie(SDL_Renderer* renderer, const Game& game,
+                       const Assets& assets, float screenX, float feetY) {
+  // Poses: $EC93/$EC6C flip through five cells for twenty frames and then
+  // hold the upright cell; $EC4E stays on one cell for 24 frames and then
+  // alternates two cells every four frames; $EAAA alternates every sixteen.
+  SDL_Texture* texture = assets.stage3Charlie;
+  int columns = 4;
+  int rows = 3;
+  int frame = 0;
+  SDL_RendererFlip flip = SDL_FLIP_NONE;
+  float width = 110.0F;
+  float height = 116.0F;
+  float baseline = feetY + 6.0F;
+  const int poseFrame = game.level3PoseFrame;
+  switch (game.level3Pose) {
+    case Level3Pose::MovingRight:
+    case Level3Pose::MovingLeft: {
+      constexpr std::array<int, 5> flipCells{3, 4, 5, 6, 7};
+      frame = poseFrame < 20 ? flipCells[static_cast<std::size_t>(poseFrame / 4)]
+                             : 0;
+      if (game.level3Pose == Level3Pose::MovingLeft) flip = SDL_FLIP_HORIZONTAL;
+      break;
+    }
+    case Level3Pose::Stationary:
+      texture = assets.stage3CharlieVertical;
+      if (poseFrame < 24) {
+        frame = std::min(poseFrame / 4, 3);
+      } else {
+        frame = ((poseFrame / 4) & 1) == 0 ? 4 : 6;
+      }
+      break;
+    case Level3Pose::Cheer:
+      // $9173 lifts the celebration cells ten rows; the painted cheer keeps
+      // its shoes on the drum instead.
+      frame = ((poseFrame / 16) & 1) == 0 ? 11 : 10;
+      baseline += 10.0F * kLevel3RowScale;
+      break;
+    case Level3Pose::Fallen:
+      frame = 9;
+      break;
+    case Level3Pose::Roof:
+      return;
+  }
+  if (game.level3State == 7) {
+    // $9015: seven frozen frames, then the fall.
+    if (game.level3Countdown == 0) frame = 10;
+  }
+  if (!texture) {
+    fillRect(renderer, screenX - 20.0F, feetY - 80.0F, 40.0F, 80.0F,
+             color(220, 40, 40));
+    return;
+  }
+  drawSheetFrame(renderer, texture, columns, rows, frame, screenX, baseline,
+                 width, height, flip, 0.0);
 }
 
 void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
                      const Assets& assets, double timeSeconds,
                      double interpolation) {
-  const float camera = game.previousCameraX +
-                       (game.cameraX - game.previousCameraX) *
-                           static_cast<float>(interpolation);
+  // The 96-frame restart phase wipes the playfield and redraws the board at
+  // the restart page ($6D2C); after the first quarter show that fresh board.
+  const bool restarting = game.scene == Scene::Crashed && game.crashFrame >= 24;
+  const int progress =
+      restarting ? static_cast<int>((0x10000 - ((game.level3RestartPage & 0xff) << 8)) & 0xffff)
+                 : level3Progress(game);
+  const float camera = restarting
+                           ? static_cast<float>(progress) * kSourceToWorldX
+                           : game.previousCameraX +
+                                 (game.cameraX - game.previousCameraX) *
+                                     static_cast<float>(interpolation);
   drawBackdrop(renderer, camera, false, assets, game, timeSeconds);
 
-  for (std::size_t index = 0; index < game.stage3Tambourines.size(); ++index) {
-    const auto& drum = game.stage3Tambourines[index];
-    const float x = drum.worldX - camera;
-    const bool goal = index + 1 == game.stage3Tambourines.size();
-    if (x < -110.0F || x > kWorldWidth + 110.0F) continue;
+  // Drums: tile rows 6-11, 17-22 and 27-0 of every 256-column page.
+  for (int index = 0; index < kLevel3DrumCount; ++index) {
+    const float x = static_cast<float>(level3DrumCentre(index)) *
+                        kSourceToWorldX - camera;
+    if (x < -120.0F || x > kWorldWidth + 120.0F) continue;
+    const bool goal = index == kLevel3DrumCount - 1;
+    const bool pressed =
+        game.level3TileTimer > 0 && game.level3PressedDrum == index;
     drawStage3Tambourine(renderer,
                          goal ? assets.stage3GoalTambourine
                               : assets.stage3Tambourine,
-                         x, drum.compressionFrame, goal);
-    if (drum.bagAvailable) {
-      const float bagY = kStage3PrizeBagY;
+                         x, pressed ? 1.0F : 0.0F, goal);
+  }
+
+  for (const auto& sign : kLevel3Signs) {
+    const float x = static_cast<float>(sign.worldColumn) * kSourceToWorldX - camera;
+    if (x < -80.0F || x > kWorldWidth + 80.0F) continue;
+    drawLevel3Sign(renderer, x, sign.text);
+  }
+
+  // Bags: $ED5C blinks four frames on, two off; the popup shows the value
+  // for 32 frames; state 6 is the coin pile of the perfect clear.
+  for (const auto& bag : game.level3Bags) {
+    if (!bag.active || restarting) continue;
+    const float x = level3ScreenX(progress, bag.x - 8, camera);
+    if (bag.state == 3) {
+      if (bag.age % 6 >= 4) continue;
+      const float centerY = level3RowToY(static_cast<float>(bag.y) + 8.0F);
       if (assets.rewardBag) {
-        const SDL_FRect bagDestination{x - 24.0F, bagY - 31.0F,
-                                       48.0F, 52.0F};
-        SDL_RenderCopyF(renderer, assets.rewardBag, nullptr,
-                        &bagDestination);
+        const SDL_FRect destination{x - 24.0F, centerY - 26.0F, 48.0F, 52.0F};
+        SDL_RenderCopyF(renderer, assets.rewardBag, nullptr, &destination);
+      } else {
+        ellipse(renderer, x, centerY, 16.0F, 20.0F, color(223, 158, 39), 4);
+      }
+    } else if (bag.state == 4) {
+      const float centerY = level3RowToY(static_cast<float>(bag.y) + 8.0F);
+      drawText(renderer, std::to_string(bag.value), x, centerY - 8.0F, 1.25F,
+               color(255, 245, 96), true);
+    } else if (bag.state == 6) {
+      // $F9F5: blank for 96 frames, then three growing stages of 64 frames.
+      const int stage = game.level3PileFrame < 96
+                            ? 0
+                            : std::min(3, 1 + (game.level3PileFrame - 96) / 64);
+      const float baseY = level3RowToY(static_cast<float>(bag.y) + 16.0F);
+      for (int coin = 0; coin < stage * 3; ++coin) {
+        const float offsetX = static_cast<float>((coin % 3) - 1) * 12.0F +
+                              static_cast<float>(coin / 3) * 4.0F;
+        const float offsetY = -static_cast<float>(coin / 3) * 7.0F;
+        drawCoin(renderer, x + offsetX, baseY + offsetY - 6.0F, 1.0F);
       }
     }
   }
 
-  // In the original board the distance plaques sit in the performer lanes,
-  // not underneath the tambourines. Draw them above the drums but below the
-  // performers so an act's feet naturally overlap the ground sign.
-  for (const auto& marker : game.meterMarkers) {
-    const float x = marker.worldX - camera;
-    if (x < -50.0F || x > kWorldWidth + 50.0F) continue;
-    fillRect(renderer, x - 27.0F, kStage3GroundY - 20.0F, 54.0F, 21.0F,
-             color(29, 179, 239));
-    fillRect(renderer, x - 23.0F, kStage3GroundY - 17.0F, 46.0F, 15.0F,
-             color(239, 238, 196));
-    drawText(renderer, std::to_string(marker.meters) + "M", x,
-             kStage3GroundY - 14.0F, 0.9F, color(245, 83, 24), true);
-  }
-
-  for (std::size_t index = 0; index < game.stage3Performers.size(); ++index) {
-    const auto& performer = game.stage3Performers[index];
-    const float x = performer.worldX - camera;
+  // Performers stand on the grass at row $E0 + 32.
+  for (const auto& performer : game.level3Performers) {
+    if (!performer.active || restarting) continue;
+    const float x = level3ScreenX(progress, performer.x, camera);
     if (x < -80.0F || x > kWorldWidth + 80.0F) continue;
-    const bool knife =
-        performer.kind == Stage3PerformerKind::KnifeThrower;
-    // These 12-frame actions were authored and checked as continuous WAM
-    // motion studies. Frame zero is not blindly tied to the projectile:
-    // actionFrame resets at release, so the first portion is follow-through
-    // and tracking, the middle is recovery, and the final portion anticipates
-    // the next release. This keeps the hands, head, and projectile in one
-    // readable rhythm instead of jumping among five unrelated poses.
-    const int cycle = performer.actionFrame % 150;
-    int frame = 0;
-    if (knife) {
-      frame = cycle < 6 ? 3 :
-              cycle < 20 ? 4 :
-              cycle < 34 ? 5 :
-              cycle < 48 ? 6 :
-              cycle < 62 ? 7 :
-              cycle < 76 ? 8 :
-              cycle < 90 ? 9 :
-              cycle < 104 ? 10 :
-              cycle < 118 ? 11 :
-              cycle < 130 ? 0 :
-              cycle < 138 ? 1 :
-              cycle < 145 ? 2 : 3;
-    } else {
-      frame = cycle < 8 ? 5 :
-              cycle < 20 ? 6 :
-              cycle < 32 ? 7 :
-              cycle < 44 ? 8 :
-              cycle < 58 ? 9 :
-              cycle < 72 ? 10 :
-              cycle < 88 ? 11 :
-              cycle < 110 ? 0 :
-              cycle < 124 ? 1 :
-              cycle < 136 ? 2 :
-              cycle < 144 ? 3 :
-              cycle < 148 ? 4 : 5;
-    }
-    SDL_Texture* texture = knife ? assets.stage3KnifeThrower
-                                 : assets.stage3FlameThrower;
+    const bool juggler = performer.type != 0;
+    SDL_Texture* texture = juggler ? assets.stage3KnifeThrower
+                                   : assets.stage3FlameThrower;
+    const int frame = level3PerformerFrame(performer);
     drawSheetFrame(renderer, texture, 4, 3, frame, x, kStage3GroundY,
-                   knife ? 105.6F : 112.8F,
-                   knife ? 134.4F : 139.2F);
+                   juggler ? 105.6F : 112.8F, juggler ? 134.4F : 139.2F);
+  }
 
-    const auto& projectile = game.stage3Projectiles[index];
-    if (!projectile.active) continue;
-    const int projectileFrame = (projectile.age / 4) & 3;
-    if (knife) {
-      drawSheetFrame(renderer, assets.stage3Projectiles, 4, 2,
-                     projectileFrame, projectile.position.x - camera,
-                     projectile.position.y + 16.0F, 28.0F, 36.0F,
-                     SDL_FLIP_NONE,
-                     static_cast<double>(projectile.age * 17));
+  // Flames: two cells, the lower one at the record row.
+  for (const auto& flame : game.level3Flames) {
+    if (!flame.active || restarting) continue;
+    const float x = level3ScreenX(progress, flame.x - 8, camera);
+    const float centerY = level3RowToY(static_cast<float>(flame.y));
+    const int frame = (flame.age / 4) & 3;
+    if (assets.stage3FlameProjectile) {
+      drawSheetFrame(renderer, assets.stage3FlameProjectile, 4, 1, frame, x,
+                     centerY + 46.0F, 92.0F, 112.0F);
     } else {
-      // The ROM flame is a compact upright droplet. It never rotates into a
-      // sideways fireball; its four frames only flicker internally before the
-      // projectile is retired at the end of its vertical cycle.
-      drawSheetFrame(renderer, assets.stage3FlameProjectile, 4, 1,
-                     projectileFrame, projectile.position.x - camera,
-                     projectile.position.y + 71.0F, 80.0F, 140.0F);
+      ellipse(renderer, x, centerY, 14.0F, 36.0F, color(255, 160, 30), 6);
     }
   }
 
-  const float playerWorldX = game.player.previous.x +
+  // Knives: one cell; hidden for the sixteen held frames ($ED4A).
+  for (const auto& knife : game.level3Knives) {
+    if (!knife.active || knife.state == 2 || restarting) continue;
+    const float x = level3ScreenX(progress, knife.x - 8, camera);
+    const float centerY = level3RowToY(static_cast<float>(knife.y) + 8.0F);
+    const int frame = (knife.age / 4) & 3;
+    if (assets.stage3Projectiles) {
+      drawSheetFrame(renderer, assets.stage3Projectiles, 4, 2, frame, x,
+                     centerY + 18.0F, 28.0F, 36.0F);
+    } else {
+      fillRect(renderer, x - 3.0F, centerY - 16.0F, 6.0F, 32.0F,
+               color(220, 220, 240));
+    }
+  }
+
+  const float playerScreenX =
+      game.player.previous.x +
       (game.player.position.x - game.player.previous.x) *
-          static_cast<float>(interpolation);
-  const float playerY = game.player.previous.y +
+          static_cast<float>(interpolation) - camera;
+  const float playerFeetY =
+      game.player.previous.y +
       (game.player.position.y - game.player.previous.y) *
           static_cast<float>(interpolation);
-  int charlieFrame = 0;
-  int charlieRows = 3;
-  int charlieColumns = 4;
-  double charlieAngle = 0.0;
-  // The original front-facing atlas has much wider transparent cell margins
-  // than the WAM tuck. Match their painted widths while preserving the
-  // established vertical bounce height; this prevents a size pop at takeoff
-  // without making the extended apex pose unnaturally tall.
-  float charlieWidth = 110.0F;
-  float charlieHeight = 116.0F;
-  SDL_Texture* charlieTexture = assets.stage3CharlieVertical;
-  if (game.scene == Scene::Goal) {
-    // A compact crouch-rise-cheer loop keeps Charlie celebrating on the goal
-    // drum instead of freezing on one pose.
-    constexpr std::array<int, 6> celebrationFrames{0, 1, 2, 3, 2, 1};
-    charlieFrame = celebrationFrames[static_cast<std::size_t>(
-        (game.goalFrame / 7) % static_cast<int>(celebrationFrames.size()))];
-  } else if (game.stage3Traveling) {
-    const int remainingFrames =
-        std::max(1, kStage3TransferFrames - game.stage3TravelStartFrame);
-    const float progress = std::clamp(
-        static_cast<float>(game.stage3BounceFrame -
-                           game.stage3TravelStartFrame) /
-            static_cast<float>(remainingFrames),
-        0.0F, 1.0F);
-    // WAM defines the compact tuck and the board-derived 48-frame timing.
-    // Rotate one centered HD tuck continuously instead of stepping through a
-    // few unrelated painted poses; those frame swaps caused the visible
-    // shaking/rocket-launch effect during every drum transfer.
-    charlieTexture = assets.stage3CharlieTuck;
-    charlieColumns = 1;
-    charlieRows = 1;
-    charlieFrame = 0;
-    charlieAngle = game.player.facingRight
-                       ? static_cast<double>(progress * 360.0F)
-                       : static_cast<double>(progress * -360.0F);
-    charlieWidth = 100.0F;
-    charlieHeight = 100.0F;
-  } else {
-    const float progress = static_cast<float>(game.stage3BounceFrame) /
-                           static_cast<float>(kStage3BounceFrames);
-    // Drive the pose directly from physical bounce height: compress at both
-    // drum contacts and extend at the apex. The previous linear 0..11 walk
-    // showed crouched frames at the apex and upright frames at landing.
-    const float extension = std::sin(progress * kPi);
-    charlieFrame = std::clamp(
-        static_cast<int>(std::lround(extension * 5.0F)), 0, 5);
-  }
-  // On an over-jump the board removes Charlie from the arena and draws a
-  // separate shocked head bursting through the fixed circus marquee.  Moving
-  // a full body through the HUD is both visually wrong and unlike the ROM.
-  if (!game.stage3RoofCrash) {
-    // The goal artwork contains transparent pixels above its white cushion.
-    // Its visible top is 22 logical pixels below the texture rectangle; use
-    // that actual surface as Charlie's baseline so he no longer floats.
-    // Every frame in the vertical atlas has a six-logical-pixel transparent
-    // margin below Charlie's shoes. The goal cushion begins 22 pixels below
-    // its destination rectangle, so 22 alone still leaves him visibly
-    // floating. Anchor the painted shoe bottom, not the sprite cell bottom.
-    const float playerBaseline =
-        game.scene == Scene::Goal ? playerY + 28.0F : playerY + 15.0F;
-    drawSheetFrame(renderer, charlieTexture, charlieColumns, charlieRows,
-                   charlieFrame,
-                   playerWorldX - camera, playerBaseline,
-                   charlieWidth, charlieHeight,
-                   game.player.facingRight ? SDL_FLIP_NONE
-                                           : SDL_FLIP_HORIZONTAL,
-                   charlieAngle);
+  const bool charlieVisible = game.scene != Scene::Crashed;
+  const bool charlieAboveHud = game.level3Y < 0x50;
+  if (charlieVisible && !charlieAboveHud) {
+    drawLevel3Charlie(renderer, game, assets, playerScreenX, playerFeetY);
   }
 
-  if (game.scene == Scene::Goal) {
-    // Event 3 shares the board's perfect-clear reward: the bird appears only
-    // when every suspended bag was collected without losing a life. A missed
-    // bag or any crash leaves perfectClear false, so no partial reward leaks
-    // into the goal presentation.
-    drawGoalPresentation(renderer, game, assets.bird, assets.rewardBag,
-                         assets.props);
+  // Goal presentation: crowd callouts ($EAFE) blink 16 frames on and off;
+  // the bird enters from the left along row $40 and the coins fall from
+  // the bag at column $B4.
+  if (game.level3State == 4) {
+    const bool visible = ((game.level3PoseFrame / 16) & 1) == 0;
+    if (visible) {
+      const auto outlinedCheer = [&](std::string_view text, float x, float y,
+                                     float scale, SDL_Color value) {
+        for (const auto& offset : std::array<Vec2, 4>{
+                 Vec2{-2.0F, 0.0F}, Vec2{2.0F, 0.0F},
+                 Vec2{0.0F, -2.0F}, Vec2{0.0F, 2.0F}}) {
+          drawText(renderer, text, x + offset.x, y + offset.y, scale,
+                   color(45, 10, 24), true);
+        }
+        drawText(renderer, text, x, y, scale, value, true);
+      };
+      outlinedCheer("FAR OUT", 40.0F * kSourceToWorldX, 222.0F, 2.4F,
+                    color(87, 219, 255));
+      outlinedCheer("FAR OUT", 184.0F * kSourceToWorldX, 222.0F, 2.4F,
+                    color(87, 219, 255));
+      outlinedCheer("GREAT", 116.0F * kSourceToWorldX, 262.0F, 2.6F,
+                    color(255, 93, 36));
+    }
+  }
+  if (game.level3BirdActive) {
+    // Keep the bird just below the scoreboard instead of over it.
+    const float birdX = static_cast<float>(game.level3BirdX + 8) * kSourceToWorldX;
+    const float birdY = level3RowToY(0x40) + 60.0F;
+    if (assets.bird) {
+      int textureWidth = 0;
+      int textureHeight = 0;
+      SDL_QueryTexture(assets.bird, nullptr, nullptr, &textureWidth,
+                       &textureHeight);
+      const int cellWidth = textureWidth / 4;
+      const int flap = (game.level3PoseFrame / 8) & 1;
+      const int cell = game.level3BirdState == 3 ? flap : 2 + flap;
+      const SDL_Rect source{cell * cellWidth, 0, cellWidth, textureHeight};
+      const SDL_FRect destination{birdX - 45.0F, birdY - 60.0F, 90.0F, 120.0F};
+      SDL_RenderCopyExF(renderer, assets.bird, &source, &destination, 0.0,
+                        nullptr, SDL_FLIP_HORIZONTAL);
+    }
+    if (!game.level3CoinStarted) {
+      const float bagX = static_cast<float>(game.level3BirdBagX - 8) * kSourceToWorldX;
+      const float bagY = level3RowToY(0x50) + 60.0F;
+      if (assets.rewardBag) {
+        const SDL_FRect destination{bagX - 24.0F, bagY - 10.0F, 48.0F, 59.0F};
+        SDL_RenderCopyF(renderer, assets.rewardBag, nullptr, &destination);
+      }
+    }
+    for (const auto& coin : game.level3Coins) {
+      if (!coin.active || coin.bagCopy) continue;
+      const float x = static_cast<float>(coin.x - 8) * kSourceToWorldX;
+      const float y = level3RowToY(static_cast<float>(coin.y) + 8.0F) + 40.0F;
+      drawCoin(renderer, x, y,
+               std::abs(std::cos(static_cast<float>(coin.age) * (kPi / 12.0F))));
+    }
   }
 
   drawStage1ScorePopup(renderer, game, camera);
   drawHud(renderer, game, assets.charlieLife);
-  if (game.stage3RoofCrash) {
-    const int roofFrame = std::min(game.crashFrame / 5, 3);
-    drawSheetFrame(renderer, assets.stage3CharlieRoofHead, 4, 1,
-                   roofFrame, kStage3PlayerScreenX, 132.0F,
-                   78.0F, 70.0F);
-
+  // The fourth stationary rebound carries Charlie up through the scoreboard;
+  // at the apex only the roof burst remains.
+  if (charlieVisible && charlieAboveHud && game.level3Pose != Level3Pose::Roof) {
+    drawLevel3Charlie(renderer, game, assets, playerScreenX, playerFeetY);
   }
-  if (game.scene == Scene::Crashed) drawCrowdOhNo(renderer);
+  if (game.level3Pose == Level3Pose::Roof &&
+      (game.level3State == 8 || game.scene == Scene::Crashed)) {
+    const int roofFrame = std::min(game.level3PoseFrame / 5, 3);
+    drawSheetFrame(renderer, assets.stage3CharlieRoofHead, 4, 1, roofFrame,
+                   playerScreenX, 132.0F, 78.0F, 70.0F);
+  }
+  if (game.level3State == 8 || (game.scene == Scene::Crashed && !restarting)) {
+    drawCrowdOhNo(renderer);
+  }
 }
 
 void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
@@ -5910,11 +6617,112 @@ int main(int argc, char** argv) {
     int frame = 0;
     int input = 0xff;
     int playerState = 0;
+    int rel = -1;
+    int frameByte = 0;
+    int bonus = -1;
   };
   std::vector<ReplayRow> replayRows;
   std::size_t replayIndex = 0;
   std::ofstream replayOutput;
-  if (!options.replayPath.empty()) {
+  if (!options.replayPath.empty() && options.replayEvent == 2) {
+    // Level 3 capture: one row per emulated frame, "rel" counts from the
+    // frame that runs $8C61 (initialisation plus the first rebound tick),
+    // which is also the first native update.
+    std::ifstream replayFile(options.replayPath);
+    std::string line;
+    int inputColumn = -1;
+    int relColumn = -1;
+    int frameColumn = -1;
+    int frameByteColumn = -1;
+    int bonusColumn = -1;
+    while (std::getline(replayFile, line)) {
+      std::vector<std::string> cells;
+      std::string cell;
+      std::stringstream lineStream(line);
+      while (std::getline(lineStream, cell, ',')) cells.push_back(cell);
+      if (inputColumn < 0) {
+        for (std::size_t column = 0; column < cells.size(); ++column) {
+          if (cells[column] == "input") inputColumn = static_cast<int>(column);
+          if (cells[column] == "rel") relColumn = static_cast<int>(column);
+          if (cells[column] == "frame") frameColumn = static_cast<int>(column);
+          if (cells[column] == "frame_byte") frameByteColumn = static_cast<int>(column);
+          if (cells[column] == "bonus") bonusColumn = static_cast<int>(column);
+        }
+        if (inputColumn < 0 || relColumn < 0 || frameColumn < 0) {
+          std::cerr << "Level 3 replay file lacks frame/rel/input columns.\n";
+          return 1;
+        }
+        continue;
+      }
+      if (cells.empty() || cells[0].empty() || cells[0][0] == '#') continue;
+      if (static_cast<int>(cells.size()) <= std::max(inputColumn, relColumn)) continue;
+      ReplayRow row;
+      row.frame = std::stoi(cells[static_cast<std::size_t>(frameColumn)]);
+      row.input = std::stoi(cells[static_cast<std::size_t>(inputColumn)], nullptr, 16);
+      row.rel = std::stoi(cells[static_cast<std::size_t>(relColumn)]);
+      if (frameByteColumn >= 0) {
+        row.frameByte = std::stoi(cells[static_cast<std::size_t>(frameByteColumn)]);
+      }
+      if (bonusColumn >= 0 && static_cast<int>(cells.size()) > bonusColumn) {
+        row.bonus = std::stoi(cells[static_cast<std::size_t>(bonusColumn)]);
+      }
+      replayRows.push_back(row);
+    }
+    bool found = false;
+    for (std::size_t row = 0; row < replayRows.size(); ++row) {
+      if (replayRows[row].rel == options.replayOffset) {
+        replayIndex = row;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      std::cerr << "Level 3 replay file has no rel " << options.replayOffset << " row.\n";
+      return 1;
+    }
+    game.selectedEvent = 2;
+    startGame(game);
+    // <$14 advances before the first update; the capture logs it after.
+    game.level1BoardFrameByte = static_cast<std::uint8_t>(
+        options.replayFrameByte >= 0 ? options.replayFrameByte
+                                     : replayRows[replayIndex].frameByte - 1);
+    game.level3Invulnerable = options.replayInvulnerable;
+    game.level3ClearProjectiles = options.replayClearProjectiles;
+    if (!options.replayOutput.empty()) {
+      replayOutput.open(options.replayOutput);
+      replayOutput << "frame,rel,input,state,y,x,phase,vel,target,bnc,dir,stick,scroll,"
+                      "score,missed,bagidx,bagtot,tile";
+      for (int index = 0; index < 4; ++index) {
+        for (const char* name : {"active", "x", "timer", "rem", "type"}) {
+          replayOutput << ",perf" << index << '_' << name;
+        }
+      }
+      for (int index = 0; index < 3; ++index) {
+        for (const char* name : {"state", "y", "x", "vel", "apex", "hold"}) {
+          replayOutput << ",flame" << index << '_' << name;
+        }
+      }
+      for (int index = 0; index < 4; ++index) {
+        for (const char* name : {"state", "y", "x", "vel", "apex", "sway", "hold"}) {
+          replayOutput << ",knife" << index << '_' << name;
+        }
+      }
+      for (int index = 0; index < 3; ++index) {
+        for (const char* name : {"state", "x", "key", "timer"}) {
+          replayOutput << ",bag" << index << '_' << name;
+        }
+      }
+      replayOutput << ",bird_state,bird_x,bird_bagx";
+      for (int index = 0; index < 13; ++index) {
+        replayOutput << ",coin" << index << "_y,coin" << index << "_x";
+      }
+      replayOutput << ",coinidx,coincount,bonus,lives,phase05,phase06,frame_byte\n";
+    }
+    if (!options.replayCaptureDir.empty()) {
+      std::error_code error;
+      std::filesystem::create_directories(options.replayCaptureDir, error);
+    }
+  } else if (!options.replayPath.empty()) {
     std::ifstream replayFile(options.replayPath);
     std::string line;
     int inputColumn = -1;
@@ -6072,98 +6880,44 @@ int main(int argc, char** argv) {
       game.player.runSpeed = ball.velocity;
       game.cameraX = std::max(0.0F, ball.worldX - kStage4PlayerScreenX);
       game.previousCameraX = game.cameraX;
-    } else if (options.captureScene == "stage3-goal") {
-      game.stage3CurrentTambourine =
-          static_cast<int>(game.stage3Tambourines.size()) - 1;
-      game.stage3TargetTambourine = game.stage3CurrentTambourine;
-      game.prizeBagsCollected = game.prizeBagsAvailable;
-      game.deathOccurred = false;
-      finishStage(game);
-      game.goalFrame = 180;
-    } else if (options.captureScene == "stage3-approach") {
-      const int finalIndex =
-          static_cast<int>(game.stage3Tambourines.size()) - 1;
-      game.stage3CurrentTambourine = finalIndex - 1;
-      game.stage3TargetTambourine = finalIndex;
-      game.stage3BounceLevel = 1;
-      game.stage3BounceFrame = kStage3TransferFrames / 2;
-      game.stage3BounceBaseY = kStage3TambourineTopY;
-      game.stage3Traveling = true;
-      game.stage3TravelStartFrame = 0;
-      game.stage3TravelStartX =
-          game.stage3Tambourines[static_cast<std::size_t>(finalIndex - 1)]
-              .worldX;
-      game.player.position = {
-          (game.stage3Tambourines[static_cast<std::size_t>(finalIndex - 1)]
-                   .worldX +
-           game.stage3Tambourines[static_cast<std::size_t>(finalIndex)]
-               .worldX) *
-              0.5F,
-          kStage3TambourineTopY - 118.0F};
-      game.player.previous = game.player.position;
-      game.cameraX = stage3CameraFor(game.player.position.x);
-      game.previousCameraX = game.cameraX;
-    } else if (options.captureScene == "stage3-roof") {
-      game.stage3CurrentTambourine = 3;
-      game.stage3TargetTambourine = 3;
-      game.player.position = {
-          game.stage3Tambourines[3].worldX, kStage3RoofImpactY};
-      game.player.previous = game.player.position;
-      game.player.alive = false;
-      game.player.grounded = false;
-      game.player.runSpeed = 0.0F;
-      game.stage3BounceLevel = 4;
-      game.stage3RoofCrash = true;
-      game.stage3Traveling = false;
-      game.scene = Scene::Crashed;
-      game.crashFrame = 16;
-      game.cameraX = std::max(
-          0.0F, game.player.position.x - kStage3PlayerScreenX);
-      game.previousCameraX = game.cameraX;
-    } else if (options.captureScene == "stage3-transfer") {
-      game.stage3CurrentTambourine = 3;
-      game.stage3TargetTambourine = 4;
-      game.stage3BounceLevel = 1;
-      game.stage3BounceFrame = kStage3BounceFrames / 2;
-      game.stage3BounceBaseY = kStage3TambourineTopY;
-      game.stage3Traveling = true;
-      game.stage3TravelStartFrame = 0;
-      game.stage3TravelStartX = game.stage3Tambourines[3].worldX;
-      game.player.position = {
-          (game.stage3Tambourines[3].worldX +
-           game.stage3Tambourines[4].worldX) * 0.5F,
-          kStage3TambourineTopY - 118.0F};
-      game.player.previous = game.player.position;
-      game.player.facingRight = true;
-      game.cameraX = std::max(
-          0.0F, game.player.position.x - kStage3PlayerScreenX);
-      game.previousCameraX = game.cameraX;
-    } else if (options.captureScene == "stage3") {
-      game.stage3CurrentTambourine = 3;
-      game.stage3TargetTambourine = 3;
-      game.player.position = {
-          game.stage3Tambourines[3].worldX,
-          kStage3TambourineTopY - stage3BounceHeight(3)};
-      game.player.previous = game.player.position;
-      game.player.runSpeed = 0.0F;
-      game.player.grounded = false;
-      game.stage3BounceLevel = 3;
-      game.stage3BounceFrame = kStage3BounceFrames / 2;
-      game.stage3BounceBaseY = kStage3TambourineTopY;
-      game.stage3Traveling = false;
-      game.cameraX = std::max(
-          0.0F, game.player.position.x - kStage3PlayerScreenX);
-      game.previousCameraX = game.cameraX;
-      for (std::size_t index = 0;
-           index < game.stage3Projectiles.size(); ++index) {
-        game.stage3Projectiles[index].active = index < 2;
-        game.stage3Projectiles[index].age = index == 0 ? 27 : 42;
-        game.stage3Projectiles[index].kind =
-            game.stage3Performers[index].kind;
-        game.stage3Projectiles[index].position = {
-            game.stage3Performers[index].worldX,
-            kStage3GroundY - (index == 0 ? 210.0F : 188.0F)};
+    } else if (options.captureScene == "stage3-goal" ||
+               options.captureScene == "stage3-approach" ||
+               options.captureScene == "stage3-roof" ||
+               options.captureScene == "stage3-transfer" ||
+               options.captureScene == "stage3") {
+      // Run the board model with scripted joystick input so every capture
+      // shows a state the arcade can actually reach.
+      std::array<Uint8, SDL_NUM_SCANCODES> scripted{};
+      auto stepFrames = [&](int frames, bool right) {
+        scripted[SDL_SCANCODE_RIGHT] = right ? 1 : 0;
+        for (int frame = 0; frame < frames; ++frame) {
+          ++game.level1BoardFrameByte;
+          updateLevel3(game, scripted.data(), 0.0F);
+        }
+      };
+      game.level3Invulnerable = true;
+      if (options.captureScene == "stage3-goal") {
+        // No bag can be missed when none spawns ($8ABA limit), so the bird
+        // and coin shower follow the celebration.
+        game.level3BagsTotal = 0x21;
+        while (game.level3State != 4) stepFrames(1, true);
+        game.level3BagsTotal = 7;
+        stepFrames(330, false);
+      } else if (options.captureScene == "stage3-approach") {
+        stepFrames(930, true);
+      } else if (options.captureScene == "stage3-roof") {
+        stepFrames(60, true);
+        while (game.level3State != 8) stepFrames(1, false);
+        stepFrames(12, false);
+      } else if (options.captureScene == "stage3-transfer") {
+        stepFrames(304, true);
+      } else {
+        stepFrames(60, true);
+        stepFrames(60, false);
       }
+      game.level3Invulnerable = false;
+      game.player.previous = game.player.position;
+      game.previousCameraX = game.cameraX;
     } else if (options.captureScene == "layout") {
       game.player.position = {78.0F, kGroundY};
       game.player.previous = game.player.position;
@@ -6333,6 +7087,7 @@ int main(int argc, char** argv) {
       game.eventSelectConfirmAudioSerial;
   std::uint32_t observedStage3BounceAudioSerial =
       game.stage3BounceAudioSerial;
+  std::uint32_t observedLevel3ShowerAudioSerial = 0;
   std::uint32_t observedStage3OverjumpAudioSerial =
       game.stage3OverjumpAudioSerial;
   std::uint32_t observedStage4BallCollisionAudioSerial =
@@ -6598,7 +7353,87 @@ int main(int argc, char** argv) {
       jumpForStep = false;
       jumpQueued = false;
       accumulator -= kFixedDt;
-      if (replaying) {
+      if (replaying && options.replayEvent == 2) {
+        if (replayFrame == 0 && replayRows[replayIndex].bonus >= 0) {
+          // The capture may poke the bonus digits on its first stage frame.
+          game.bonus = replayRows[replayIndex].bonus;
+        }
+        if (replayOutput) {
+          const int phase6 = game.scene == Scene::Crashed ? 5
+                             : (game.scene == Scene::Tally ? 4 : 3);
+          replayOutput << replayFrame << ',' << replayRows[replayIndex].rel
+                       << ',' << std::hex << replayInput << std::dec << ','
+                       << game.level3State << ',' << static_cast<int>(game.level3Y)
+                       << ',' << static_cast<int>(game.level3X) << ','
+                       << game.level3Phase << ',' << game.level3Velocity << ','
+                       << game.level3Target << ',' << game.level3Bounce << ','
+                       << game.level3Direction << ',' << game.level3Stick << ','
+                       << game.level3Scroll << ',' << game.score << ','
+                       << game.level3Missed << ',' << game.level3BagValueIndex
+                       << ',' << game.level3BagsTotal << ',' << game.level3TileTimer;
+          for (const auto& performer : game.level3Performers) {
+            if (!performer.active) {
+              replayOutput << ",0,0,0,0,0";
+            } else {
+              replayOutput << ",1," << static_cast<int>(performer.x) << ','
+                           << static_cast<int>(performer.timer) << ','
+                           << performer.remaining << ',' << performer.type;
+            }
+          }
+          for (const auto& flame : game.level3Flames) {
+            if (!flame.active) {
+              replayOutput << ",-1,0,0,0,0,0";
+            } else {
+              replayOutput << ',' << flame.state << ',' << static_cast<int>(flame.y)
+                           << ',' << static_cast<int>(flame.x) << ',' << flame.velocity
+                           << ',' << (flame.apex ? 1 : 0) << ','
+                           << static_cast<int>(flame.hold);
+            }
+          }
+          for (const auto& knife : game.level3Knives) {
+            if (!knife.active) {
+              replayOutput << ",-1,0,0,0,0,0,0";
+            } else {
+              replayOutput << ',' << knife.state << ',' << static_cast<int>(knife.y)
+                           << ',' << static_cast<int>(knife.x) << ',' << knife.velocity
+                           << ',' << (knife.apex ? 1 : 0) << ','
+                           << static_cast<int>(knife.sway) << ','
+                           << static_cast<int>(knife.hold);
+            }
+          }
+          for (const auto& bag : game.level3Bags) {
+            if (!bag.active) {
+              replayOutput << ",-1,0,0,0";
+            } else {
+              replayOutput << ',' << bag.state << ',' << static_cast<int>(bag.x) << ','
+                           << static_cast<int>(bag.key) << ','
+                           << static_cast<int>(bag.timer);
+            }
+          }
+          if (!game.level3BirdActive) {
+            replayOutput << ",-1,0,0";
+          } else {
+            replayOutput << ',' << game.level3BirdState << ','
+                         << static_cast<int>(game.level3BirdX) << ','
+                         << static_cast<int>(game.level3BirdBagX);
+          }
+          for (const auto& coin : game.level3Coins) {
+            if (!coin.active) {
+              replayOutput << ",-1,0";
+            } else {
+              replayOutput << ',' << static_cast<int>(coin.y) << ','
+                           << static_cast<int>(coin.x);
+            }
+          }
+          replayOutput << ',' << game.level3CoinIndex << ',' << game.level3CoinCount
+                       << ',' << game.bonus << ',' << game.lives << ",0," << phase6
+                       << ',' << static_cast<int>(game.level1BoardFrameByte) << '\n';
+        }
+        ++replayFrame;
+        ++replayIndex;
+        accumulator = 0.0;
+        if (game.scene == Scene::Title) running = false;
+      } else if (replaying) {
         if (replayOutput) {
           const int riderRow =
               kLevel1RiderGroundSourceY - level1RiderDisplacement(game.player);
@@ -6829,6 +7664,10 @@ int main(int argc, char** argv) {
       observedStage3OverjumpAudioSerial =
           game.stage3OverjumpAudioSerial;
     }
+    if (observedLevel3ShowerAudioSerial != game.level3ShowerAudioSerial) {
+      playBirdCoinDrop(audio);
+      observedLevel3ShowerAudioSerial = game.level3ShowerAudioSerial;
+    }
     if (game.scene != observedScene) {
       if (game.highScoreDirty &&
           (game.scene == Scene::Crashed || game.scene == Scene::Goal ||
@@ -6844,6 +7683,7 @@ int main(int argc, char** argv) {
     const int showerStart =
         kGoalArrivalFrames + kBirdArrivalFrames + kBagDropFrames;
     if (game.scene == Scene::Goal && game.perfectClear &&
+        game.selectedEvent != 2 &&
         observedGoalFrame < showerStart && game.goalFrame >= showerStart) {
       playBirdCoinDrop(audio);
     }

@@ -15,9 +15,9 @@ contain extracted graphics, program code, names, or logos. User-supplied
 soundtrack and effects are loaded only from the ignored local `assets/audio`
 folder and are not stored in this repository.
 
-The current milestone includes playable Event 1, Event 2, and an Event 3
-tambourine first pass, plus a faithful six-event HD selection screen.
-Event 1 is frame-synchronized with the original board (see below). The
+The current milestone includes playable Event 1, Event 2 and Event 3, plus a
+faithful six-event HD selection screen.  Events 1 and 3 are
+frame-synchronized with the original board (see below). The
 friendly blond Charlie rider uses the production Run A/B/C poses plus the
 backward walking poses E/F while retaining the original HD lion artwork.
 Vector rendering remains only as a fallback if an asset cannot be loaded.
@@ -206,6 +206,24 @@ object capture for it). The two manual captures and the headless
 three-failure run in `docs/diagnostics/level1-replay/` replay with no
 mismatches. `tools/autoplay_level1_headless.lua` produces new captures in
 headless MAME (`-video none -sound none -nothrottle`).
+
+## Level 3 board model and replay verification
+
+Event 3 runs the `circusc4` trampoline handler documented in
+`docs/LEVEL3_ROM_MODEL.md`: the two-column scroll with the `$F8` walk-in
+page, the 8.8 rebound velocities (`$0420`/`$03C0` moving, `$FA65`
+stationary) with the roof on the fourth stationary apex, the `$F517`
+performer schedule, fire-breather flames and juggled knives with their
+collision windows, the seven `$FA43` bags worth 300-900, the 20-point
+landings, the 160-frame celebration with the bird and forty 100-point
+coins for a perfect clear, the seven-frame hit, the fall, the 40-frame
+fallen pose, the page step-back and 96-frame restart with the 4000/3500/
+3000 bonus. `--replay capture.csv --replay-event 3 --replay-output
+native.csv` (with `--replay-clear-projectiles` or `--replay-invulnerable`
+for captures made that way) replays a `tools/autoplay_level3_headless.lua`
+capture and `tools/compare_level3_replay.py` compares every board field
+of every playing frame; the seven captures in
+`docs/diagnostics/level3-replay/` replay with no mismatches.
 
 ## Reference analysis
 
