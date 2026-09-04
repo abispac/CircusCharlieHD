@@ -436,7 +436,7 @@ enum class Level3Pose : std::uint8_t {
   Fallen,       // $EA9E
 };
 
-// --- structs -------------------------------------------------------------
+// ---- circusc4 Event 4 records ---------------------------------------------
 
 // One board record.  The field names follow the offsets the ROM uses so the
 // routines below read like the disassembly.
@@ -485,7 +485,7 @@ struct Level4Plaque {
   int cell = 0;
 };
 
-// --- constants -----------------------------------------------------------
+// ---- Event 4 board constants ----------------------------------------------
 
 // The board's 224x256 screen maps onto the native canvas exactly as it does
 // in Event 3.
@@ -3279,7 +3279,7 @@ void updateLevel3(Game& game, const Uint8* keyboard, float controllerAxis) {
   }
 }
 
-// --- helpers -------------------------------------------------------------
+// ---- Event 4 board setup --------------------------------------------------
 
 float level4RowToY(float row) { return level3RowToY(row); }
 
@@ -3423,16 +3423,12 @@ void syncLevel4World(Game& game) {
                       game.level4Charlie.state != 2;
 }
 
-
-// ---------------------------------------------------------------------------
-// Event 4 (rolling balls) — the circusc4 stage handler at $97D8-$9F0C.
-//
-// The board keeps Charlie ($2400), the ball he rides ($2440), four rolling
-// balls ($2480-$2540), twelve object slots ($2600-$26B0) and three distance
-// plaques ($26C0-$26E0).  Everything below follows those records field by
-// field; docs/LEVEL4_ROM_MODEL.md explains the model and lists the captures
-// that verify it.
-// ---------------------------------------------------------------------------
+// ---- circusc4 Event 4 (rolling balls) -------------------------------------
+// The stage handler lives at $97D8-$9F0C.  The board keeps Charlie ($2400),
+// the ball he rides ($2440), four rolling balls ($2480-$2540), twelve object
+// slots ($2600-$26B0) and three distance plaques ($26C0-$26E0).  Everything
+// below follows those records field by field; docs/LEVEL4_ROM_MODEL.md
+// explains the model and lists the captures that verify it.
 
 void level4ClearRecord(Level4Record& record) { record = Level4Record{}; }
 
@@ -3470,9 +3466,7 @@ void level4SetScript(Level4Record& record, int script) {
 // $6250 with the $D140 value table.
 void level4AddScore(Game& game, int points) { game.score += points; }
 
-// ---------------------------------------------------------------------------
-// $97F1: the ridden ball against the four rolling balls.
-// ---------------------------------------------------------------------------
+// ---- $97F1: the ridden ball against the four rolling balls ----------------
 
 void level4BallCollisions(Game& game) {
   Level4Record& ball = game.level4Ball;
@@ -3503,9 +3497,7 @@ void level4BallCollisions(Game& game) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// $9D51: rolling ball spawning and motion.
-// ---------------------------------------------------------------------------
+// ---- $9D51: rolling ball spawning and motion ------------------------------
 
 // $9D86-$9DAF plus $9E2D: which of the six $F1B5 schedules is in force.
 int level4DifficultyIndex(const Game& game) {
@@ -3660,9 +3652,7 @@ void level4RollUpdate(Game& game) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// $8532: the joystick and the jump edge.
-// ---------------------------------------------------------------------------
+// ---- $8532: the joystick and the jump edge --------------------------------
 
 void level4LatchInput(Game& game, int stick, int button) {
   Level4Record& charlie = game.level4Charlie;
@@ -3688,9 +3678,7 @@ void level4LatchInput(Game& game, int stick, int button) {
   if (charlie.phase == 2 && charlie.row >= 0x68) game.level4Buffered = button;
 }
 
-// ---------------------------------------------------------------------------
-// $9A42/$9B10: the landing, its 100 points and the close-ball bonus.
-// ---------------------------------------------------------------------------
+// ---- $9A42/$9B10: the landing, its 100 points and the close-ball bonus ----
 
 void level4SpawnDoublePopup(Game& game, int owner) {
   const Level4Record& source = level4BallRecord(game, owner);
@@ -3760,7 +3748,8 @@ bool level4Landing(Game& game) {
     const Level4Record& ball = game.level4Ball;
     if (ball.active != 0) {
       const int reach = (charlie.col + 0x18) & 0xff;
-      int delta = static_cast<std::int8_t>((((ball.col + 0x10) & 0xff) - reach) & 0xff);
+      int delta = static_cast<std::int8_t>(
+          (((ball.col + 0x10) & 0xff) - reach) & 0xff);
       if (std::abs(delta) < 0x12) landed = -1;
     }
   }
@@ -3770,7 +3759,8 @@ bool level4Landing(Game& game) {
       if (roll.active == 0) continue;
       const int reach =
           (charlie.col + (charlie.direction == 1 ? 0x0c : 0x18)) & 0xff;
-      int delta = static_cast<std::int8_t>((((roll.col + 0x10) & 0xff) - reach) & 0xff);
+      int delta = static_cast<std::int8_t>(
+          (((roll.col + 0x10) & 0xff) - reach) & 0xff);
       if (std::abs(delta) < 0x12) {
         landed = i;
         break;
@@ -3836,9 +3826,7 @@ void level4GoalCheck(Game& game) {
   game.goalFrame = 0;
 }
 
-// ---------------------------------------------------------------------------
-// $9943: walking, scrolling and the jump arc.
-// ---------------------------------------------------------------------------
+// ---- $9943: walking, scrolling and the jump arc ---------------------------
 
 void level4Move(Game& game) {  // $9943
   Level4Record& charlie = game.level4Charlie;
@@ -3868,7 +3856,8 @@ void level4Move(Game& game) {  // $9943
       if (charlie.col < 0xe0) charlie.col = (charlie.col + 1) & 0xff;
     } else {
       game.level4Scroll = (game.level4Scroll - 1) & 0xffff;
-      for (auto& plaque : game.level4Plaques) plaque.col = (plaque.col - 1) & 0xff;
+      for (auto& plaque : game.level4Plaques)
+        plaque.col = (plaque.col - 1) & 0xff;
     }
   } else if (charlie.direction == 1) {
     if (game.level4Scroll != 0) {
@@ -3918,9 +3907,7 @@ void level4Move(Game& game) {  // $9943
   level4LatchInput(game, charlie.stick, game.level4LatchedButton);
 }
 
-// ---------------------------------------------------------------------------
-// $9872: Charlie's state machine ($FAC6).
-// ---------------------------------------------------------------------------
+// ---- $9872: Charlie's state machine ($FAC6) -------------------------------
 
 void level4Charlie(Game& game, int stick, int button) {
   Level4Record& charlie = game.level4Charlie;
@@ -3932,7 +3919,8 @@ void level4Charlie(Game& game, int stick, int button) {
       int steps = 1;
       if (charlie.phase == 0 && charlie.direction == 0) {
         charlie.idleLow = (charlie.idleLow + 4) & 0xff;
-        if (charlie.idleLow == 0) charlie.idleHigh = (charlie.idleHigh + 1) & 0xff;
+        if (charlie.idleLow == 0)
+          charlie.idleHigh = (charlie.idleHigh + 1) & 0xff;
         if (charlie.idleHigh >= 3) {
           // $98E3: three seconds of standing still and he slips off.
           charlie.state = 2;
@@ -4009,9 +3997,7 @@ void level4Charlie(Game& game, int stick, int button) {
   level4Plaques(game);
 }
 
-// ---------------------------------------------------------------------------
-// $9BF8: the ball Charlie rides ($FAD9).
-// ---------------------------------------------------------------------------
+// ---- $9BF8: the ball Charlie rides ($FAD9) --------------------------------
 
 // $9CCB: the ball closes on Charlie's column.
 void level4BallFollow(Game& game) {
@@ -4122,9 +4108,7 @@ void level4BallState(Game& game) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// $7D65: the object slots — score popups and the FAR OUT / OH NO cells.
-// ---------------------------------------------------------------------------
+// ---- $7D65: the object slots, popups and callout cells --------------------
 
 void level4Objects(Game& game) {
   for (auto& popup : game.level4Popups) {
@@ -4145,9 +4129,7 @@ void level4Objects(Game& game) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// $BB73: the bonus countdown and its time-out.
-// ---------------------------------------------------------------------------
+// ---- $BB73: the bonus countdown and its time-out --------------------------
 
 void level4Bonus(Game& game) {
   if (game.level4BonusHold != 0) {
@@ -4176,7 +4158,7 @@ void level4Bonus(Game& game) {
   }
 }
 
-// --- the frame ($97D8) ---------------------------------------------------
+// ---- Event 4 frame ($97D8) ------------------------------------------------
 
 void updateLevel4(Game& game, const Uint8* keyboard, bool jumpPressed,
                   float controllerAxis) {
@@ -4371,11 +4353,9 @@ void updateStage2(Game& game, const Uint8* keyboard, bool jumpPressed,
   }
 }
 
-// ---------------------------------------------------------------------------
 // Event 1 board model.  Every rule below names the circusc4 routine it
 // reproduces; see docs/level1-remaining-rom-fidelity.md and
 // docs/LEVEL1_ROM_MODEL.md.
-// ---------------------------------------------------------------------------
 
 std::int32_t level1MovementCommand(int direction) {
   if (direction > 0) return kLevel1RightCommand;
