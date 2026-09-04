@@ -7016,7 +7016,11 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
       (game.player.position.y - game.player.previous.y) *
           static_cast<float>(interpolation);
   const bool charlieVisible = game.scene != Scene::Crashed;
-  const bool charlieAboveHud = game.level3Y < 0x50;
+  // The scoreboard ends at kArenaTop.  The board's own Charlie is 32 rows
+  // tall and his head stops just below it on the third rebound, but the HD
+  // art is taller and does reach in, so he is drawn after the scoreboard
+  // whenever his sprite would otherwise be cut off by it.
+  const bool charlieAboveHud = playerFeetY - 110.0F < kArenaTop;
   if (charlieVisible && !charlieAboveHud) {
     drawLevel3Charlie(renderer, game, assets, playerScreenX, playerFeetY);
   }
