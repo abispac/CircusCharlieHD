@@ -269,6 +269,7 @@ struct Options {
   std::vector<int> riderDiagnosticFrames;
   // Deterministic replay of a MAME capture-state.csv input column.
   std::string replayPath;
+  int startEvent = 0;   // 1-6: skip the boot video and go straight in
   std::string replayOutput;
   std::string replayCaptureDir;
   std::vector<int> replayCaptureFrames;
@@ -1057,6 +1058,7 @@ void printUsage() {
       << "  --mode WIDTHxHEIGHT\n"
       << "  --rotate 0|90|180|270\n"
       << "  --fullscreen\n"
+      << "  --event 1|2|3|4|5|6\n"
       << "  --debug\n"
       << "  --lion-test\n"
       << "  --capture FILE.png\n"
@@ -1182,6 +1184,12 @@ std::optional<Options> parseOptions(int argc, char** argv) {
     } else if (argument == "--mode" && index + 1 < argc) {
       if (!parseMode(argv[++index], options.width, options.height)) {
         std::cerr << "Invalid display mode.\n";
+        return std::nullopt;
+      }
+    } else if (argument == "--event" && index + 1 < argc) {
+      options.startEvent = std::atoi(argv[++index]);
+      if (options.startEvent < 1 || options.startEvent > 6) {
+        std::cerr << "Event must be 1 to 6.\n";
         return std::nullopt;
       }
     } else if (argument == "--rotate" && index + 1 < argc) {
@@ -8185,6 +8193,14 @@ int main(int argc, char** argv) {
   bool eventSelectMusicPlaying = false;
   bool stageMusicPlaying = false;
   bool stageMusicFast = false;
+  if (options.startEvent > 0) {
+    // Straight into one event, for testing a stage without sitting through
+    // the boot video and the selection screen.
+    insertCoin(game);
+    enterEventSelect(game);
+    game.selectedEvent = std::min(options.startEvent - 1, 3);
+    confirmEventSelection(game);
+  }
   if (game.scene == Scene::Boot) playBootAudio(audio);
   std::uint32_t observedJumpAudioSerial = game.jumpAudioSerial;
   std::uint32_t observedCrashAudioSerial = game.crashAudioSerial;
