@@ -496,11 +496,6 @@ constexpr int kLevel4ScrollEnd = 1793;   // progress once page $F8 stops it
 constexpr int kLevel4BallRow = 0xc0;
 constexpr int kLevel4StartColumn = 0x50;
 constexpr int kLevel4CharlieRow = 0xa4;
-constexpr int kLevel4SpawnColumn = 0xf1;
-constexpr int kLevel4GoalPage = 0xf8;
-constexpr int kLevel4FallenFrames = 0x28;
-constexpr int kLevel4GoalFrames = 0xa0;
-constexpr int kLevel4StruckFrames = 0x20;
 constexpr int kLevel4RestartFrames = 96;
 // $FB80 on a fresh start, then $BD1C by page.
 constexpr int kLevel4FirstBonus = 6410;
@@ -566,7 +561,6 @@ constexpr std::array<std::array<int, 3>, 10> kLevel4PlaqueCells{{
 
 // The $F1B5 rolling-ball schedule: six difficulty tables of nine pages,
 // each naming up to five $2204 columns at which a ball rolls in.
-constexpr int kLevel4SpawnListCount = 22;
 constexpr std::array<std::array<int, 5>, 22> kLevel4SpawnLists{{
     {224, 184, 64, 32, 0},   // $F1E9
     {248, 216, 152, 120, 80},   // $F1EE
@@ -2163,57 +2157,6 @@ void resetCourse(Game& game) {
     return;
   }
 
-  if (false) {
-    game.player.position = {kStage4PlayerScreenX, kStage4CharlieBaselineY};
-    game.player.previous = game.player.position;
-    game.player.grounded = true;
-    game.player.runSpeed = 82.0F;
-    game.player.facingRight = true;
-    game.stage4RespawnGraceFrames = 90;
-    game.stage4IdleFrame = 0;
-    game.meterMarkers = {
-        {kStage4PlayerScreenX, -1}, {500.0F, 60},
-        {1150.0F, 50}, {2190.0F, 40},
-        {3230.0F, 30}, {4270.0F, 20}, {5310.0F, 10},
-    };
-    // The arcade object stream uses a few repeating separations rather than
-    // the steadily shrinking provisional layout. These values are scaled
-    // from the supplied native 224-pixel Stage 4 capture; the velocities are
-    // likewise converted from the board's per-frame object motion.
-    constexpr std::array<float, 24> gaps{
-        286, 226, 286, 214, 254, 224, 278, 218,
-        246, 232, 272, 216, 258, 224, 282, 220,
-        248, 230, 270, 218, 256, 226, 276, 222};
-    constexpr std::array<float, 6> incomingSpeeds{
-        -62.0F, -66.0F, -58.0F, -64.0F, -60.0F, -68.0F};
-    float x = kStage4PlayerScreenX;
-    // The opening ball is stationary until the player walks. Leaving the
-    // old provisional velocity here made Charlie drift and animate before
-    // any input, masking the cabinet's idle-balance sequence.
-    game.stage4Balls.push_back({x, 0.0F, 0.0F});
-    for (std::size_t index = 0; index < gaps.size(); ++index) {
-      x += gaps[index];
-      // Unridden balls enter from the right and roll left toward Charlie in
-      // the recorded board sequence. Their staggered speeds create the
-      // bunching and separation patterns visible in the arcade footage.
-      const float drift = incomingSpeeds[index % incomingSpeeds.size()];
-      game.stage4Balls.push_back({x, drift, static_cast<float>(index * 29U)});
-    }
-    // Keep the final approach fixed like the arcade board: the last rolling
-    // ball leads into a stationary goal at the right edge instead of letting
-    // the camera carry the finish platform across the whole screen.
-    game.stage4Balls.back().worldX = kStage4CourseLength - 165.0F;
-    // The board reuses a tiny number of object slots. Keep Charlie's ball
-    // and one approaching ball live. At measured intervals a second close
-    // incoming ball is admitted to reproduce the double-ball jump pattern.
-    for (auto& ball : game.stage4Balls) ball.active = false;
-    game.stage4Balls[0].active = true;
-    if (game.stage4Balls.size() > 1) game.stage4Balls[1].active = true;
-    game.stage4NextBallToActivate =
-        std::min(2, static_cast<int>(game.stage4Balls.size()));
-    game.prizeBagsAvailable = 0;
-    return;
-  }
 
   game.stage2Monkeys.clear();
   // The board initialises the Event 1 bonus digits to 5800 on the frame
@@ -3346,11 +3289,6 @@ Level4Record& level4BallRecord(Game& game, int owner) {
   return game.level4Rolls[static_cast<std::size_t>(owner)];
 }
 
-const Level4Record& level4BallRecord(const Game& game, int owner) {
-  if (owner < 0) return game.level4Ball;
-  return game.level4Rolls[static_cast<std::size_t>(owner)];
-}
-
 // $8790/$8794: fill free object slots with one callout cell each.
 template <std::size_t N>
 void level4SpawnCallouts(Game& game,
@@ -3971,6 +3909,10 @@ void level4Charlie(Game& game, int stick, int button) {
   Level4Record& charlie = game.level4Charlie;
   switch (charlie.state) {
     case 1: {  // $98BF riding
+      // How many times the script advances this frame.  Airborne or moving
+      // it is once ($9905); standing still the idle counter decides, and the
+      // wobble speeds up the longer Charlie holds the ball ($98C7-$9905).
+      int steps = 1;
       if (charlie.phase == 0 && charlie.direction == 0) {
         charlie.idleLow = (charlie.idleLow + 4) & 0xff;
         if (charlie.idleLow == 0) charlie.idleHigh = (charlie.idleHigh + 1) & 0xff;
@@ -3980,7 +3922,14 @@ void level4Charlie(Game& game, int stick, int button) {
           charlie.velocity = charlie.launch << 8;
           break;
         }
+        if (charlie.idleHigh == 0) {
+          // $98F6: only the frame that starts the count takes a step.
+          steps = ((charlie.idleLow - 4) & 0xff) == 0 ? 1 : 0;
+        } else if (charlie.idleHigh == 2) {
+          steps = 3;   // $98FF runs $87CE three times
+        }
       }
+      for (int step = 0; step < steps; ++step) level4Animate(charlie);
       level4LatchInput(game, stick, button);
       level4Move(game);
       break;
@@ -4251,257 +4200,6 @@ void updateLevel4(Game& game, const Uint8* keyboard, bool jumpPressed,
   syncLevel4World(game);
 }
 
-void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
-                  float controllerAxis) {
-  game.player.previous = game.player.position;
-  game.previousCameraX = game.cameraX;
-  if (game.stage4Balls.empty()) return;
-
-  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
-                        keyboard[SDL_SCANCODE_A] || controllerAxis < -0.35F;
-  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
-                         keyboard[SDL_SCANCODE_D] || controllerAxis > 0.35F;
-
-  if (game.stage4RespawnGraceFrames > 0)
-    --game.stage4RespawnGraceFrames;
-  // Like the original event, Charlie backs up while still facing the course.
-  // Left changes ball direction; it never mirrors the rider artwork.
-  game.player.facingRight = true;
-
-  for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
-    auto& ball = game.stage4Balls[index];
-    if (!ball.active) continue;
-    if (ball.collisionCooldown > 0) --ball.collisionCooldown;
-    if (static_cast<int>(index) != game.stage4CurrentBall ||
-        game.stage4Airborne) {
-      ball.worldX += ball.velocity * static_cast<float>(kFixedDt);
-    }
-    ball.rotation += ball.velocity * static_cast<float>(kFixedDt) /
-                     kStage4BallRadius;
-  }
-
-  if (!game.stage4Airborne) {
-    auto& ball = game.stage4Balls[static_cast<std::size_t>(game.stage4CurrentBall)];
-    float target = 0.0F;
-    if (moveLeft != moveRight) target = moveRight ? 142.0F : -112.0F;
-    ball.velocity += (target - ball.velocity) *
-                     static_cast<float>(kFixedDt) * 5.5F;
-    if (!moveLeft && !moveRight) ball.velocity *= 0.975F;
-    ball.worldX += ball.velocity * static_cast<float>(kFixedDt);
-    game.player.position = {ball.worldX, kStage4CharlieBaselineY};
-    game.player.runSpeed = ball.velocity;
-
-    if (moveLeft != moveRight) {
-      game.stage4IdleFrame = 0;
-    } else {
-      // MAME's Stage 4 object trace repeats this exact no-input sequence:
-      // 78 steady frames, a long two-sided stagger, shorter recovery pulses,
-      // then the balance failure on frame 203. It restarts from zero as soon
-      // as the player walks or jumps instead of looping the walk animation.
-      ++game.stage4IdleFrame;
-      if (game.stage4IdleFrame >= 203) {
-        game.stage4PinnedCrash = true;
-        game.stage4FallFrame = 0;
-        crashPlayer(game);
-        return;
-      }
-    }
-
-    if (jumpPressed) {
-      const float sourceVelocity = ball.velocity;
-      game.stage4JumpDirection =
-          moveRight != moveLeft ? (moveRight ? 1 : -1) : 0;
-      game.stage4Airborne = true;
-      game.stage4IdleFrame = 0;
-      game.player.grounded = false;
-      // Preserve the measured apex while shortening the whole arc by about
-      // one tenth, which removes the heavy pause the earlier prototype had.
-      game.player.verticalVelocity = -365.0F;
-      if (game.stage4JumpDirection == 0) {
-        // No direction is a true vertical bounce relative to the rolling
-        // ball: Charlie and the ball retain the same horizontal velocity.
-        game.player.runSpeed = sourceVelocity;
-      } else {
-        // The debugger trace keeps Charlie at the same screen anchor during
-        // a transfer. The approaching ball crosses beneath him; Charlie does
-        // not receive an extra horizontal launch impulse.
-        game.player.runSpeed = sourceVelocity;
-        // As soon as Charlie leaves for another ball, the abandoned ball
-        // rolls toward the rear exactly as in the Stage 4 frame sequence.
-        ball.velocity = -62.0F;
-      }
-      game.player.jumpFrame = 0;
-      ++game.jumpAudioSerial;
-    }
-  } else {
-    ++game.player.jumpFrame;
-    game.player.verticalVelocity += 900.0F * static_cast<float>(kFixedDt);
-    game.player.position.x += game.player.runSpeed * static_cast<float>(kFixedDt);
-    game.player.position.y +=
-        game.player.verticalVelocity * static_cast<float>(kFixedDt);
-
-    if (game.player.verticalVelocity > 0.0F) {
-      // The goal is a real landing surface. Earlier builds only finished on
-      // the final rolling ball, so a correctly aimed jump passed through the
-      // visible platform and fell to the grass.
-      const float goalX = kStage4CourseLength;
-      const bool overGoal =
-          game.player.position.x >= goalX - 80.0F &&
-          game.player.position.x <= goalX + 80.0F;
-      const bool atGoalTop =
-          game.player.position.y >= kStage4GoalTopY - 17.0F &&
-          game.player.position.y <= kStage4GoalTopY + 16.0F;
-      if (overGoal && atGoalTop) {
-        game.player.position = {goalX, kStage4GoalTopY};
-        game.player.previous = game.player.position;
-        game.player.verticalVelocity = 0.0F;
-        game.player.grounded = true;
-        game.stage4Airborne = false;
-        game.stage4JumpDirection = 0;
-        game.stage4IdleFrame = 0;
-        game.player.jumpFrame = -1;
-        finishStage(game);
-        return;
-      }
-
-      int landing = -1;
-      float best = 44.0F;
-      for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
-        if (!game.stage4Balls[index].active) continue;
-        if (static_cast<int>(index) == game.stage4CurrentBall &&
-            game.stage4JumpDirection != 0)
-          continue;
-        const float distance = std::abs(
-            game.player.position.x - game.stage4Balls[index].worldX);
-        if (distance < best &&
-            game.player.position.y >= kStage4CharlieBaselineY - 17.0F &&
-            game.player.position.y <= kStage4CharlieBaselineY + 16.0F) {
-          best = distance;
-          landing = static_cast<int>(index);
-        }
-      }
-      if (landing >= 0) {
-        const float transferVelocity = game.player.runSpeed;
-        const int skipped = std::abs(landing - game.stage4CurrentBall) - 1;
-        if (skipped > 0) game.score += skipped * 500;
-        game.stage4CurrentBall = landing;
-        auto& ball = game.stage4Balls[static_cast<std::size_t>(landing)];
-        if (game.stage4JumpDirection != 0)
-          ball.velocity = transferVelocity;
-        game.player.position = {ball.worldX, kStage4CharlieBaselineY};
-        game.player.previous = game.player.position;
-        game.player.runSpeed = ball.velocity;
-        game.player.verticalVelocity = 0.0F;
-        game.player.grounded = true;
-        game.stage4Airborne = false;
-        game.stage4JumpDirection = 0;
-        game.stage4IdleFrame = 0;
-        game.player.jumpFrame = -1;
-      }
-    }
-    if (game.player.position.y > kStage4BallCenterY + 90.0F) {
-      game.stage4PinnedCrash = false;
-      crashPlayer(game);
-      return;
-    }
-  }
-
-  // Resolve ball-to-ball contact independently of Charlie. The circles use
-  // a slightly inset physical radius so painted antialiasing never causes a
-  // premature hit. A collision hurts Charlie only while he is grounded on
-  // one of the two balls involved; he is safe while jumping over them.
-  constexpr float collisionDiameter = kStage4BallRadius * 1.86F;
-  for (std::size_t left = 0; left < game.stage4Balls.size(); ++left) {
-    auto& a = game.stage4Balls[left];
-    if (!a.active) continue;
-    for (std::size_t right = left + 1; right < game.stage4Balls.size();
-         ++right) {
-      auto& b = game.stage4Balls[right];
-      if (!b.active) continue;
-      const float delta = b.worldX - a.worldX;
-      const float distance = std::abs(delta);
-      if (distance >= collisionDiameter) continue;
-      const bool approaching =
-          delta >= 0.0F ? a.velocity > b.velocity : b.velocity > a.velocity;
-      if (!approaching && a.collisionCooldown > 0 &&
-          b.collisionCooldown > 0)
-        continue;
-
-      const float direction = delta >= 0.0F ? 1.0F : -1.0F;
-      const float overlap = collisionDiameter - distance;
-      a.worldX -= direction * overlap * 0.5F;
-      b.worldX += direction * overlap * 0.5F;
-      std::swap(a.velocity, b.velocity);
-      a.collisionCooldown = 12;
-      b.collisionCooldown = 12;
-      ++game.stage4BallCollisionAudioSerial;
-
-      const bool charlieOnCollidingBall =
-          !game.stage4Airborne && game.stage4RespawnGraceFrames == 0 &&
-          (static_cast<int>(left) == game.stage4CurrentBall ||
-           static_cast<int>(right) == game.stage4CurrentBall);
-      if (charlieOnCollidingBall) {
-        const auto& ridden = game.stage4Balls[static_cast<std::size_t>(
-            game.stage4CurrentBall)];
-        game.player.position.x = ridden.worldX;
-        game.stage4PinnedCrash = true;
-        game.stage4FallFrame = 0;
-        crashPlayer(game);
-        return;
-      }
-    }
-  }
-
-  const float following = std::max(0.0F,
-      game.player.position.x - kStage4PlayerScreenX);
-  const float finalCamera = std::max(0.0F,
-      kStage4CourseLength - kStage4GoalScreenX);
-  game.cameraX = std::min(following, finalCamera);
-
-  // Retire the one abandoned ball only after it has visibly rolled behind
-  // Charlie. Then reuse the freed object slot for one new approaching ball.
-  for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
-    auto& ball = game.stage4Balls[index];
-    if (!ball.active || static_cast<int>(index) == game.stage4CurrentBall)
-      continue;
-    if (ball.worldX < game.cameraX - kStage4BallRadius * 2.2F)
-      ball.active = false;
-  }
-  int activeCount = 0;
-  for (const auto& ball : game.stage4Balls)
-    if (ball.active) ++activeCount;
-  if (activeCount < 2 && game.stage4NextBallToActivate <
-                           static_cast<int>(game.stage4Balls.size())) {
-    auto& next = game.stage4Balls[static_cast<std::size_t>(
-        game.stage4NextBallToActivate++)];
-    const auto& current = game.stage4Balls[static_cast<std::size_t>(
-        game.stage4CurrentBall)];
-    next.worldX = std::max(next.worldX, current.worldX + 286.0F);
-    if (next.velocity > -10.0F) next.velocity = -62.0F;
-    next.active = true;
-    next.collisionCooldown = 0;
-    ++activeCount;
-  }
-  // Every fifth object group contains the arcade's close second ball. This
-  // makes it possible to clear two balls in one faster arc and earn the
-  // existing skipped-ball bonus without flooding the screen with objects.
-  if (activeCount == 2 && game.stage4NextBallToActivate <
-                              static_cast<int>(game.stage4Balls.size()) &&
-      game.stage4NextBallToActivate % 5 == 2) {
-    float rightmost = -100000.0F;
-    for (const auto& ball : game.stage4Balls)
-      if (ball.active) rightmost = std::max(rightmost, ball.worldX);
-    auto& second = game.stage4Balls[static_cast<std::size_t>(
-        game.stage4NextBallToActivate++)];
-    second.worldX = rightmost + 126.0F;
-    second.velocity = -66.0F;
-    second.collisionCooldown = 0;
-    second.active = true;
-  }
-  if (game.bonus > 0) --game.bonus;
-  if (game.bonus <= 0) crashPlayer(game);
-  awardScoreLives(game);
-}
 
 void updateStage2(Game& game, const Uint8* keyboard, bool jumpPressed,
                   float controllerAxis) {
@@ -7449,7 +7147,6 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
 
   const Level4Record& charlie = game.level4Charlie;
   const float playerX = static_cast<float>(charlie.col) * scale;
-  const float playerY = level4RowToY(static_cast<float>(charlie.row));
   int length = 0;
   const Level4Pose* script = level4Script(charlie.script, length);
   const int frame = script[static_cast<std::size_t>(std::max(charlie.pose, 0))]
