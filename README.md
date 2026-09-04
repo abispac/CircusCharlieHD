@@ -4,7 +4,9 @@
 
 The native build opens with the supplied 16.1-second arcade boot recording,
 including its original PCM audio, then transitions directly into the HD event
-selection screen. The video is stored as 30 fps PNG frames under
+selection screen. You don't have to sit through it: insert a coin (`5`) and
+press START (`1`), MAME style, and the video is cut short and the event
+screen opens right away. The video is stored as 30 fps PNG frames under
 `assets/boot/` so SDL can play it without shipping an external movie-decoder
 runtime. Gameplay HUD bulbs use a moving five-color chase around all four
 sides of the score panel.
@@ -82,6 +84,7 @@ Modern 1080p display:
 
 - `5` or `C`: insert one coin / add one credit
 - `1` or `Enter`: open the event-selection screen when a credit is available
+  (during the boot video this also skips the rest of it)
 - `Left` / `A`: move or backtrack left
 - `Right` / `D`: move right
 - Release horizontal input: stop

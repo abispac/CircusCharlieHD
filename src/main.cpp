@@ -2070,6 +2070,22 @@ bool startWithCredit(Game& game) {
   return true;
 }
 
+// One START button for the keyboard (1 or Enter) and the pad. On the event
+// screen it confirms the choice; anywhere a game can begin it spends a credit.
+// The boot footage counts as one of those places on purpose: on the real
+// cabinet you sit through the power-on sequence, but here it is only mood, so
+// once a coin is in (5) a press of START cuts the video short and goes straight
+// to the event screen. With no credit the press is ignored, just like the
+// cabinet, so a stray key can't skip the video by accident.
+void pressStart(Game& game) {
+  if (game.scene == Scene::EventSelect) {
+    confirmEventSelection(game);
+  } else if (game.scene == Scene::Boot || game.scene == Scene::Title ||
+             game.scene == Scene::Complete) {
+    startWithCredit(game);
+  }
+}
+
 void awardScoreLives(Game& game) {
   while (game.score >= game.nextScoreLife) {
     ++game.lives;
@@ -7177,12 +7193,7 @@ int main(int argc, char** argv) {
         if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
           insertCoin(game);
         } else if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START) {
-          if (game.scene == Scene::EventSelect) {
-            confirmEventSelection(game);
-          } else if (game.scene == Scene::Title ||
-                     game.scene == Scene::Complete) {
-            startWithCredit(game);
-          }
+          pressStart(game);
         } else if (game.scene == Scene::EventSelect &&
                    event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_LEFT) {
           moveEventSelection(game, -1);
@@ -7210,12 +7221,7 @@ int main(int argc, char** argv) {
             break;
           case SDLK_RETURN:
           case SDLK_1:
-            if (game.scene == Scene::EventSelect) {
-              confirmEventSelection(game);
-            } else if (game.scene == Scene::Title ||
-                game.scene == Scene::Complete) {
-              startWithCredit(game);
-            }
+            pressStart(game);
             break;
           case SDLK_LEFT:
           case SDLK_a:
