@@ -457,6 +457,8 @@ struct Level4Record {
   int stick = 0;          // $1B,X
   int idleHigh = 0;       // $27,X
   int idleLow = 0;        // $28,X
+  int script = 0;         // $C,X  which animation script
+  int pose = -1;          // its current step
   int align = 0;          // $29,X  (the ridden ball only)
   int countdown = 0;      // $2D,X
 };
@@ -503,6 +505,48 @@ constexpr int kLevel4RestartFrames = 96;
 // $FB80 on a fresh start, then $BD1C by page.
 constexpr int kLevel4FirstBonus = 6410;
 constexpr int kLevel4RestartBonus[3] = {4000, 3500, 3000};
+
+// The animation scripts $87CE walks: one HD cell and how many frames it is
+// held.  Both directions share them -- the board never mirrors Charlie on
+// this stage, it reverses the ball's spin instead -- and a jump holds a
+// single pose for its whole 57 frames ($E9CF's delay is 240).
+struct Level4Pose {
+  int frame;
+  int delay;
+};
+constexpr std::array<Level4Pose, 4> kLevel4Standing{   // $E9FF
+    {{0, 16}, {4, 16}, {1, 16}, {0, 16}}};
+constexpr std::array<Level4Pose, 4> kLevel4Walking{    // $E9B4
+    {{0, 6}, {1, 6}, {2, 6}, {1, 6}}};
+constexpr std::array<Level4Pose, 1> kLevel4Jumping{{{5, 240}}};          // $E9CF
+constexpr std::array<Level4Pose, 6> kLevel4GoalJump{   // $E9D8
+    {{5, 8}, {6, 8}, {5, 8}, {6, 8}, {6, 8}, {4, 80}}};
+constexpr std::array<Level4Pose, 3> kLevel4Struck{     // $EA1A
+    {{0, 3}, {4, 3}, {1, 3}}};
+constexpr std::array<Level4Pose, 1> kLevel4Fallen{{{10, 8}}};            // $EA9E
+constexpr std::array<Level4Pose, 2> kLevel4Cheer{{{4, 16}, {0, 16}}};    // $EAAA
+
+enum Level4Script {
+  kLevel4ScriptStanding = 0,
+  kLevel4ScriptWalking,
+  kLevel4ScriptJumping,
+  kLevel4ScriptGoalJump,
+  kLevel4ScriptStruck,
+  kLevel4ScriptFallen,
+  kLevel4ScriptCheer,
+};
+
+inline const Level4Pose* level4Script(int script, int& length) {
+  switch (script) {
+    case kLevel4ScriptWalking: length = 4; return kLevel4Walking.data();
+    case kLevel4ScriptJumping: length = 1; return kLevel4Jumping.data();
+    case kLevel4ScriptGoalJump: length = 6; return kLevel4GoalJump.data();
+    case kLevel4ScriptStruck: length = 3; return kLevel4Struck.data();
+    case kLevel4ScriptFallen: length = 1; return kLevel4Fallen.data();
+    case kLevel4ScriptCheer: length = 2; return kLevel4Cheer.data();
+    default: length = 4; return kLevel4Standing.data();
+  }
+}
 
 // $EAFE and $EB23: the cells of the two callouts, as (row, column) pairs.
 constexpr std::array<std::pair<int, int>, 9> kLevel4GoalCells{{
@@ -3294,6 +3338,9 @@ std::string level4PlaqueText(int cell) {
   }
 }
 
+void level4Animate(Level4Record& record);
+void level4SetScript(Level4Record& record, int script);
+
 Level4Record& level4BallRecord(Game& game, int owner) {
   if (owner < 0) return game.level4Ball;
   return game.level4Rolls[static_cast<std::size_t>(owner)];
@@ -3403,6 +3450,7 @@ void initializeLevel4Board(Game& game, int page) {
   charlie.launch = 4;
   charlie.landVelocity = 4;
   charlie.velocity = 0x0420;
+  level4SetScript(charlie, kLevel4ScriptStanding);
 }
 
 // The board rows and columns become world pixels for the renderer.
@@ -3440,10 +3488,25 @@ void level4ClearPopup(Level4Popup& popup) {
   popup.col = 0;
 }
 
-// $87CE: advance one animation script step.  Only the delay counter is
-// modelled; the native drawing picks its own frames from the pose.
+// $87CE: hold the current cell while $B,X counts down, then take the next
+// step of the script.
 void level4Animate(Level4Record& record) {
-  if (record.animation > 0) --record.animation;
+  if (record.animation > 0) {
+    --record.animation;
+    return;
+  }
+  int length = 0;
+  const Level4Pose* script = level4Script(record.script, length);
+  record.pose = (record.pose + 1) % length;
+  record.animation = script[record.pose].delay;
+}
+
+// The board clears $B,X whenever it stores a new script pointer, so the next
+// $87CE call shows the script's first cell.
+void level4SetScript(Level4Record& record, int script) {
+  record.script = script;
+  record.pose = -1;
+  record.animation = 0;
 }
 
 // $8347/$8354: the record's other cells mirror the first, so only the
@@ -3478,7 +3541,7 @@ void level4BallCollisions(Game& game) {
     charlie.state = 7;
     charlie.countdown = 0x20;
     charlie.velocity = 0;
-    charlie.animation = 0;
+    level4SetScript(charlie, kLevel4ScriptStruck);
     ++game.level4Falls;
     ++game.crashAudioSerial;
     return;
@@ -3810,7 +3873,7 @@ void level4GoalCheck(Game& game) {
     return;
   }
   charlie.row = (charlie.row + 6) & 0xff;
-  charlie.animation = 0;
+  level4SetScript(charlie, kLevel4ScriptCheer);
   charlie.state = 4;
   charlie.countdown = 0xa0;
   level4SpawnCallouts(game, kLevel4GoalCells, 1);
@@ -3830,8 +3893,15 @@ void level4Move(Game& game) {  // $9943
       ++game.jumpAudioSerial;
     }
     if (charlie.jump != 0 || charlie.stick != charlie.direction) {
+      if (charlie.jump != 0) {
+        level4SetScript(charlie, ((game.level4Scroll >> 8) & 0xff) == 0xf8
+                                     ? kLevel4ScriptGoalJump
+                                     : kLevel4ScriptJumping);
+      } else {
+        level4SetScript(charlie, charlie.stick == 0 ? kLevel4ScriptStanding
+                                                    : kLevel4ScriptWalking);
+      }
       charlie.direction = charlie.stick;
-      charlie.animation = 0;
       charlie.idleHigh = 0;
       charlie.idleLow = 0;
       level4Plaques(game);
@@ -3884,7 +3954,8 @@ void level4Move(Game& game) {  // $9943
   if ((velocity >> 8) != charlie.landVelocity) return;
   charlie.phase = 0;
   charlie.jump = 0;
-  charlie.animation = 0;
+  level4SetScript(charlie, charlie.direction == 0 ? kLevel4ScriptStanding
+                                                  : kLevel4ScriptWalking);
   charlie.landVelocity = charlie.launch;
   charlie.velocity = (charlie.launch << 8) | 0x20;
   if (level4Landing(game)) return;
@@ -3907,7 +3978,6 @@ void level4Charlie(Game& game, int stick, int button) {
           // $98E3: three seconds of standing still and he slips off.
           charlie.state = 2;
           charlie.velocity = charlie.launch << 8;
-          charlie.animation = 0;
           break;
         }
       }
@@ -3925,7 +3995,7 @@ void level4Charlie(Game& game, int stick, int button) {
       if (charlie.row >= 0xd0) {
         charlie.state = 8;
         charlie.countdown = 0x28;
-        charlie.animation = 0;
+        level4SetScript(charlie, kLevel4ScriptFallen);
         level4SpawnCallouts(game, kLevel4FailCells, 2);
         ++game.crashAudioSerial;
       }
@@ -3953,7 +4023,7 @@ void level4Charlie(Game& game, int stick, int button) {
       if (charlie.row >= 0xd0) {
         charlie.state = 8;
         charlie.countdown = 0x28;
-        charlie.animation = 0;
+        level4SetScript(charlie, kLevel4ScriptFallen);
         level4SpawnCallouts(game, kLevel4FailCells, 2);
       }
       break;
@@ -7380,36 +7450,18 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
   const Level4Record& charlie = game.level4Charlie;
   const float playerX = static_cast<float>(charlie.col) * scale;
   const float playerY = level4RowToY(static_cast<float>(charlie.row));
-  int frame = 0;
-  // The painted Charlie carries transparent padding below his shoes; the
-  // board's own composite puts his feet eight rows into the ball's top cell.
-  float baseline = playerY + 67.0F;
-  if (charlie.state == 8 || (charlie.state == 7 && charlie.countdown == 0) ||
-      charlie.state == 2) {
-    frame = 8 + std::min(3, (charlie.state == 8 ? kLevel4FallenFrames -
-                                                      charlie.countdown
-                                                : charlie.row - 0xa4) / 6);
-    frame = std::clamp(frame, 8, 11);
-  } else if (charlie.state == 7) {
-    frame = 8;
-  } else if (charlie.state == 4) {
-    constexpr std::array<int, 8> celebration{0, 1, 2, 3, 2, 1, 0, 1};
-    frame = celebration[static_cast<std::size_t>(
-        ((kLevel4GoalFrames - charlie.countdown) / 7) % 8)];
-  } else if (charlie.phase != 0) {
-    // $E9CF/$E9D8: the jump runs through four cells over its 57 frames.
-    const int elapsed = charlie.phase == 1 ? 0 : 2;
-    frame = 4 + std::min(3, elapsed +
-                                (charlie.velocity < 0x0200 ? 1 : 0));
-  } else if (charlie.direction == 0) {
-    frame = (static_cast<int>(timeSeconds * 60.606) / 7) & 3;
-  } else {
-    frame = (static_cast<int>(timeSeconds * 60.606) / 5) & 3;
-  }
+  int length = 0;
+  const Level4Pose* script = level4Script(charlie.script, length);
+  const int frame = script[static_cast<std::size_t>(std::max(charlie.pose, 0))]
+                        .frame;
+  // The board never mirrors Charlie on this stage: both directions run the
+  // same $E9B4 cells and the attribute byte stays zero, so only the ball's
+  // spin tells you which way he is rolling.  The painted cell carries a
+  // transparent border, and his feet belong four rows into the ball's top
+  // cell, where the board's own composite puts them.
   drawSheetFrame(renderer, assets.stage4Charlie, 4, 3, frame, playerX,
-                 baseline, 150.0F, 150.0F,
-                 charlie.direction == 1 ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE,
-                 0.0);
+                 level4RowToY(static_cast<float>(charlie.row + 16)) + 18.0F,
+                 133.0F, 133.0F, SDL_FLIP_NONE, 0.0);
 }
 
 void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
