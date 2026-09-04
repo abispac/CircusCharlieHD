@@ -9,3 +9,4 @@ snap/
 *.blend1
 assets/audio/*.wav
 blender-rig/stage1-build/
+_to_delete/

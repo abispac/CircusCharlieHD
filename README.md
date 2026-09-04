@@ -17,8 +17,8 @@ contain extracted graphics, program code, or logos. User-supplied
 soundtrack and effects are loaded only from the ignored local `assets/audio`
 folder and are not stored in this repository.
 
-The current milestone includes playable Event 1, Event 2 and Event 3, plus a
-faithful six-event HD selection screen.  Events 1 and 3 are
+The current milestone includes playable Event 1, Event 2, Event 3 and Event 4,
+plus a faithful six-event HD selection screen.  Events 1, 3 and 4 are
 frame-synchronized with the original board (see below). The
 friendly blond Charlie rider uses the production Run A/B/C poses plus the
 backward walking poses E/F while retaining the original HD lion artwork.
@@ -224,6 +224,31 @@ for captures made that way) replays a `tools/autoplay_level3_headless.lua`
 capture and `tools/compare_level3_replay.py` compares every board field
 of every playing frame; the seven captures in
 `docs/diagnostics/level3-replay/` replay with no mismatches.
+
+## Event 4 board model and replay verification
+
+Event 4 runs the `circusc4` rolling-ball handler documented in
+`docs/LEVEL4_ROM_MODEL.md`: the one-column scroll with the `$F8` walk-in page,
+the 57-frame jump arc, the `$9A42` landing window and the record swap that
+makes the ball landed on the ridden one, the `$F1B5` spawn schedule that
+tightens with every landing, the close-ball bonus worth 400 to 2000 points,
+the 192-frame idle slip, the ball-versus-ball collision and the goal stand.
+`tools/autoplay_level4_headless.lua` captures the board frame by frame and
+`tools/compare_level4_replay.py` compares every column of every playing
+frame; the five captures in `docs/diagnostics/level4-replay/` replay with no
+mismatches.
+
+## Vertical monitors
+
+`--rotate 0|90|180|270` turns the whole presentation, and `F10` cycles it
+while the game runs, which is easier when a cabinet monitor is being set up.
+A monitor mounted in portrait needs no rotation — the game is 480x640 and
+fills it. A landscape panel turned on its side wants `--rotate 90` (or `270`,
+depending on which way it was turned) together with `--fullscreen`:
+
+```sh
+./build/circus_charlie_hd --rotate 90 --fullscreen
+```
 
 ## Reference analysis
 

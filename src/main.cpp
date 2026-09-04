@@ -435,6 +435,126 @@ enum class Level3Pose : std::uint8_t {
   Fallen,       // $EA9E
 };
 
+// --- structs -------------------------------------------------------------
+
+// One board record.  The field names follow the offsets the ROM uses so the
+// routines below read like the disassembly.
+struct Level4Record {
+  int active = 0;         // ,X
+  int flag = 0;           // $1,X
+  int state = 0;          // $2,X
+  int row = 0;            // $4,X
+  int half = 0;           // $5,X   half-column accumulator
+  int col = 0;            // $6,X
+  int phase = 0;          // $7,X   0 riding, 1 rising, 2 falling
+  int landVelocity = 0;   // $8,X
+  int launch = 0;         // $9,X
+  int direction = 0;      // $A,X   0 still, 1 left, 2 right
+  int animation = 0;      // $B,X
+  int velocity = 0;       // $17,X:$18,X, 8.8
+  int jump = 0;           // $1A,X
+  int stick = 0;          // $1B,X
+  int idleHigh = 0;       // $27,X
+  int idleLow = 0;        // $28,X
+  int align = 0;          // $29,X  (the ridden ball only)
+  int countdown = 0;      // $2D,X
+};
+
+// $2600-$26B0.  State 0 is a score popup that tracks a ball; state 2 is one
+// cell of the FAR OUT / GREAT / OH NO callouts.
+struct Level4Popup {
+  int active = 0;
+  int flag = 0;
+  int state = 0;
+  int row = 0;
+  int col = 0;
+  int timer = 0;
+  int owner = -1;   // -1 the ridden ball, 0-3 a rolling ball
+  int value = 0;    // points, for the drawing code
+  int cell = 0;
+  int kind = 0;     // 0 score popup, 1 goal callout, 2 failure callout
+};
+
+struct Level4Plaque {
+  int col = 0;
+  int row = 0;
+  int trigger = 0;
+  int cell = 0;
+};
+
+// --- constants -----------------------------------------------------------
+
+// The board's 224x256 screen maps onto the native canvas exactly as it does
+// in Event 3.
+constexpr float kLevel4BallRadius = 40.0F;
+constexpr int kLevel4ScrollEnd = 1793;   // progress once page $F8 stops it
+
+// $9912/$9883: the ball starts at row $C0 column $50 and Charlie sits on it.
+constexpr int kLevel4BallRow = 0xc0;
+constexpr int kLevel4StartColumn = 0x50;
+constexpr int kLevel4CharlieRow = 0xa4;
+constexpr int kLevel4SpawnColumn = 0xf1;
+constexpr int kLevel4GoalPage = 0xf8;
+constexpr int kLevel4FallenFrames = 0x28;
+constexpr int kLevel4GoalFrames = 0xa0;
+constexpr int kLevel4StruckFrames = 0x20;
+constexpr int kLevel4RestartFrames = 96;
+// $FB80 on a fresh start, then $BD1C by page.
+constexpr int kLevel4FirstBonus = 6410;
+constexpr int kLevel4RestartBonus[3] = {4000, 3500, 3000};
+
+// $EAFE and $EB23: the cells of the two callouts, as (row, column) pairs.
+constexpr std::array<std::pair<int, int>, 9> kLevel4GoalCells{{
+    {88, 32}, {88, 48}, {88, 64}, {104, 108}, {104, 124},
+    {104, 140}, {88, 176}, {88, 192}, {88, 208}}};
+constexpr std::array<std::pair<int, int>, 6> kLevel4FailCells{{
+    {88, 64}, {88, 80}, {88, 96}, {112, 160}, {112, 176}, {112, 192}}};
+
+// $EB48: the distance plaques, three per page.  Only the trigger column and
+// the sign they show change; the row is always $E0.
+constexpr std::array<int, 3> kLevel4PlaqueTriggers{0x80, 0x70, 0x60};
+constexpr std::array<std::array<int, 3>, 10> kLevel4PlaqueCells{{
+    {0xb8, 0xb9, 0xba}, {0xb8, 0xb9, 0xba}, {0xca, 0xc5, 0xbc},
+    {0xca, 0xc1, 0xbc}, {0xca, 0xc0, 0xbc}, {0xca, 0xbf, 0xbc},
+    {0xca, 0xbe, 0xbc}, {0xca, 0xbd, 0xbc}, {0xc2, 0xc3, 0xc4},
+    {0xc2, 0xc3, 0xc4}}};
+
+// The $F1B5 rolling-ball schedule: six difficulty tables of nine pages,
+// each naming up to five $2204 columns at which a ball rolls in.
+constexpr int kLevel4SpawnListCount = 22;
+constexpr std::array<std::array<int, 5>, 22> kLevel4SpawnLists{{
+    {224, 184, 64, 32, 0},   // $F1E9
+    {248, 216, 152, 120, 80},   // $F1EE
+    {228, 128, 8, 0, 0},   // $F1F4
+    {192, 120, 32, 0, 0},   // $F1F8
+    {212, 0, 0, 0, 0},   // $F1D5
+    {224, 184, 64, 32, 1},   // $F214
+    {192, 160, 128, 96, 64},   // $F1FC
+    {0, 242, 20, 242, 20},   // $F201
+    {224, 184, 64, 32, 1},   // $F22B
+    {128, 89, 8, 192, 0},   // $F230
+    {128, 89, 8, 224, 160},   // $F247
+    {228, 128, 8, 64, 192},   // $F24C
+    {192, 120, 32, 72, 0},   // $F251
+    {192, 160, 128, 96, 32},   // $F256
+    {224, 184, 144, 64, 16},   // $F26D
+    {208, 176, 128, 89, 24},   // $F272
+    {228, 170, 128, 72, 8},   // $F277
+    {192, 120, 80, 32, 0},   // $F27C
+    {224, 176, 128, 80, 32},   // $F281
+    {208, 160, 120, 72, 16},   // $F286
+    {204, 160, 124, 88, 48},   // $F28B
+    {200, 164, 112, 64, 0},   // $F290
+}};
+constexpr std::array<std::array<int, 9>, 6> kLevel4SchedulePages{{
+    {0, 0, 1, 2, 3, 3, 3, 3, 4},   // table 0 ($F1C3)
+    {0, 0, 1, 2, 3, 5, 3, 6, 7},   // table 1 ($F1D7)
+    {5, 5, 1, 2, 2, 1, 3, 6, 7},   // table 2 ($F202)
+    {8, 8, 9, 8, 2, 1, 6, 6, 7},   // table 3 ($F219)
+    {8, 10, 10, 11, 11, 12, 13, 6, 7},   // table 4 ($F235)
+    {14, 14, 15, 16, 17, 18, 19, 20, 21},   // table 5 ($F25B)
+}};
+
 struct Stage4Ball {
   float worldX = 0.0F;
   float velocity = 0.0F;
@@ -688,6 +808,31 @@ struct Game {
   int level3PressedDrum = -1;
   int level3DeathKind = 0;                // 1 flame, 2 knife, 3 roof, 4 time
   int level3RestartPage = 0;              // $2203 after $8517
+  Level4Record level4Charlie;             // $2400
+  Level4Record level4Ball;                // $2440 the ball he rides
+  std::array<Level4Record, 4> level4Rolls;   // $2480-$2540
+  std::array<Level4Popup, 12> level4Popups;  // $2600-$26B0
+  std::array<Level4Plaque, 3> level4Plaques; // $26C0-$26E0
+  int level4Scroll = 0;                   // $2203:$2204
+  int level4Timeout = 0;                  // $2263
+  int level4BonusHold = 0;                // $2276
+  int level4Buffered = 0;                 // $28D3
+  int level4Doubles = 0;                  // $28D4
+  int level4Pending = 0;                  // $28D5
+  int level4PendingLead = -1;             // $28D6
+  int level4PendingTrail = -1;            // $28D8
+  int level4Falls = 0;                    // $28DF
+  int level4Landings = 0;                 // $28EF
+  int level4Held = 0;                     // $28F0
+  int level4Standing = 0;                 // $28FC
+  int level4Flash = 0;                    // $2888
+  int level4Dips = 0xb4;                  // $202F
+  int level4Visits = 1;                   // $2211
+  bool level4Started = false;             // $2258
+  int level4RestartPage = 0;
+  int level4LatchedButton = 0;
+  bool level4Died = false;
+  bool level4Finished = false;
   bool level3Died = false;                // $2258
   int level3BonusTimeout = 0;             // $2263
   bool level3BirdActive = false;          // $2700-$2720 presentation records
@@ -910,7 +1055,7 @@ void printUsage() {
   std::cout
       << "Circus Charlie HD\n"
       << "  --mode WIDTHxHEIGHT\n"
-      << "  --rotate 0|90|270\n"
+      << "  --rotate 0|90|180|270\n"
       << "  --fullscreen\n"
       << "  --debug\n"
       << "  --lion-test\n"
@@ -1042,8 +1187,8 @@ std::optional<Options> parseOptions(int argc, char** argv) {
     } else if (argument == "--rotate" && index + 1 < argc) {
       options.rotation = std::atoi(argv[++index]);
       if (options.rotation != 0 && options.rotation != 90 &&
-          options.rotation != 270) {
-        std::cerr << "Rotation must be 0, 90, or 270.\n";
+          options.rotation != 180 && options.rotation != 270) {
+        std::cerr << "Rotation must be 0, 90, 180 or 270.\n";
         return std::nullopt;
       }
     } else if (argument == "--help" || argument == "-h") {
@@ -1838,6 +1983,10 @@ void initializeLevel1Board(Game& game) {
 
 void initializeLevel3Board(Game& game, int pageByte);
 void syncLevel3World(Game& game);
+void initializeLevel4Board(Game& game, int page);
+void syncLevel4World(Game& game);
+void updateLevel4(Game& game, const Uint8* keyboard, bool jumpPressed,
+                  float controllerAxis);
 
 void resetCourse(Game& game) {
   game.player = Player{};
@@ -1954,6 +2103,15 @@ void resetCourse(Game& game) {
     game.firePots.clear();
     game.bonusRings.clear();
     game.stage2Monkeys.clear();
+    game.stage4Balls.clear();
+    game.prizeBagsAvailable = 0;
+    game.level4Started = false;
+    initializeLevel4Board(game, 0);
+    syncLevel4World(game);
+    return;
+  }
+
+  if (false) {
     game.player.position = {kStage4PlayerScreenX, kStage4CharlieBaselineY};
     game.player.previous = game.player.position;
     game.player.grounded = true;
@@ -3107,6 +3265,912 @@ void updateLevel3(Game& game, const Uint8* keyboard, float controllerAxis) {
     game.player.previous = game.player.position;
     game.previousCameraX = game.cameraX;
   }
+}
+
+// --- helpers -------------------------------------------------------------
+
+float level4RowToY(float row) { return level3RowToY(row); }
+
+// The middle cell of a plaque names the distance ($EB5C-$EBBC).
+std::string level4PlaqueText(int cell) {
+  switch (cell) {
+    case 0xb8: return "START";
+    case 0xc5: return "60M";
+    case 0xc1: return "50M";
+    case 0xc0: return "40M";
+    case 0xbf: return "30M";
+    case 0xbe: return "20M";
+    case 0xbd: return "10M";
+    case 0xc2: return "GOAL";
+    default: return {};
+  }
+}
+
+Level4Record& level4BallRecord(Game& game, int owner) {
+  if (owner < 0) return game.level4Ball;
+  return game.level4Rolls[static_cast<std::size_t>(owner)];
+}
+
+const Level4Record& level4BallRecord(const Game& game, int owner) {
+  if (owner < 0) return game.level4Ball;
+  return game.level4Rolls[static_cast<std::size_t>(owner)];
+}
+
+// $8790/$8794: fill free object slots with one callout cell each.
+template <std::size_t N>
+void level4SpawnCallouts(Game& game,
+                         const std::array<std::pair<int, int>, N>& cells,
+                         int kind) {
+  std::size_t cell = 0;
+  for (auto& popup : game.level4Popups) {
+    if (cell >= cells.size()) return;
+    if (popup.active != 0) continue;
+    popup.active = 1;
+    popup.state = 2;
+    popup.row = cells[cell].first;
+    popup.col = cells[cell].second;
+    popup.cell = static_cast<int>(cell);
+    popup.kind = kind;
+    popup.owner = -1;
+    ++cell;
+  }
+}
+
+// $82BA: a plaque re-enters from the right edge when the scroll reaches its
+// trigger column.
+void level4Plaques(Game& game) {
+  int page = (-((game.level4Scroll >> 8) & 0xff)) & 0xff;
+  if (game.level4Charlie.direction != 1) ++page;
+  page = std::clamp(page, 0, 9);
+  const int low = game.level4Scroll & 0xff;
+  for (std::size_t i = 0; i < kLevel4PlaqueTriggers.size(); ++i) {
+    if (kLevel4PlaqueTriggers[i] != low) continue;
+    for (auto& plaque : game.level4Plaques) {
+      if (plaque.trigger != kLevel4PlaqueTriggers[i]) continue;
+      plaque.col = 0xf0;
+      plaque.row = 0xe0;
+      plaque.cell = kLevel4PlaqueCells[static_cast<std::size_t>(page)][i];
+      break;
+    }
+    break;
+  }
+}
+
+// $8267: the plaques enter the stage already scrolled off to the left.
+void level4InitPlaques(Game& game) {
+  int page = (-((game.level4Scroll >> 8) & 0xff)) & 0xff;
+  ++page;
+  page = std::clamp(page, 0, 9);
+  for (std::size_t i = 0; i < kLevel4PlaqueTriggers.size(); ++i) {
+    Level4Plaque& plaque = game.level4Plaques[i];
+    plaque.trigger = kLevel4PlaqueTriggers[i];
+    plaque.col = (-(kLevel4PlaqueTriggers[i] + 0x10)) & 0xff;
+    plaque.row = 0xe0;
+    plaque.cell = kLevel4PlaqueCells[static_cast<std::size_t>(page)][i];
+  }
+}
+
+// $9883 plus $BB25: start (or restart) the stage on the given page.
+void initializeLevel4Board(Game& game, int page) {
+  game.level4Scroll = (page << 8) & 0xffff;
+  game.level4Charlie = Level4Record{};
+  game.level4Ball = Level4Record{};
+  for (auto& roll : game.level4Rolls) roll = Level4Record{};
+  for (auto& popup : game.level4Popups) popup = Level4Popup{};
+  game.level4Flash = 0;
+  game.level4Standing = 0;
+  game.level4Pending = 0;
+  game.level4PendingLead = -1;
+  game.level4PendingTrail = -1;
+  game.level4Buffered = 0;
+  game.level4Held = 0;
+  game.level4BonusHold = 0;
+  game.level4Timeout = 0x40;
+  game.level4Falls = 0;
+  game.level4Doubles = 0;
+  game.level4Landings = 0;
+  game.level4Died = false;
+  game.level4Finished = false;
+  if (page == 0 && !game.level4Started) {
+    game.bonus = kLevel4FirstBonus;
+    game.level4Started = true;
+  } else if (page == 0 || page >= 0xfe) {
+    game.bonus = kLevel4RestartBonus[0];
+  } else if (page >= 0xfc) {
+    game.bonus = kLevel4RestartBonus[1];
+  } else {
+    game.bonus = kLevel4RestartBonus[2];
+  }
+  level4InitPlaques(game);
+  Level4Record& ball = game.level4Ball;
+  ball.active = 1;
+  ball.state = 5;
+  ball.row = kLevel4BallRow;
+  ball.col = kLevel4StartColumn;
+  Level4Record& charlie = game.level4Charlie;
+  charlie.active = 1;
+  charlie.state = 1;
+  charlie.row = kLevel4CharlieRow;
+  charlie.col = ball.col;
+  charlie.launch = 4;
+  charlie.landVelocity = 4;
+  charlie.velocity = 0x0420;
+}
+
+// The board rows and columns become world pixels for the renderer.
+void syncLevel4World(Game& game) {
+  const int progress = (-game.level4Scroll) & 0xffff;
+  const float scale = kWorldWidth / 224.0F;
+  game.cameraX = static_cast<float>(progress) * scale;
+  game.player.position = {
+      static_cast<float>(progress + game.level4Charlie.col) * scale,
+      level3RowToY(static_cast<float>(game.level4Charlie.row))};
+  game.player.grounded = game.level4Charlie.phase == 0;
+  game.player.facingRight = game.level4Charlie.direction != 1;
+  game.player.alive = game.level4Charlie.state != 7 &&
+                      game.level4Charlie.state != 8 &&
+                      game.level4Charlie.state != 2;
+}
+
+
+// ---------------------------------------------------------------------------
+// Event 4 (rolling balls) — the circusc4 stage handler at $97D8-$9F0C.
+//
+// The board keeps Charlie ($2400), the ball he rides ($2440), four rolling
+// balls ($2480-$2540), twelve object slots ($2600-$26B0) and three distance
+// plaques ($26C0-$26E0).  Everything below follows those records field by
+// field; docs/LEVEL4_ROM_MODEL.md explains the model and lists the captures
+// that verify it.
+// ---------------------------------------------------------------------------
+
+void level4ClearRecord(Level4Record& record) { record = Level4Record{}; }
+
+void level4ClearPopup(Level4Popup& popup) {
+  // $7D96 clears only ,X and $6,X.  The state, the flag and the timer of a
+  // released slot survive into whatever object claims it next.
+  popup.active = 0;
+  popup.col = 0;
+}
+
+// $87CE: advance one animation script step.  Only the delay counter is
+// modelled; the native drawing picks its own frames from the pose.
+void level4Animate(Level4Record& record) {
+  if (record.animation > 0) --record.animation;
+}
+
+// $8347/$8354: the record's other cells mirror the first, so only the
+// leading row and column are kept here.
+
+// $6250 with the $D140 value table.
+void level4AddScore(Game& game, int points) { game.score += points; }
+
+// ---------------------------------------------------------------------------
+// $97F1: the ridden ball against the four rolling balls.
+// ---------------------------------------------------------------------------
+
+void level4BallCollisions(Game& game) {
+  Level4Record& ball = game.level4Ball;
+  if (ball.active == 0 || ball.state >= 3) return;
+  for (auto& roll : game.level4Rolls) {
+    if (roll.active == 0) continue;
+    int delta = ((ball.col + 0x10) & 0xff) - ((roll.col + 0x10) & 0xff);
+    delta = static_cast<std::int8_t>(delta & 0xff);
+    if (std::abs(delta) >= 0x1c) continue;
+    // $9825: both balls are knocked out of their rolling states.  $FAC3
+    // maps the ridden ball's state to the state the roller takes.
+    static constexpr std::array<int, 3> kStruckStates{5, 7, 6};
+    roll.state = kStruckStates[static_cast<std::size_t>(ball.state)];
+    ball.state = ball.state == 1 ? 7 : 6;
+    ball.active = 0;
+    ball.flag = 1;
+    ball.animation = 0;
+    ++game.stage4BallCollisionAudioSerial;
+    Level4Record& charlie = game.level4Charlie;
+    if (charlie.phase != 0) return;
+    charlie.state = 7;
+    charlie.countdown = 0x20;
+    charlie.velocity = 0;
+    charlie.animation = 0;
+    ++game.level4Falls;
+    ++game.crashAudioSerial;
+    return;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// $9D51: rolling ball spawning and motion.
+// ---------------------------------------------------------------------------
+
+// $9D86-$9DAF plus $9E2D: which of the six $F1B5 schedules is in force.
+int level4DifficultyIndex(const Game& game) {
+  int index = (game.level4Dips & 0x60) >> 4;
+  if (game.level4Visits != 0) index += (game.level4Visits - 1) * 2;
+  index &= 0xff;
+  static constexpr std::array<int, 8> kThresholds{0x14, 0x18, 0x1c, 0x20,
+                                                  0x24, 0x28, 0x2c, 0x30};
+  for (const int threshold : kThresholds) {
+    if (game.level4Landings < threshold) break;
+    index += 2;
+  }
+  return std::min(index, 0x0a);
+}
+
+int level4SchedulePage(const Game& game) {
+  return (-((game.level4Scroll >> 8) & 0xff)) & 0xff;
+}
+
+// The five spawn columns of the current page, highest first.  The ROM
+// indexes $F1B5 by a byte offset, so the six tables sit at even indices.
+const std::array<int, 5>& level4PageSpawns(const Game& game) {
+  const std::size_t table =
+      static_cast<std::size_t>(level4DifficultyIndex(game) / 2);
+  const std::size_t page =
+      static_cast<std::size_t>(std::min(level4SchedulePage(game), 8));
+  return kLevel4SpawnLists[static_cast<std::size_t>(
+      kLevel4SchedulePages[table][page])];
+}
+
+// $9DEF: a ball may only enter when no other roller is near the right edge.
+bool level4SpawnAllowed(const Game& game) {
+  for (const auto& roll : game.level4Rolls) {
+    if (roll.active == 0 && roll.flag == 0) continue;
+    if (roll.col < 0x14) continue;
+    int delta = static_cast<std::int8_t>((0xf1 - roll.col) & 0xff);
+    if (std::abs(delta) <= 0x24) return false;
+  }
+  return true;
+}
+
+void level4Spawn(Game& game, Level4Record& roll) {
+  game.level4Standing = 0;
+  if (!level4SpawnAllowed(game)) return;
+  roll.active = (roll.active + 1) & 0xff;
+  roll.row = 0xc0;
+  roll.col = 0xf1;
+  roll.animation = 0;
+  roll.half = 0;
+}
+
+// $9D73, once per slot until one of them answers.
+void level4RollSpawn(Game& game) {
+  const int direction = game.level4Charlie.direction;
+  if (direction == 1) return;
+  if (direction == 0) {
+    // $9E3D: standing still, one ball rolls in every 256 frames.
+    game.level4Standing = (game.level4Standing + 1) & 0xff;
+    if (game.level4Standing != 0) return;
+    for (auto& roll : game.level4Rolls) {
+      if (roll.active == 0) {
+        level4Spawn(game, roll);
+        return;
+      }
+    }
+    return;
+  }
+  for (auto& roll : game.level4Rolls) {
+    if (roll.active != 0 || roll.flag != 0) continue;
+    const std::array<int, 5>& spawns = level4PageSpawns(game);
+    const int low = game.level4Scroll & 0xff;
+    for (std::size_t i = 0; i < spawns.size(); ++i) {
+      const int value = spawns[i];
+      if (i != 0 && value == 0) return;
+      if (value == low) {
+        level4Spawn(game, roll);
+        return;
+      }
+      if (i == 0 ? low > value : value < low) return;
+    }
+    return;
+  }
+}
+
+// $9E51 with the $FAF2 state table.
+void level4RollTail(Level4Record& roll) {
+  if (roll.col == 0xf3 || roll.col == 0xf2) roll.state = 2;
+}
+
+void level4RollUpdate(Game& game) {
+  const int direction = game.level4Charlie.direction;
+  const bool walking = ((game.level4Scroll >> 8) & 0xff) == 0xf8;
+  for (auto& roll : game.level4Rolls) {
+    if (roll.active == 0 && roll.flag == 0) continue;
+    switch (roll.state) {
+      case 0: {  // $9E5F rolling toward Charlie
+        level4Animate(roll);
+        if (direction == 1) {
+          roll.animation = 0;
+          roll.state = (roll.state + 1) & 0xff;
+          break;
+        }
+        const int half = (roll.half + 0x80) & 0xff;
+        if (half == 0) roll.col = (roll.col - 1) & 0xff;
+        roll.half = half;
+        if (direction != 0 && !walking) roll.col = (roll.col - 1) & 0xff;
+        level4RollTail(roll);
+        break;
+      }
+      case 1: {  // $9E9B Charlie backtracks, the ball drifts away
+        level4Animate(roll);
+        if (direction != 1) {
+          roll.animation = 0;
+          roll.half = 0;
+          roll.state = (roll.state - 1) & 0xff;
+          break;
+        }
+        const int half = (roll.half + 0x80) & 0xff;
+        if (half == 0) roll.col = (roll.col + 1) & 0xff;
+        roll.half = half;
+        level4RollTail(roll);
+        break;
+      }
+      case 2:  // $9EBE the slot is wiped
+        level4ClearRecord(roll);
+        break;
+      case 3:  // $9ED9 knocked to the right
+        level4Animate(roll);
+        level4Animate(roll);
+        roll.col = (roll.col + 2) & 0xff;
+        if (roll.col >= 0xf0) level4ClearRecord(roll);
+        break;
+      case 4:  // $9EEE knocked to the left
+        level4Animate(roll);
+        level4Animate(roll);
+        roll.col = (roll.col - 2) & 0xff;
+        if (roll.col >= 0xf0 && roll.col < 0xf2) level4ClearRecord(roll);
+        break;
+      case 6:  // $9F07 one cell per frame to the right
+        level4Animate(roll);
+        roll.col = (roll.col + 2) & 0xff;
+        if (roll.col >= 0xf0) level4ClearRecord(roll);
+        break;
+      case 7:  // $9F0A one cell per frame to the left
+        level4Animate(roll);
+        roll.col = (roll.col - 2) & 0xff;
+        if (roll.col >= 0xf0 && roll.col < 0xf2) level4ClearRecord(roll);
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// $8532: the joystick and the jump edge.
+// ---------------------------------------------------------------------------
+
+void level4LatchInput(Game& game, int stick, int button) {
+  Level4Record& charlie = game.level4Charlie;
+  charlie.stick = stick & 0x03;
+  game.level4LatchedButton = button;
+  if (game.level4Buffered != 0) {
+    // $8580: a jump buffered during the fall is discarded on the landing.
+    if (charlie.phase != 0) return;
+    game.level4Buffered = 0;
+    return;
+  }
+  if (game.level4Held != 0) {
+    if (button == 0) {
+      game.level4Held = 0;
+    } else {
+      charlie.jump = 0;
+    }
+    return;
+  }
+  charlie.jump = button;
+  if (button == 0) return;
+  game.level4Held = (game.level4Held + 1) & 0xff;
+  if (charlie.phase == 2 && charlie.row >= 0x68) game.level4Buffered = button;
+}
+
+// ---------------------------------------------------------------------------
+// $9A42/$9B10: the landing, its 100 points and the close-ball bonus.
+// ---------------------------------------------------------------------------
+
+void level4SpawnDoublePopup(Game& game, int owner) {
+  const Level4Record& source = level4BallRecord(game, owner);
+  int first = -1;
+  for (int i = 0; i < 4; ++i) {
+    if (game.level4Popups[static_cast<std::size_t>(i)].active == 0) {
+      first = i;
+      break;
+    }
+  }
+  if (first < 0) return;
+  Level4Popup& lead = game.level4Popups[static_cast<std::size_t>(first)];
+  game.level4Pending = 1;
+  game.level4PendingLead = first;
+  lead.active = 1;
+  lead.flag = 0;
+  lead.row = (source.row + 0xf8) & 0xff;
+  lead.col = (source.col + 8) & 0xff;
+  lead.owner = owner;
+  lead.timer = 0x20;
+  int second = -1;
+  for (int i = 0; i < 4; ++i) {
+    if (game.level4Popups[static_cast<std::size_t>(i)].active == 0) {
+      second = i;
+      break;
+    }
+  }
+  if (second < 0) return;
+  Level4Popup& trail = game.level4Popups[static_cast<std::size_t>(second)];
+  game.level4PendingTrail = second;
+  trail.active = 1;
+  trail.flag = 1;
+  trail.row = lead.row;
+  trail.col = (lead.col + 0x0f) & 0xff;
+  trail.owner = owner;
+  trail.timer = 0x20;
+}
+
+// $9B10: how much the close ball is worth, decided by its distance.
+void level4AwardDouble(Game& game, int ballColumn) {
+  if (game.level4Pending == 0) return;
+  const int delta = (ballColumn - game.level4Charlie.col) & 0xff;
+  int points = 400;
+  if (delta < 5) points = delta >= 2 ? 600 : 2000;
+  if (game.level4PendingLead >= 0) {
+    game.level4Popups[static_cast<std::size_t>(game.level4PendingLead)].value =
+        points;
+  }
+  if (game.level4PendingTrail >= 0) {
+    game.level4Popups[static_cast<std::size_t>(game.level4PendingTrail)].value =
+        points;
+  }
+  level4AddScore(game, points);
+  ++game.level4Doubles;
+  ++game.prizeBagAudioSerial;
+  game.level4Pending = 0;
+}
+
+// $9A42: find the ball Charlie came down on, or fall.  A landing ends with
+// $9B0D pulling its own return address off the stack, so the goal test and
+// the second joystick latch at $9A11/$9A14 only run when nothing was there.
+bool level4Landing(Game& game) {
+  Level4Record& charlie = game.level4Charlie;
+  int landed = -2;
+  if (charlie.direction == 0) {
+    // Standing still he always comes back down on his own ball.
+    const Level4Record& ball = game.level4Ball;
+    if (ball.active != 0) {
+      const int reach = (charlie.col + 0x18) & 0xff;
+      int delta = static_cast<std::int8_t>((((ball.col + 0x10) & 0xff) - reach) & 0xff);
+      if (std::abs(delta) < 0x12) landed = -1;
+    }
+  }
+  if (landed == -2) {
+    for (int i = 0; i < 4; ++i) {
+      const Level4Record& roll = game.level4Rolls[static_cast<std::size_t>(i)];
+      if (roll.active == 0) continue;
+      const int reach =
+          (charlie.col + (charlie.direction == 1 ? 0x0c : 0x18)) & 0xff;
+      int delta = static_cast<std::int8_t>((((roll.col + 0x10) & 0xff) - reach) & 0xff);
+      if (std::abs(delta) < 0x12) {
+        landed = i;
+        break;
+      }
+    }
+  }
+  if (landed == -2) {
+    charlie.state = 2;  // $9A76: nothing underneath, Charlie drops
+    return false;
+  }
+  // $8ED2: a landing while moving is worth 100 on this stage.
+  if (charlie.direction != 0) level4AddScore(game, 100);
+  ++game.level4Landings;
+  ++game.jumpAudioSerial;
+  // $9A84: a second ball close behind pays the double bonus.
+  for (int i = 0; i < 4; ++i) {
+    const Level4Record& roll = game.level4Rolls[static_cast<std::size_t>(i)];
+    if (roll.active == 0) continue;
+    if (i == landed) {
+      if (charlie.direction != 0) game.level4Flash = 0x10;
+      continue;
+    }
+    if (charlie.direction == 0) break;
+    game.level4Flash = 0x10;
+    if (charlie.direction == 2) {
+      const int gap = (charlie.col - roll.col) & 0xff;
+      if (gap >= 0x40) continue;
+      level4SpawnDoublePopup(game, i);
+      break;
+    }
+    if (roll.col < 0x50) continue;
+    if (roll.col >= 0x78) continue;
+    level4SpawnDoublePopup(game, i);
+    break;
+  }
+  // $9AC8: the landed-on ball becomes the ridden ball; the records swap.
+  if (landed >= 0) {
+    std::swap(game.level4Ball,
+              game.level4Rolls[static_cast<std::size_t>(landed)]);
+  }
+  // $9AFC: which way the ball has to travel to get back under Charlie.
+  Level4Record& ball = game.level4Ball;
+  const int diff = (ball.col - charlie.col) & 0xff;
+  ball.align = (diff == 0 || diff >= 0x80) ? diff : 1;
+  level4AwardDouble(game, ball.col);
+  return true;
+}
+
+// $9BC0: the goal stand on the last page.
+void level4GoalCheck(Game& game) {
+  Level4Record& charlie = game.level4Charlie;
+  if (((game.level4Scroll >> 8) & 0xff) != 0xf8) return;
+  if (charlie.col < 0xa0 || charlie.col >= 0xca) {
+    charlie.state = 2;
+    return;
+  }
+  charlie.row = (charlie.row + 6) & 0xff;
+  charlie.animation = 0;
+  charlie.state = 4;
+  charlie.countdown = 0xa0;
+  level4SpawnCallouts(game, kLevel4GoalCells, 1);
+  game.scene = Scene::Goal;
+  game.goalFrame = 0;
+}
+
+// ---------------------------------------------------------------------------
+// $9943: walking, scrolling and the jump arc.
+// ---------------------------------------------------------------------------
+
+void level4Move(Game& game) {  // $9943
+  Level4Record& charlie = game.level4Charlie;
+  if (charlie.phase == 0) {
+    if (charlie.jump != 0) {
+      charlie.phase = 1;
+      ++game.jumpAudioSerial;
+    }
+    if (charlie.jump != 0 || charlie.stick != charlie.direction) {
+      charlie.direction = charlie.stick;
+      charlie.animation = 0;
+      charlie.idleHigh = 0;
+      charlie.idleLow = 0;
+      level4Plaques(game);
+    }
+  }
+  const bool walking = ((game.level4Scroll >> 8) & 0xff) == 0xf8;
+  if (charlie.direction == 2) {
+    if (walking) {
+      if (charlie.col < 0xe0) charlie.col = (charlie.col + 1) & 0xff;
+    } else {
+      game.level4Scroll = (game.level4Scroll - 1) & 0xffff;
+      for (auto& plaque : game.level4Plaques) plaque.col = (plaque.col - 1) & 0xff;
+    }
+  } else if (charlie.direction == 1) {
+    if (game.level4Scroll != 0) {
+      if (walking && charlie.col != 0x50) {
+        charlie.col = (charlie.col - 1) & 0xff;
+      } else {
+        game.level4Scroll = (game.level4Scroll + 1) & 0xffff;
+        for (auto& plaque : game.level4Plaques)
+          plaque.col = (plaque.col + 1) & 0xff;
+      }
+    }
+  }
+  if (charlie.phase == 0) return;
+  if (charlie.phase == 1) {
+    // $8499: rise until the velocity runs out.
+    int velocity = charlie.velocity;
+    if ((velocity >> 8) != 0) {
+      velocity = (velocity - 0x20) & 0xffff;
+      charlie.velocity = velocity;
+      charlie.row = (charlie.row - (velocity >> 8)) & 0xff;
+      return;
+    }
+    if ((velocity & 0xff) >= 0x40) {
+      velocity = (velocity - 0x40) & 0xffff;
+      charlie.velocity = velocity;
+      charlie.row = (charlie.row - (velocity >> 8)) & 0xff;
+      return;
+    }
+    charlie.velocity = 0;
+    charlie.phase = 2;
+    // $8425 runs the first falling step on the apex frame.
+  }
+  int velocity = charlie.velocity;
+  if ((velocity >> 8) == 0) velocity = (velocity + 0x20) & 0xffff;
+  velocity = (velocity + 0x20) & 0xffff;
+  charlie.velocity = velocity;
+  charlie.row = (charlie.row + (velocity >> 8)) & 0xff;
+  if ((velocity >> 8) != charlie.landVelocity) return;
+  charlie.phase = 0;
+  charlie.jump = 0;
+  charlie.animation = 0;
+  charlie.landVelocity = charlie.launch;
+  charlie.velocity = (charlie.launch << 8) | 0x20;
+  if (level4Landing(game)) return;
+  level4GoalCheck(game);
+  level4LatchInput(game, charlie.stick, game.level4LatchedButton);
+}
+
+// ---------------------------------------------------------------------------
+// $9872: Charlie's state machine ($FAC6).
+// ---------------------------------------------------------------------------
+
+void level4Charlie(Game& game, int stick, int button) {
+  Level4Record& charlie = game.level4Charlie;
+  switch (charlie.state) {
+    case 1: {  // $98BF riding
+      if (charlie.phase == 0 && charlie.direction == 0) {
+        charlie.idleLow = (charlie.idleLow + 4) & 0xff;
+        if (charlie.idleLow == 0) charlie.idleHigh = (charlie.idleHigh + 1) & 0xff;
+        if (charlie.idleHigh >= 3) {
+          // $98E3: three seconds of standing still and he slips off.
+          charlie.state = 2;
+          charlie.velocity = charlie.launch << 8;
+          charlie.animation = 0;
+          break;
+        }
+      }
+      level4LatchInput(game, stick, button);
+      level4Move(game);
+      break;
+    }
+    case 2: {  // $8592 sliding off the ball
+      if (charlie.direction != 0 && game.level4Scroll != 0) {
+        charlie.col =
+            (charlie.col + (charlie.direction == 2 ? 1 : -1)) & 0xff;
+      }
+      charlie.velocity = (charlie.velocity + 0x20) & 0xffff;
+      charlie.row = (charlie.row + (charlie.velocity >> 8)) & 0xff;
+      if (charlie.row >= 0xd0) {
+        charlie.state = 8;
+        charlie.countdown = 0x28;
+        charlie.animation = 0;
+        level4SpawnCallouts(game, kLevel4FailCells, 2);
+        ++game.crashAudioSerial;
+      }
+      break;
+    }
+    case 4:  // $8FD7 the goal celebration
+      if (charlie.countdown > 0) {
+        --charlie.countdown;
+        level4Animate(charlie);
+        if (charlie.countdown == 0) {
+          game.level4Finished = true;
+          game.level4Scroll = 0;
+        }
+      }
+      break;
+    case 7:  // $84BC struck by a ball
+      if (charlie.countdown != 0) {
+        --charlie.countdown;
+        level4Animate(charlie);
+        charlie.velocity = 0;
+        break;
+      }
+      charlie.velocity = (charlie.velocity + 0x20) & 0xffff;
+      charlie.row = (charlie.row + (charlie.velocity >> 8)) & 0xff;
+      if (charlie.row >= 0xd0) {
+        charlie.state = 8;
+        charlie.countdown = 0x28;
+        charlie.animation = 0;
+        level4SpawnCallouts(game, kLevel4FailCells, 2);
+      }
+      break;
+    case 8:  // $8509 the crowd's reaction, then the restart
+      level4Animate(charlie);
+      if (charlie.countdown > 0) --charlie.countdown;
+      if (charlie.countdown == 0) {
+        int page = (game.level4Scroll >> 8) & 0xff;
+        if (page != 0) page = (page + (page >= 0xfa ? 1 : 2)) & 0xff;
+        game.level4RestartPage = page;
+        game.level4Died = true;
+      }
+      break;
+    default:
+      break;
+  }
+  level4Plaques(game);
+}
+
+// ---------------------------------------------------------------------------
+// $9BF8: the ball Charlie rides ($FAD9).
+// ---------------------------------------------------------------------------
+
+// $9CCB: the ball closes on Charlie's column.
+void level4BallFollow(Game& game) {
+  Level4Record& ball = game.level4Ball;
+  const Level4Record& charlie = game.level4Charlie;
+  const bool walking = ((game.level4Scroll >> 8) & 0xff) == 0xf8;
+  if (!walking) {
+    if (ball.align == 0) {
+      ball.col = charlie.col;
+      return;
+    }
+    ball.col = (ball.col + (ball.align == 1 ? -1 : 1)) & 0xff;
+    if (ball.col == charlie.col) ball.align = 0;
+    if (ball.state == 0) level4Animate(ball);
+    return;
+  }
+  if (ball.align == 0) {
+    ball.col = charlie.col;
+    return;
+  }
+  if (ball.align == 1) {
+    if (charlie.direction != 1) {
+      if (ball.col == charlie.col) ball.align = 0;
+      return;
+    }
+    level4Animate(ball);
+    int col = ball.col;
+    for (int step = 0; step < 3; ++step) {
+      if (col == charlie.col) {
+        ball.align = 0;
+        return;
+      }
+      if (step < 2) col = (col - 1) & 0xff;
+    }
+    ball.col = col;
+    return;
+  }
+  if (charlie.direction == 1) {
+    if (ball.col == charlie.col) ball.align = 0;
+    return;
+  }
+  level4Animate(ball);
+  int col = ball.col;
+  for (int step = 0; step < 3; ++step) {
+    if (col == charlie.col) {
+      ball.align = 0;
+      return;
+    }
+    if (step < 2) col = (col + 1) & 0xff;
+  }
+  ball.col = col;
+}
+
+void level4BallState(Game& game) {
+  Level4Record& ball = game.level4Ball;
+  if (ball.active == 0 && ball.flag == 0) return;
+  const Level4Record& charlie = game.level4Charlie;
+  switch (ball.state) {
+    case 0:
+    case 1:
+    case 2: {
+      if (ball.state != 0) level4Animate(ball);
+      level4BallFollow(game);
+      if (charlie.phase != 0) {
+        // $9C14: Charlie has left, the ball rolls out from under him.
+        if (charlie.direction == 0) break;
+        ball.state = charlie.direction + 2;
+        ball.animation = 0;
+        break;
+      }
+      if (charlie.direction == 0) {
+        ball.state = 0;
+      } else if (ball.state != charlie.direction) {
+        ball.state = charlie.direction;
+        ball.animation = 0;
+      }
+      break;
+    }
+    case 3:  // $9C79 rolling off to the right
+      level4Animate(ball);
+      level4Animate(ball);
+      ball.col = (ball.col + 2) & 0xff;
+      if (ball.col >= 0xf0) level4ClearRecord(ball);
+      break;
+    case 4:  // $9C9C rolling off to the left
+      level4Animate(ball);
+      level4Animate(ball);
+      ball.col = (ball.col - 2) & 0xff;
+      if (ball.col >= 0xf0 && ball.col < 0xf2) level4ClearRecord(ball);
+      break;
+    case 5:  // $9CB4 the opening frame
+      level4Animate(ball);
+      ball.state = 1;
+      ball.animation = 0;
+      break;
+    case 6:  // $9CBD knocked left
+      level4Animate(ball);
+      ball.col = (ball.col - 1) & 0xff;
+      if (ball.col >= 0xf0) level4ClearRecord(ball);
+      break;
+    case 7:  // $9CC4 knocked right
+      level4Animate(ball);
+      ball.col = (ball.col + 1) & 0xff;
+      if (ball.col >= 0xf0 && ball.col < 0xf2) level4ClearRecord(ball);
+      break;
+    default:
+      break;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// $7D65: the object slots — score popups and the FAR OUT / OH NO cells.
+// ---------------------------------------------------------------------------
+
+void level4Objects(Game& game) {
+  for (auto& popup : game.level4Popups) {
+    if (popup.active == 0) continue;
+    if (popup.state == 0) {
+      if (popup.timer > 0) --popup.timer;
+      if (popup.timer == 0) {
+        level4ClearPopup(popup);
+        continue;
+      }
+      const Level4Record& owner = level4BallRecord(game, popup.owner);
+      popup.col = (owner.col + 8 + (popup.flag != 0 ? 0x0f : 0)) & 0xff;
+      if (popup.col == 0) level4ClearPopup(popup);
+    } else if (popup.state == 2) {
+      popup.timer = (popup.timer - 1) & 0xff;
+      if (popup.timer == 0) level4ClearPopup(popup);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// $BB73: the bonus countdown and its time-out.
+// ---------------------------------------------------------------------------
+
+void level4Bonus(Game& game) {
+  if (game.level4BonusHold != 0) {
+    --game.level4BonusHold;
+    return;
+  }
+  // $BBBE: sixteen doubles and the clock starts running faster.
+  int steps = 1;
+  if (game.level4Doubles == 0x20) steps = 3;
+  else if (game.level4Doubles == 0x15) steps = 2;
+  if (game.level4Charlie.state == 4) return;
+  for (int step = 0; step < steps; ++step) {
+    if (game.bonus > 0) {
+      --game.bonus;
+      if (game.bonus != 0) continue;
+    }
+    const int before = game.level4Timeout--;
+    if (before == 0) {
+      game.level4Timeout = 0;
+      continue;
+    }
+    if (before == 2 && game.level4Charlie.state == 1) {
+      game.level4Charlie.state = 7;
+      ++game.crashAudioSerial;
+    }
+  }
+}
+
+// --- the frame ($97D8) ---------------------------------------------------
+
+void updateLevel4(Game& game, const Uint8* keyboard, bool jumpPressed,
+                  float controllerAxis) {
+  game.player.previous = game.player.position;
+  game.previousCameraX = game.cameraX;
+
+  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
+                        keyboard[SDL_SCANCODE_A] || controllerAxis < -0.35F;
+  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
+                         keyboard[SDL_SCANCODE_D] || controllerAxis > 0.35F;
+  const int stick = (moveLeft ? 1 : 0) | (moveRight ? 2 : 0);
+  const bool button = jumpPressed || keyboard[SDL_SCANCODE_SPACE] ||
+                      keyboard[SDL_SCANCODE_Z];
+
+  level4BallCollisions(game);      // $97F1
+  level4RollSpawn(game);           // $9D56
+  level4RollUpdate(game);          // $9D64
+  level4Charlie(game, stick, button ? 0x10 : 0);   // $9872
+  level4BallState(game);           // $9BF8
+  level4Objects(game);             // $7D65
+  level4Bonus(game);               // $BB73
+  if ((game.level4Flash != 0 || game.level4Charlie.state == 4) &&
+      (game.level1BoardFrameByte & 3) == 0) {
+    game.level4Flash = (game.level4Flash - 1) & 0xff;   // $81FA
+  }
+
+  if (game.level4Finished) {
+    game.level4Finished = false;
+    game.scene = Scene::Tally;
+    game.tallyFrame = 0;
+  } else if (game.level4Died) {
+    game.level4Died = false;
+    game.scene = Scene::Crashed;
+    game.crashFrame = 0;
+    game.crashDurationFrames = kLevel4RestartFrames;
+    if (game.lives > 0) --game.lives;
+  }
+  syncLevel4World(game);
 }
 
 void updateStage4(Game& game, const Uint8* keyboard, bool jumpPressed,
@@ -4352,12 +5416,23 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         game.selectedEvent == 0 ? kLevel1FailureFrames : game.crashDurationFrames;
     if (game.crashFrame >= failureFrames) {
       restartAfterCrash(game);
+      if (game.selectedEvent == 3 && game.scene == Scene::Playing) {
+        // $9883 initialises the board and runs the first riding tick in the
+        // same frame, so the capture already shows one column of scroll.
+        initializeLevel4Board(game, game.level4RestartPage);
+        updateLevel4(game, keyboard, jumpPressed, controllerAxis);
+      }
       if (game.selectedEvent == 2 && game.scene == Scene::Playing) {
         // $8C61 initialises the board and runs the first rebound tick in
         // the same frame (the capture shows row $B0 on the re-init frame).
         updateLevel3(game, keyboard, controllerAxis);
       }
     }
+    return;
+  }
+
+  if (game.scene == Scene::Goal && game.selectedEvent == 3) {
+    updateLevel4(game, keyboard, jumpPressed, controllerAxis);
     return;
   }
 
@@ -4442,7 +5517,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     return;
   }
   if (game.selectedEvent == 3) {
-    updateStage4(game, keyboard, jumpPressed, controllerAxis);
+    updateLevel4(game, keyboard, jumpPressed, controllerAxis);
     return;
   }
 
@@ -6231,91 +7306,102 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
                        (game.cameraX - game.previousCameraX) *
                            static_cast<float>(interpolation);
   drawBackdrop(renderer, camera, false, assets, game, timeSeconds, false);
+  const float scale = kWorldWidth / 224.0F;
+  const bool restarting =
+      game.scene == Scene::Crashed && game.crashFrame >= 24;
 
-  for (const auto& marker : game.meterMarkers) {
-    const float x = marker.worldX - camera;
-    if (x < -50.0F || x > kWorldWidth + 50.0F) continue;
-    drawFloorPlaque(renderer, x,
-                    marker.meters < 0
-                        ? std::string("START")
-                        : std::to_string(marker.meters) + "M",
-                    marker.meters < 0);
-  }
-
-  for (std::size_t index = 0; index < game.stage4Balls.size(); ++index) {
-    const auto& ball = game.stage4Balls[index];
-    if (!ball.active) continue;
-    const float x = ball.worldX - camera;
+  // The distance plaques ride the tilemap, so their board column is already
+  // a screen column.
+  for (const auto& plaque : game.level4Plaques) {
+    const float x = static_cast<float>(plaque.col) * scale;
     if (x < -80.0F || x > kWorldWidth + 80.0F) continue;
-    // Rotate the painted ball continuously. Swapping among eight nearly
-    // identical atlas cells made the first version appear static.
-    drawSheetFrame(renderer, assets.stage4Ball, 1, 1, 0, x,
-                   kStage4BallCenterY + kStage4BallRadius,
-                   kStage4BallRadius * 2.0F, kStage4BallRadius * 2.0F,
-                   SDL_FLIP_NONE,
-                   static_cast<double>(ball.rotation * 180.0F / kPi));
+    drawFloorPlaque(renderer, x, level4PlaqueText(plaque.cell),
+                    plaque.cell == 0xb8);
   }
 
-  const float goalX = kStage4CourseLength - camera;
-  if (goalX > -130.0F && goalX < kWorldWidth + 130.0F &&
-      assets.goalPlatform) {
-    const SDL_FRect destination{goalX - 86.0F, kStage4GoalTopY,
-                                172.0F, 48.0F};
+  // The goal stand sits on the last page, 181 columns past the point where
+  // the scroll stops ($9BC0 accepts a landing between columns $A0 and $CA).
+  const float goalX =
+      (static_cast<float>(kLevel4ScrollEnd + 181) * scale) - camera;
+  if (goalX > -130.0F && goalX < kWorldWidth + 130.0F && assets.goalPlatform) {
+    const SDL_FRect destination{goalX - 86.0F, level4RowToY(0xb4), 172.0F,
+                                48.0F};
     SDL_RenderCopyF(renderer, assets.goalPlatform, nullptr, &destination);
   }
+  if (restarting) return;
 
-  const float playerWorldX = game.player.previous.x +
-      (game.player.position.x - game.player.previous.x) *
-          static_cast<float>(interpolation);
-  const float playerY = game.player.previous.y +
-      (game.player.position.y - game.player.previous.y) *
-          static_cast<float>(interpolation);
-  int frame = 0;
-  // The generated atlas retains transparent padding below Charlie's shoes.
-  // Anchor the painted feet to the physical ball surface, not the cell edge.
-  float baseline = playerY + 43.0F - kStage4CharlieVisualLift;
-  float width = 150.0F;
-  float height = 150.0F;
-  if (game.scene == Scene::Crashed) {
-    // Both a ball squeeze and a missed landing use the dedicated Stage 4
-    // stumble/face-plant row. The old branch only selected it for squeeze
-    // failures, leaving a missed jump frozen in its airborne pose.
-    frame = 8 + std::min(3, game.stage4FallFrame / 6);
-    baseline = kStage4BallCenterY + 70.0F;
-  } else if (game.stage4Airborne) {
-    frame = 4 + std::min(3, (game.player.jumpFrame / 5) & 3);
-  } else if (game.scene == Scene::Goal) {
-    constexpr std::array<int, 8> celebration{0, 1, 2, 3, 2, 1, 0, 1};
-    frame = celebration[static_cast<std::size_t>((game.goalFrame / 7) % 8)];
-    // The platform is drawn downward from kStage4GoalTopY. Account for the
-    // atlas's transparent shoe padding so Charlie stands on the green top
-    // instead of appearing embedded in the striped side wall.
-    baseline = kStage4GoalTopY + 15.0F;
-  } else if (game.stage4IdleFrame == 0) {
-    // Only directional ball-walking cycles the balance animation.
-    frame = (static_cast<int>(timeSeconds * 60.606F) / 7) & 3;
-  } else {
-    // Sprite commands measured from two identical MAME idle/fall cycles.
-    // Frame zero is the steady arms-out pose; one and three are the opposing
-    // balance corrections. The pulses accelerate just before Charlie falls.
-    const int idle = game.stage4IdleFrame;
-    const bool staggerA =
-        (idle >= 78 && idle < 95) || (idle >= 133 && idle < 139) ||
-        (idle >= 156 && idle < 161) || (idle >= 178 && idle < 184) ||
-        (idle >= 191 && idle < 203);
-    const bool staggerB =
-        (idle >= 95 && idle < 112) || (idle >= 139 && idle < 144) ||
-        (idle >= 161 && idle < 167) || (idle >= 184 && idle < 190);
-    frame = staggerA ? 1 : (staggerB ? 3 : 0);
+  auto drawBall = [&](const Level4Record& record) {
+    if (record.active == 0 && record.flag == 0) return;
+    const float x = static_cast<float>(record.col) * scale;
+    if (x < -100.0F || x > kWorldWidth + 100.0F) return;
+    // The board animates the ball with sprite cells; rotating the painted
+    // ball by the distance it has covered reads the same at 60 Hz.
+    const float world = camera + x;
+    drawSheetFrame(renderer, assets.stage4Ball, 1, 1, 0, x,
+                   level4RowToY(static_cast<float>(record.row)) +
+                       kLevel4BallRadius,
+                   kLevel4BallRadius * 2.0F, kLevel4BallRadius * 2.0F,
+                   SDL_FLIP_NONE,
+                   static_cast<double>(world / kLevel4BallRadius) * 57.2958);
+  };
+  for (const auto& roll : game.level4Rolls) drawBall(roll);
+  drawBall(game.level4Ball);
+
+  // $2600-$26B0: the double-bonus number follows its ball, the callout cells
+  // stay where they were placed.
+  for (const auto& popup : game.level4Popups) {
+    if (popup.active == 0) continue;
+    const float x = static_cast<float>(popup.col) * scale;
+    const float y = level4RowToY(static_cast<float>(popup.row));
+    if (popup.state == 0) {
+      if (popup.flag != 0 || popup.value == 0) continue;
+      drawText(renderer, std::to_string(popup.value), x - 6.0F, y, 1.6F,
+               color(255, 236, 120), false);
+      continue;
+    }
+    // Each callout is three 16x16 cells; the word is drawn once per group.
+    if (popup.cell % 3 != 0) continue;
+    const int group = popup.cell / 3;
+    const char* word = popup.kind == 1
+                           ? (group == 1 ? "GREAT" : "FAR OUT")
+                           : (group == 1 ? "NO!" : "OH");
+    drawText(renderer, word, x - 12.0F, y, 2.0F,
+             group == 1 ? color(255, 236, 120) : color(255, 255, 255), false);
   }
-  drawSheetFrame(renderer, assets.stage4Charlie, 4, 3, frame,
-                 playerWorldX - camera, baseline, width, height,
-                 // Charlie keeps looking toward the course even when the
-                 // player rolls backward, matching the cabinet animation.
-                 SDL_FLIP_NONE);
 
-  drawHud(renderer, game, assets.charlieLife);
-  if (game.scene == Scene::Crashed) drawCrowdOhNo(renderer);
+  const Level4Record& charlie = game.level4Charlie;
+  const float playerX = static_cast<float>(charlie.col) * scale;
+  const float playerY = level4RowToY(static_cast<float>(charlie.row));
+  int frame = 0;
+  // The painted Charlie carries transparent padding below his shoes; the
+  // board's own composite puts his feet eight rows into the ball's top cell.
+  float baseline = playerY + 67.0F;
+  if (charlie.state == 8 || (charlie.state == 7 && charlie.countdown == 0) ||
+      charlie.state == 2) {
+    frame = 8 + std::min(3, (charlie.state == 8 ? kLevel4FallenFrames -
+                                                      charlie.countdown
+                                                : charlie.row - 0xa4) / 6);
+    frame = std::clamp(frame, 8, 11);
+  } else if (charlie.state == 7) {
+    frame = 8;
+  } else if (charlie.state == 4) {
+    constexpr std::array<int, 8> celebration{0, 1, 2, 3, 2, 1, 0, 1};
+    frame = celebration[static_cast<std::size_t>(
+        ((kLevel4GoalFrames - charlie.countdown) / 7) % 8)];
+  } else if (charlie.phase != 0) {
+    // $E9CF/$E9D8: the jump runs through four cells over its 57 frames.
+    const int elapsed = charlie.phase == 1 ? 0 : 2;
+    frame = 4 + std::min(3, elapsed +
+                                (charlie.velocity < 0x0200 ? 1 : 0));
+  } else if (charlie.direction == 0) {
+    frame = (static_cast<int>(timeSeconds * 60.606) / 7) & 3;
+  } else {
+    frame = (static_cast<int>(timeSeconds * 60.606) / 5) & 3;
+  }
+  drawSheetFrame(renderer, assets.stage4Charlie, 4, 3, frame, playerX,
+                 baseline, 150.0F, 150.0F,
+                 charlie.direction == 1 ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE,
+                 0.0);
 }
 
 void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
@@ -6651,7 +7737,8 @@ int main(int argc, char** argv) {
   std::vector<ReplayRow> replayRows;
   std::size_t replayIndex = 0;
   std::ofstream replayOutput;
-  if (!options.replayPath.empty() && options.replayEvent == 2) {
+  if (!options.replayPath.empty() &&
+      (options.replayEvent == 2 || options.replayEvent == 3)) {
     // Level 3 capture: one row per emulated frame, "rel" counts from the
     // frame that runs $8C61 (initialisation plus the first rebound tick),
     // which is also the first native update.
@@ -6676,7 +7763,7 @@ int main(int argc, char** argv) {
           if (cells[column] == "bonus") bonusColumn = static_cast<int>(column);
         }
         if (inputColumn < 0 || relColumn < 0 || frameColumn < 0) {
-          std::cerr << "Level 3 replay file lacks frame/rel/input columns.\n";
+          std::cerr << "Replay file lacks frame/rel/input columns.\n";
           return 1;
         }
         continue;
@@ -6704,10 +7791,10 @@ int main(int argc, char** argv) {
       }
     }
     if (!found) {
-      std::cerr << "Level 3 replay file has no rel " << options.replayOffset << " row.\n";
+      std::cerr << "Replay file has no rel " << options.replayOffset << " row.\n";
       return 1;
     }
-    game.selectedEvent = 2;
+    game.selectedEvent = options.replayEvent;
     startGame(game);
     // <$14 advances before the first update; the capture logs it after.
     game.level1BoardFrameByte = static_cast<std::uint8_t>(
@@ -6715,7 +7802,26 @@ int main(int argc, char** argv) {
                                      : replayRows[replayIndex].frameByte - 1);
     game.level3Invulnerable = options.replayInvulnerable;
     game.level3ClearProjectiles = options.replayClearProjectiles;
-    if (!options.replayOutput.empty()) {
+    if (!options.replayOutput.empty() && options.replayEvent == 3) {
+      replayOutput.open(options.replayOutput);
+      replayOutput << "frame,rel,input,state,y,x,phase,landvel,launch,dir,vel,jump,"
+                      "stick,idle_hi,idle_lo,countdown,ball_active,ball_flag,"
+                      "ball_state,ball_y,ball_x,ball_half,ball_align,scroll,score,"
+                      "bonus,lives,buffered,doubles,pending,falls,landings,held,"
+                      "standing,flash,timeout,visits";
+      for (int index = 0; index < 4; ++index) {
+        for (const char* name : {"active", "flag", "state", "y", "x", "half"}) {
+          replayOutput << ",roll" << index << '_' << name;
+        }
+      }
+      for (int index = 0; index < 12; ++index) {
+        for (const char* name : {"state", "flag", "y", "x", "timer"}) {
+          replayOutput << ",fx" << index << '_' << name;
+        }
+      }
+      replayOutput << ",plaque0_x,plaque1_x,plaque2_x,phase05,phase06,frame_byte,"
+                      "dips\n";
+    } else if (!options.replayOutput.empty()) {
       replayOutput.open(options.replayOutput);
       replayOutput << "frame,rel,input,state,y,x,phase,vel,target,bnc,dir,stick,scroll,"
                       "score,missed,bagidx,bagtot,tile";
@@ -6858,54 +7964,32 @@ int main(int argc, char** argv) {
       }
       startGame(game);
     }
-    if (options.captureScene == "stage4-goal") {
-      game.stage4CurrentBall =
-          static_cast<int>(game.stage4Balls.size()) - 1;
-      finishStage(game);
-      game.goalFrame = 96;
-    } else if (options.captureScene == "stage4-fall") {
-      game.stage4CurrentBall = 5;
-      for (auto& candidate : game.stage4Balls) candidate.active = false;
-      game.stage4Balls[5].active = true;
-      const auto& ball = game.stage4Balls[5];
-      game.player.position = {ball.worldX, kStage4BallCenterY + 30.0F};
+    if (options.captureScene == "stage4" ||
+        options.captureScene == "stage4-jump" ||
+        options.captureScene == "stage4-fall" ||
+        options.captureScene == "stage4-goal") {
+      // Run the board model with the joystick held right, jumping onto the
+      // rolling balls, so the capture shows a real playing frame.
+      std::array<Uint8, SDL_NUM_SCANCODES> scripted{};
+      scripted[SDL_SCANCODE_RIGHT] = 1;
+      const int frames = options.captureScene == "stage4-goal" ? 1888
+                         : options.captureScene == "stage4-fall" ? 130
+                         : options.captureScene == "stage4-jump" ? 90
+                                                                 : 60;
+      for (int frame = 0; frame < frames; ++frame) {
+        bool jump = false;
+        if (options.captureScene != "stage4-fall" &&
+            game.level4Charlie.phase == 0 && game.level4Charlie.state == 1) {
+          for (const auto& roll : game.level4Rolls) {
+            if (roll.active == 0 || roll.state > 1) continue;
+            if (roll.col > 0x60 && roll.col <= 173) jump = true;
+          }
+        }
+        updateGame(game, scripted.data(), jump, 0.0F);
+        if (game.scene == Scene::Crashed && options.captureScene != "stage4-fall")
+          break;
+      }
       game.player.previous = game.player.position;
-      game.player.alive = false;
-      game.player.grounded = false;
-      game.stage4Airborne = false;
-      game.stage4PinnedCrash = true;
-      game.stage4FallFrame = 18;
-      game.scene = Scene::Crashed;
-      game.crashFrame = 18;
-      game.cameraX = std::max(0.0F, ball.worldX - kStage4PlayerScreenX);
-      game.previousCameraX = game.cameraX;
-    } else if (options.captureScene == "stage4-jump") {
-      game.stage4CurrentBall = 4;
-      for (auto& candidate : game.stage4Balls) candidate.active = false;
-      game.stage4Balls[4].active = true;
-      game.stage4Balls[5].active = true;
-      const auto& from = game.stage4Balls[4];
-      const auto& to = game.stage4Balls[5];
-      game.stage4Airborne = true;
-      game.player.grounded = false;
-      game.player.jumpFrame = 11;
-      game.player.verticalVelocity = 18.0F;
-      game.player.position = {(from.worldX + to.worldX) * 0.5F,
-                              kStage4CharlieBaselineY - 92.0F};
-      game.player.previous = game.player.position;
-      game.cameraX = std::max(
-          0.0F, game.player.position.x - kStage4PlayerScreenX);
-      game.previousCameraX = game.cameraX;
-    } else if (options.captureScene == "stage4") {
-      game.stage4CurrentBall = 4;
-      for (auto& candidate : game.stage4Balls) candidate.active = false;
-      game.stage4Balls[4].active = true;
-      game.stage4Balls[5].active = true;
-      const auto& ball = game.stage4Balls[4];
-      game.player.position = {ball.worldX, kStage4CharlieBaselineY};
-      game.player.previous = game.player.position;
-      game.player.runSpeed = ball.velocity;
-      game.cameraX = std::max(0.0F, ball.worldX - kStage4PlayerScreenX);
       game.previousCameraX = game.cameraX;
     } else if (options.captureScene == "stage3-goal" ||
                options.captureScene == "stage3-approach" ||
@@ -7096,6 +8180,7 @@ int main(int argc, char** argv) {
 
   bool running = true;
   bool fullscreen = options.fullscreen;
+  int rotation = options.rotation;
   bool jumpQueued = false;
   bool eventSelectMusicPlaying = false;
   bool stageMusicPlaying = false;
@@ -7179,7 +8264,7 @@ int main(int argc, char** argv) {
                  (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED ||
                   event.window.event == SDL_WINDOWEVENT_RESIZED)) {
         surface =
-            buildRenderSurface(renderer, window, options.rotation, surface);
+            buildRenderSurface(renderer, window, rotation, surface);
       } else if (event.type == SDL_CONTROLLERDEVICEADDED && !controller &&
                  SDL_IsGameController(event.cdevice.which)) {
         controller = SDL_GameControllerOpen(event.cdevice.which);
@@ -7256,11 +8341,17 @@ int main(int argc, char** argv) {
           case SDLK_F2:
             game.lionOnlyTest = !game.lionOnlyTest;
             break;
+          case SDLK_F10:
+            // Turning a cabinet monitor on its side is easier to judge with
+            // the game running, so the rotation can be cycled live.
+            rotation = (rotation + 90) % 360;
+            surface = buildRenderSurface(renderer, window, rotation, surface);
+            break;
           case SDLK_F11:
             fullscreen = !fullscreen;
             setFullscreen(window, fullscreen);
             surface =
-                buildRenderSurface(renderer, window, options.rotation, surface);
+                buildRenderSurface(renderer, window, rotation, surface);
             break;
           default:
             break;
@@ -7370,12 +8461,56 @@ int main(int argc, char** argv) {
       jumpForStep = false;
       jumpQueued = false;
       accumulator -= kFixedDt;
-      if (replaying && options.replayEvent == 2) {
+      if (replaying &&
+          (options.replayEvent == 2 || options.replayEvent == 3)) {
         if (replayFrame == 0 && replayRows[replayIndex].bonus >= 0) {
           // The capture may poke the bonus digits on its first stage frame.
           game.bonus = replayRows[replayIndex].bonus;
         }
-        if (replayOutput) {
+        if (replayOutput && options.replayEvent == 3) {
+          const Level4Record& charlie = game.level4Charlie;
+          const Level4Record& ball = game.level4Ball;
+          const int phase6 = game.scene == Scene::Crashed ? 5
+                             : (game.scene == Scene::Tally ? 4 : 3);
+          replayOutput << replayFrame << ',' << replayRows[replayIndex].rel
+                       << ',' << std::hex << replayInput << std::dec << ','
+                       << charlie.state << ',' << charlie.row << ','
+                       << charlie.col << ',' << charlie.phase << ','
+                       << charlie.landVelocity << ',' << charlie.launch << ','
+                       << charlie.direction << ',' << charlie.velocity << ','
+                       << charlie.jump << ',' << charlie.stick << ','
+                       << charlie.idleHigh << ',' << charlie.idleLow << ','
+                       << charlie.countdown << ',' << ball.active << ','
+                       << ball.flag << ',' << ball.state << ',' << ball.row
+                       << ',' << ball.col << ',' << ball.half << ','
+                       << ball.align << ',' << game.level4Scroll << ','
+                       << game.score << ',' << game.bonus << ',' << game.lives
+                       << ',' << game.level4Buffered << ',' << game.level4Doubles
+                       << ',' << game.level4Pending << ',' << game.level4Falls
+                       << ',' << game.level4Landings << ',' << game.level4Held
+                       << ',' << game.level4Standing << ',' << game.level4Flash
+                       << ',' << game.level4Timeout << ',' << game.level4Visits;
+          for (const auto& roll : game.level4Rolls) {
+            replayOutput << ',' << roll.active << ',' << roll.flag << ','
+                         << roll.state << ',' << roll.row << ',' << roll.col
+                         << ',' << roll.half;
+          }
+          for (const auto& popup : game.level4Popups) {
+            if (popup.active == 0) {
+              replayOutput << ",-1,0,0,0,0";
+            } else {
+              replayOutput << ',' << popup.state << ',' << popup.flag << ','
+                           << popup.row << ',' << popup.col << ','
+                           << popup.timer;
+            }
+          }
+          for (const auto& plaque : game.level4Plaques) {
+            replayOutput << ',' << plaque.col;
+          }
+          replayOutput << ",0," << phase6 << ','
+                       << static_cast<int>(game.level1BoardFrameByte) << ','
+                       << game.level4Dips << '\n';
+        } else if (replayOutput) {
           const int phase6 = game.scene == Scene::Crashed ? 5
                              : (game.scene == Scene::Tally ? 4 : 3);
           replayOutput << replayFrame << ',' << replayRows[replayIndex].rel
@@ -7723,7 +8858,7 @@ int main(int argc, char** argv) {
     setColor(renderer, color(0, 0, 0));
     SDL_RenderClear(renderer);
     SDL_RenderCopyEx(renderer, surface.texture, nullptr, &surface.destination,
-                     static_cast<double>(options.rotation), nullptr,
+                     static_cast<double>(rotation), nullptr,
                      SDL_FLIP_NONE);
     if (!options.riderDiagnosticDir.empty() && movementTraceFrame > 0) {
       const int tracedFrame = movementTraceFrame - 1;
