@@ -116,6 +116,19 @@ to row `$D0` and the same 40-frame state 8.
   the digits reach zero; when the value it reads is 2, Charlie is dropped like
   a ball hit, keeping the velocity he had (`$BC79`).
 
+## One hole the cabinet cannot reach
+
+`$8532` masks the joystick with `#$03` and `$9C55` stores the result straight
+into the ridden ball's state, so a byte with both direction bits set becomes
+state 3 -- the state a ball takes after being knocked away.  The ball rolls
+out from under Charlie at two columns a frame and leaves him riding thin air
+with the scroll stopped.  A four-way cabinet stick cannot close two opposite
+contacts, so the board never sees it and the ROM has no case for it; a
+headless capture with both bits forced reproduces it in MAME.  A keyboard
+produces that byte every time the player turns around, so `resolveStick`
+gives the game only values the hardware could have produced: the key that
+went down last wins.
+
 ## Verification
 
 `tools/autoplay_level4_headless.lua` runs `circusc4` headlessly, forces Stage 4

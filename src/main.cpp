@@ -833,6 +833,7 @@ struct Game {
   int level3Bounce = 0;                   // $2437 stationary rebound count
   int level3Direction = 0;                // $240A: 0 none, 1 left, 2 right
   int level3Stick = 0;                    // $241B
+  int level3BothStick = 0;   // which way a two-key overlap resolves
   int level3Countdown = 0;                // $242D
   Level3Pose level3Pose = Level3Pose::Stationary;
   int level3PoseFrame = 0;
@@ -870,6 +871,7 @@ struct Game {
   bool level4Started = false;             // $2258
   int level4RestartPage = 0;
   int level4LatchedButton = 0;
+  int level4BothStick = 0;   // which way a two-key overlap resolves
   bool level4Died = false;
   bool level4Finished = false;
   bool level3Died = false;                // $2258
@@ -2028,6 +2030,20 @@ void initializeLevel1Board(Game& game) {
 }
 
 void initializeLevel3Board(Game& game, int pageByte);
+// A four-way cabinet stick cannot close two opposite contacts, so the board
+// never sees a joystick byte with both bits set and has no case for it.  A
+// keyboard produces one every time the player turns around, so the key that
+// went down last wins and the game only ever sees a value the hardware could
+// have produced.
+int resolveStick(int stick, int previous, int& latched) {
+  if (stick != 3) {
+    latched = 0;
+    return stick;
+  }
+  if (latched == 0) latched = previous == 1 ? 2 : 1;
+  return latched;
+}
+
 void syncLevel3World(Game& game);
 void initializeLevel4Board(Game& game, int page);
 void syncLevel4World(Game& game);
@@ -3224,7 +3240,8 @@ void updateLevel3(Game& game, const Uint8* keyboard, float controllerAxis) {
   // $8C50
   if (game.level3State == 1) {
     // $8532: the stick is latched every frame; $8F54 reads it at a landing.
-    game.level3Stick = (moveLeft ? 1 : 0) | (moveRight ? 2 : 0);
+    game.level3Stick = resolveStick((moveLeft ? 1 : 0) | (moveRight ? 2 : 0),
+                                    game.level3Stick, game.level3BothStick);
     level3MovePlayer(game);
   } else if (game.level3State == 4) {
     level3UpdateGoal(game);
@@ -4170,7 +4187,12 @@ void updateLevel4(Game& game, const Uint8* keyboard, bool jumpPressed,
                         keyboard[SDL_SCANCODE_A] || controllerAxis < -0.35F;
   const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
                          keyboard[SDL_SCANCODE_D] || controllerAxis > 0.35F;
-  const int stick = (moveLeft ? 1 : 0) | (moveRight ? 2 : 0);
+  // Without this, $9C55 would store a stick value of 3 as the ridden ball's
+  // state -- the state a ball takes after being knocked away -- and the ball
+  // would roll out from under Charlie and leave him riding thin air.
+  const int stick = resolveStick((moveLeft ? 1 : 0) | (moveRight ? 2 : 0),
+                                 game.level4Charlie.stick,
+                                 game.level4BothStick);
   const bool button = jumpPressed || keyboard[SDL_SCANCODE_SPACE] ||
                       keyboard[SDL_SCANCODE_Z];
 
