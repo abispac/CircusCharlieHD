@@ -30,7 +30,7 @@ of the body.
 ## Rebuild
 
 ```sh
-cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
+cd CircusCharlieHD
 /Applications/Blender.app/Contents/MacOS/Blender --background --python blender-rig/stage1_rider_rig.py
 cmake --build build
 ```

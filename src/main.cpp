@@ -853,13 +853,24 @@ struct AudioEngine {
 };
 
 std::string highScoreMemoryPath() {
-  char* preferencePath =
-      SDL_GetPrefPath("BigTopRun", "BigTopRunNative");
+  char* preferencePath = SDL_GetPrefPath("abispac", "CircusCharlieHD");
   if (!preferencePath) return {};
-  const std::string path =
-      std::string(preferencePath) + "high-score.txt";
+  const std::filesystem::path path =
+      std::filesystem::path(preferencePath) / "high-score.txt";
   SDL_free(preferencePath);
-  return path;
+  // A high score saved under the project's former name ("Big Top Run
+  // Native", stored as <prefs>/BigTopRun/BigTopRunNative/) is carried over
+  // the first time the renamed build runs.
+  std::error_code error;
+  if (!std::filesystem::exists(path, error)) {
+    const std::filesystem::path legacy =
+        path.parent_path().parent_path().parent_path() / "BigTopRun" /
+        "BigTopRunNative" / "high-score.txt";
+    if (std::filesystem::exists(legacy, error)) {
+      std::filesystem::copy_file(legacy, path, error);
+    }
+  }
+  return path.string();
 }
 
 int loadHighScore(const std::string& path) {
@@ -897,7 +908,7 @@ bool parseMode(std::string_view value, int& width, int& height) {
 
 void printUsage() {
   std::cout
-      << "Big Top Run Native\n"
+      << "Circus Charlie HD\n"
       << "  --mode WIDTHxHEIGHT\n"
       << "  --rotate 0|90|270\n"
       << "  --fullscreen\n"
@@ -6560,7 +6571,7 @@ int main(int argc, char** argv) {
       SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE |
       (options.fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
   SDL_Window* window = SDL_CreateWindow(
-      "Big Top Run Native", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+      "Circus Charlie HD", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
       options.width, options.height, windowFlags);
   if (!window) {
     std::cerr << "Window creation failed: " << SDL_GetError() << '\n';
@@ -7752,7 +7763,7 @@ int main(int argc, char** argv) {
 
     SDL_SetWindowTitle(
         window,
-        ("Big Top Run Native | " + std::to_string(surface.width) + "x" +
+        ("Circus Charlie HD | " + std::to_string(surface.width) + "x" +
          std::to_string(surface.height) + " render | " +
          std::to_string(static_cast<int>(std::lround(kBoardRefresh))) + " Hz")
             .c_str());

@@ -23,7 +23,7 @@ state, rider row, course index and state, the four hoop records, the three
 fire-pot records, the bag state, score, lives and `$220A`.
 
 ```sh
-./build/big_top_run --replay session-01/capture-state.csv \
+./build/circus_charlie_hd --replay session-01/capture-state.csv \
     --replay-output /tmp/native.csv --replay-frame-byte 0xbc
 python3 tools/compact_level1_objects.py session-01/capture-objects.csv /tmp/objects.csv
 python3 tools/compare_level1_replay.py session-01/capture-state.csv /tmp/native.csv /tmp/objects.csv

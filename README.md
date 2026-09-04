@@ -1,4 +1,4 @@
-# Big Top Run Native
+# Circus Charlie HD
 
 ## Boot sequence
 
@@ -11,7 +11,7 @@ sides of the score panel.
 
 Clean-room native arcade prototype inspired by the timing and challenge style
 of early circus obstacle games. It does not emulate hardware, load ROMs, or
-contain extracted graphics, program code, names, or logos. User-supplied
+contain extracted graphics, program code, or logos. User-supplied
 soundtrack and effects are loaded only from the ignored local `assets/audio`
 folder and are not stored in this repository.
 
@@ -39,13 +39,15 @@ Vector rendering remains only as a fallback if an asset cannot be loaded.
 
 ## Build on macOS
 
+Every command below runs from the repository root.
+
 ```sh
-cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
+git clone https://github.com/abispac/CircusCharlieHD.git
+cd CircusCharlieHD
 brew install cmake ninja sdl2 sdl2_image
 ```
 
 ```sh
-cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
 cmake -S . -B build -G Ninja
 cmake --build build
 ```
@@ -55,29 +57,25 @@ cmake --build build
 Portrait development window:
 
 ```sh
-cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
-./build/big_top_run
+./build/circus_charlie_hd
 ```
 
 Vertical arcade CRT using a `640 × 480` landscape signal:
 
 ```sh
-cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
-./build/big_top_run --mode 640x480 --rotate 90 --fullscreen
+./build/circus_charlie_hd --mode 640x480 --rotate 90 --fullscreen
 ```
 
 Progressive 240p cabinet mode:
 
 ```sh
-cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
-./build/big_top_run --mode 320x240 --rotate 90 --fullscreen
+./build/circus_charlie_hd --mode 320x240 --rotate 90 --fullscreen
 ```
 
 Modern 1080p display:
 
 ```sh
-cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
-./build/big_top_run --mode 1920x1080 --fullscreen
+./build/circus_charlie_hd --mode 1920x1080 --fullscreen
 ```
 
 ## Controls
@@ -184,8 +182,7 @@ similar effects.
 ## Capture a deterministic preview
 
 ```sh
-cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
-./build/big_top_run --mode 480x640 --capture /tmp/big-top-preview.png
+./build/circus_charlie_hd --mode 480x640 --capture /tmp/circus-charlie-preview.png
 ```
 
 Pass `--capture-scene start`, `--capture-scene select`, `--capture-scene stage3`, `--capture-scene stage3-approach`, `--capture-scene stage3-roof`,

@@ -27,6 +27,6 @@ decorative fragments leak through the bottom edge.
 Use this command after building to produce a clean remake reference frame:
 
 ```sh
-cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
-./build/big_top_run --capture /private/tmp/stage1-layout.png --capture-scene layout
+cd CircusCharlieHD
+./build/circus_charlie_hd --capture /private/tmp/stage1-layout.png --capture-scene layout
 ```

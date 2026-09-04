@@ -166,7 +166,7 @@ neutralised so every flame and knife flies (`right-nodeath`), with three
 deaths and restarts (`right-deaths`), the reactive all-bags run with the
 bird and forty coins (`bags-clear`), two roof deaths (`roof-clear`), a
 left/right excursion (`left-clear`) and a bonus time-out with the digits
-poked to 0090 (`timeout-clear`).  `big_top_run --replay capture.csv
+poked to 0090 (`timeout-clear`).  `circus_charlie_hd --replay capture.csv
 --replay-event 3 [--replay-clear-projectiles | --replay-invulnerable]
 --replay-output native.csv` replays the joystick column and
 `tools/compare_level3_replay.py capture.csv native.csv` compares every

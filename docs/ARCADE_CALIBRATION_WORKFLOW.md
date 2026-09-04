@@ -38,8 +38,8 @@ rectangle must be wider and taller than the visible oval.
 Generate the deterministic remake reference with:
 
 ```sh
-cd "/Users/abispac/AppDev/Circus Charlie/BigTopRunNative"
-./build/big_top_run --capture /private/tmp/stage1-prize.png --capture-scene prize
+cd CircusCharlieHD
+./build/circus_charlie_hd --capture /private/tmp/stage1-prize.png --capture-scene prize
 ```
 
 The checked comparison is `docs/stage1-prize-calibration.png`.
