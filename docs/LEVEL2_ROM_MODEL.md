@@ -31,6 +31,14 @@ columns is `-$2203:$2204`.  Once the page byte is `$F8` the scroll stops and
 Charlie's own column moves from `$40` toward `$C0` (`$83B5`/`$83DF`); moving left
 on that page first walks him back to `$40`.
 
+Layout of the screen (source rows): the rope is on rows 152-153, the start
+platform on 147-153 over columns 0-43 with its truss at columns 17-30, the
+distance signs on rows 168-178, the blue rail on 181-183, the crowd on
+185-207, the valance on 208-223 and the grass from row 224.  The goal stand's
+three cells sit at `col`, `col-8` and `col+8`; its bags cover rows `$66-$86`
+and Charlie lands on them with his feet on row `$85`; once he has, the cells
+show the 5000.
+
 ## Frame order (`$7CE8`)
 
 1. `$80C2` Charlie against the monkeys: a fatal touch.
@@ -64,7 +72,22 @@ Collisions therefore use the positions of the previous frame.
   continuous -- so the only test that ends a life is the collision at `$80C2`.
 - Goal (`$8752`): landing on page `$F8` with `$28EE` set (the stand was
   reached) lifts Charlie onto the platform, sets state 4, the `$EAFE` FAR OUT /
-  GREAT cells and a 160-frame countdown, then clears the stage.
+  GREAT cells and a 160-frame countdown, then clears the stage.  `$8FD7` holds
+  the countdown at one while `$220A` is still clear, i.e. until the
+  perfect-clear bird has crossed.
+- Sprites: Charlie is a 2x2 composite centred on his column with his feet on
+  `row + 16` (standing at `($88,$40)` he covers source pixels x 51-73,
+  y 125-151).  The attribute byte stays `$20` walking either way -- he is
+  never mirrored, so walking left is the forward-facing walk in reverse, as on
+  the lion.  The walk runs four cells (`$19/$1D/$20/$23` leading), standing
+  holds the first of them, the jump is a single cell (`$29-$2C`) for the whole
+  arc, and the stand landing runs the `$E9D8` flip.  A monkey's pixels cover
+  columns `col-15 .. col+5` with its feet on the same line.
+- Sounds (`$0800` latch, traced in MAME): `$44` at takeoff only; a scoring
+  landing is silent unless it is a combo (`$8676`, or `$86BE` joining at
+  `$8655`), which calls `$BA8F` for `$49`.  A monkey hit plays `$4F` at once
+  (`$8121`); state 8 plays `$00,$4F,$17`; the goal plays `$00,$80,$42` and
+  `$42` ticks the bonus count.
 
 ## Monkeys (`$8818`, `$88E9`, `$897F`, `$7D06`)
 
@@ -97,13 +120,26 @@ Collisions therefore use the positions of the previous frame.
   enter as record `$2760`; walking into it (`$8015`) sets `$28EE`, and the
   jump that follows lands on the platform for 5000 points (`$80B2`).  Reaching
   the goal without the stand still clears the stage but skips the 5000.
-- Perfect clear (`$7EB1`/`$7F3B`, shared with Event 3): if `$220A` is still
-  zero at the goal -- which only happens when Charlie never turned to run,
-  because `$869B`'s START-line schedule sets `$220A` the moment he does -- the
-  bird flies in from the right pouring coins, each worth `$D140[min($220F,5)]`.
+- Perfect clear (`$7EB1`): if `$220A` is still zero at the goal -- `$8697`
+  stores Charlie's direction there on every scoring landing made while
+  moving, so only a run of jumps on the spot keeps it clear -- the bird
+  enters at column `$E8` with its bag at `$F0` and crosses to column 0 at one
+  column a frame; its cell steps at `$A0` and `$80`, the bag vanishes past
+  column `$38` and awards the extra Charlie, and reaching column 0 sets
+  `$220A`, which releases the celebration.  No coins are poured on this stage.
+- Callouts: `$87A8` adds `$52` to the *row* of the `$EAFE`/`$EB23` cells
+  outside Event 3, so FAR OUT / GREAT sit on rows `$AA`/`$BA` and OH NO on
+  `$AA`/`$C2`, on the crowd wall; the cells' `$A,X` timer is not set on
+  spawn, so it wraps and they stay 256 frames.
 - Bonus: 6410 on a fresh start, then 4000/3500/3000 by page, counting down one
   a frame; `$2263` (armed at `$40` by the stage init) starts ticking when the
-  digits reach zero and drops Charlie like a hit two frames later.
+  digits reach zero and `$BC79` drops Charlie two frames later: on this stage
+  it only stores state 7, so with `$2D` clear he falls at once with the
+  velocity and phase he had, silently until state 8.
+- Restart: `$8136` re-initialises the board (clearing `$28F9`/`$28FA` with
+  the rest) and falls straight into Charlie's handler, so on that frame the
+  collisions, the spawner (`$288B` is not stepped), the monkeys and the object
+  slots do not run.
 
 ## Verification
 
@@ -112,11 +148,14 @@ after START and logs every board field above once per frame.  Its save-state
 `search` mode plays the stage to the goal by rewinding each fatal jump and
 retrying its timing, and its `inputs` mode replays the `input` column of a
 capture (used to reproduce a search run and snapshot it).
-`docs/diagnostics/level2-replay/` holds five captures: a full run to the goal
+`docs/diagnostics/level2-replay/` holds seven captures: a full run to the goal
 (`auto-goal`), a run that also takes the 5000-point stand (`stand-clear`), a
-perfect clear with the bird and coins (`perfect-clear`), three deaths and
-restarts (`right-deaths`), a bonus time-out (`timeout`), a left/right excursion
-(`left-clear`) and a stand-still fall (`idle-fall`).
+perfect clear with the bird and the extra Charlie (`perfect-clear`, made with
+`CIRCUS_L2_PERFECT=1`, replayed with `--replay-perfect`), three deaths and
+restarts (`right-deaths`), a bonus time-out (`timeout`), a walk back to the
+start followed by jumps to the left and three deaths (`left-clear`, a
+`script` run that never closes both stick contacts) and a stand-still fall
+(`idle-fall`).
 
 ```sh
 ./build/circus_charlie_hd --replay capture.csv --replay-event 2 \
@@ -124,11 +163,5 @@ restarts (`right-deaths`), a bonus time-out (`timeout`), a left/right excursion
 python3 tools/compare_level2_replay.py capture.csv native.csv
 ```
 
-The native `--replay-event 2` output reproduces every capture's first full life
-frame for frame -- Charlie's walk and jump arc, the monkey schedule, their
-walk, leap and freeze, the collisions, the scroll, the plaques and the jump
-bonuses all match column for column.  A few fields are still being tightened
-after the first death: the spawn counter is one frame out across a mid-stage
-restart, and the floating score popups and callout cells do not yet sit on the
-exact rows and columns the cabinet places them.  `tools/compare_level2_replay.py`
-reports which columns still differ.
+All seven captures replay with no mismatch in any column of any playing
+frame, from the first walk to the wipe after the goal or the game over.

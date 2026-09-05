@@ -41,9 +41,18 @@ def main():
     columns = [c for c in mame[shared[0]] if c not in IGNORED]
     mismatches = defaultdict(list)
     checked = 0
+    ended = False
     for rel in shared:
         left, right = mame[rel], native[rel]
-        if left["phase06"] != "3" or left["state"] == "0":
+        if left["state"] == "4":
+            ended = True
+        if left["phase06"] != "3":
+            # The wipe after the goal ends the comparison: the cabinet then
+            # starts the next event, which the native replay does not follow.
+            if ended:
+                break
+            continue
+        if left["state"] == "0":
             continue
         checked += 1
         for column in columns:

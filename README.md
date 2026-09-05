@@ -18,7 +18,7 @@ soundtrack and effects are loaded only from the ignored local `assets/audio`
 folder and are not stored in this repository.
 
 The current milestone includes playable Event 1, Event 2, Event 3 and Event 4,
-plus a faithful six-event HD selection screen.  Events 1, 3 and 4 are
+plus a faithful six-event HD selection screen.  Events 1, 2, 3 and 4 are
 frame-synchronized with the original board (see below). The
 friendly blond Charlie rider uses the production Run A/B/C poses plus the
 backward walking poses E/F while retaining the original HD lion artwork.
@@ -106,7 +106,7 @@ left/right directions move Charlie. The selection cycles through Events 1–6
 in order and wraps at both ends; up/down input does nothing. `Space`, `Z`,
 `1`, `Enter`, controller A, or controller Start confirms the current cell.
 Track 02 plays once and automatically confirms the cell where Charlie is
-standing when it ends. Confirmation consumes the credit. Events 1–3 launch
+standing when it ends. Confirmation consumes the credit. Events 1–4 launch
 their own courses; later cells temporarily route to Event 1 until implemented.
 
 The cabinet-standard keyboard mappings are `5` for coin and `1` for start, so
@@ -206,6 +206,24 @@ object capture for it). The two manual captures and the headless
 three-failure run in `docs/diagnostics/level1-replay/` replay with no
 mismatches. `tools/autoplay_level1_headless.lua` produces new captures in
 headless MAME (`-video none -sound none -nothrottle`).
+
+## Event 2 board model and replay verification
+
+Event 2 runs the `circusc4` tightrope handler documented in
+`docs/LEVEL2_ROM_MODEL.md`: the half-column scroll, the `$F2C0` monkey
+schedule, the brown and purple walks, the purple leap over a brown, the
+`$80C2` collision, the 57-frame jump arc, the `$8636` scoring with the turned
+monkey and its number, the goal stand with its 5000 and the perfect-clear bird
+that brings the extra Charlie.  Charlie is never mirrored on the rope (the
+sprite attribute stays `$20` walking either way), the renderer draws every
+record where the board puts it, and the sounds follow the MAME latch trace
+(`$44` at takeoff, `$49` on a combo landing, `$4F` on a hit).  `--replay
+capture.csv --replay-event 2 --replay-output native.csv` (with
+`--replay-perfect` for a capture made with `CIRCUS_L2_PERFECT=1`) replays a
+`tools/autoplay_level2_headless.lua` capture and
+`tools/compare_level2_replay.py` compares every column of every playing frame;
+the seven captures in `docs/diagnostics/level2-replay/` replay with no
+mismatches.
 
 ## Level 3 board model and replay verification
 
