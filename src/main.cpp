@@ -461,6 +461,12 @@ struct Level4Record {
   int pose = -1;          // its current step
   int align = 0;          // $29,X  (the ridden ball only)
   int countdown = 0;      // $2D,X
+  // Event 2 monkeys reuse this record: $30 marks the purple monkeys, $31:$32
+  // is the brown record a leaping purple has frozen, and $1D is the short
+  // timer that plays the turned pose after a leap lands.
+  int kind = 0;           // $30,X  0 brown, 1 purple
+  int owner = -1;         // $31:$32,X  the record a purple is leaping over
+  int leapTimer = 0;      // $1D,X
 };
 
 // $2600-$26B0.  State 0 is a score popup that tracks a ball; state 2 is one
@@ -874,6 +880,37 @@ struct Game {
   int level4BothStick = 0;   // which way a two-key overlap resolves
   bool level4Died = false;
   bool level4Finished = false;
+  // ---- Event 2 (tightrope and monkeys) board ----
+  Level4Record level2Charlie;                // $2400
+  std::array<Level4Record, 7> level2Monkeys; // $2440-$2500 brown, $2540-$25C0 purple
+  Level4Record level2Stand;                  // $2760 the goal stand
+  std::array<Level4Popup, 12> level2Popups;  // $2600-$26B0
+  std::array<Level4Plaque, 3> level2Plaques; // $26C0-$26E0
+  int level2Scroll = 0;                      // $2203:$2204
+  int level2HalfStep = 0;                    // $2205
+  int level2Difficulty = 0;                  // $81A6 table, fixed at stage start
+  int level2SchedIndex = 0;                  // walks the $F2C0 schedule
+  int level2SchedCounter = 0;                // $288B
+  int level2Skip = 0;                        // $28F8 spawn spacing
+  int level2Buffered = 0;                    // $28D3
+  int level2Held = 0;                        // $28F0
+  int level2Timeout = 0;                     // $2263
+  int level2Flash = 0;                       // $2888
+  int level2Landings = 0;                    // $28EF
+  int level2StandHit = 0;                    // $28DF walked onto the stand
+  int level2StandGoal = 0;                   // $28EE landed in the goal zone
+  int level2Clear = 0;                       // $220A (0 keeps the perfect clear)
+  int level2Near = 0;                        // $28F9 browns jumped
+  int level2Far = 0;                         // $28FA purples jumped
+  int level2NearFirst = -1;
+  int level2FarFirst = -1;
+  int level2Dips = 0xb4;                     // $202F
+  int level2Visits = 1;                      // $220F
+  bool level2Started = false;
+  int level2RestartPage = 0;
+  int level2BothStick = 0;
+  bool level2Died = false;
+  bool level2Finished = false;
   bool level3Died = false;                // $2258
   int level3BonusTimeout = 0;             // $2263
   bool level3BirdActive = false;          // $2700-$2720 presentation records
@@ -2049,6 +2086,10 @@ void initializeLevel4Board(Game& game, int page);
 void syncLevel4World(Game& game);
 void updateLevel4(Game& game, const Uint8* keyboard, bool jumpPressed,
                   float controllerAxis);
+void initializeLevel2Board(Game& game, int page);
+void syncLevel2World(Game& game);
+void updateLevel2(Game& game, const Uint8* keyboard, bool jumpPressed,
+                  float controllerAxis);
 
 void resetCourse(Game& game) {
   game.player = Player{};
@@ -2098,45 +2139,16 @@ void resetCourse(Game& game) {
   game.stage4IdleFrame = 0;
 
   if (game.selectedEvent == 1) {
-    game.player.position = {78.0F, kStage2RopeY};
-    game.player.previous = game.player.position;
     game.hoops.clear();
     game.firePots.clear();
     game.bonusRings.clear();
-    game.meterMarkers = {
-        {780.0F, 50}, {1740.0F, 40}, {2700.0F, 30},
-        {3660.0F, 20}, {4620.0F, 10},
-    };
-    // Authored from the Event 2 frame sequence. Brown monkeys form the
-    // walking line; faster purple monkeys begin behind selected groups and
-    // leapfrog them with their distinct ROM animation family.
-    game.stage2Monkeys = {
-        {650.0F, Stage2MonkeyKind::Brown},
-        {1020.0F, Stage2MonkeyKind::Brown},
-        {1090.0F, Stage2MonkeyKind::Brown},
-        {1510.0F, Stage2MonkeyKind::Brown},
-        {1600.0F, Stage2MonkeyKind::Purple},
-        {1980.0F, Stage2MonkeyKind::Brown},
-        {2065.0F, Stage2MonkeyKind::Purple},
-        {2400.0F, Stage2MonkeyKind::Brown},
-        {2470.0F, Stage2MonkeyKind::Brown},
-        {2820.0F, Stage2MonkeyKind::Brown},
-        {2910.0F, Stage2MonkeyKind::Purple},
-        {3270.0F, Stage2MonkeyKind::Brown},
-        {3340.0F, Stage2MonkeyKind::Brown},
-        {3430.0F, Stage2MonkeyKind::Purple},
-        {3860.0F, Stage2MonkeyKind::Brown},
-        {3945.0F, Stage2MonkeyKind::Purple},
-        {4280.0F, Stage2MonkeyKind::Brown},
-        {4350.0F, Stage2MonkeyKind::Brown},
-        {4440.0F, Stage2MonkeyKind::Purple},
-        {4830.0F, Stage2MonkeyKind::Brown},
-        {4900.0F, Stage2MonkeyKind::Brown},
-        {4980.0F, Stage2MonkeyKind::Brown},
-        {5070.0F, Stage2MonkeyKind::Purple},
-        {5410.0F, Stage2MonkeyKind::Brown},
-        {5500.0F, Stage2MonkeyKind::Purple},
-    };
+    game.stage2Monkeys.clear();
+    game.meterMarkers.clear();
+    game.prizeBagsAvailable = 0;
+    game.level2Started = false;
+    game.level3BirdActive = false;
+    initializeLevel2Board(game, 0);
+    syncLevel2World(game);
     return;
   }
 
@@ -2304,6 +2316,13 @@ void restartAfterCrash(Game& game) {
     syncLevel3World(game);
     game.player.previous = game.player.position;
     game.previousCameraX = game.cameraX;
+    return;
+  }
+  if (game.selectedEvent == 1) {
+    // $8509/$8517 stepped the page byte back; the board is re-initialised by
+    // the Crashed dispatch, which also runs the first walking tick.
+    game.player.alive = true;
+    game.crashFrame = 0;
     return;
   }
   game.player.position.x = std::max(78.0F, game.player.position.x - 145.0F);
@@ -4205,6 +4224,1037 @@ void updateLevel4(Game& game, const Uint8* keyboard, bool jumpPressed,
 }
 
 
+// ============================================================================
+// Event 2 (tightrope and monkeys): a clean-room port of the circusc4 stage
+// handler at $7CE8-$8A6B.  docs/LEVEL2_ROM_MODEL.md explains the model and
+// lists the captures in docs/diagnostics/level2-replay/ that verify it.
+// ============================================================================
+void level2StartPerfect(Game& game);
+void level2SpawnScorePopup(Game& game, int record);
+void level2LandingBonus(Game& game);
+void level2GoalCheck(Game& game);
+void level2Move(Game& game);
+void level2RaiseStand(Game& game);
+
+// $F2C0: six difficulty tables of nine page pointers.  Each page
+// points into a flat (column, purple) list that the spawner walks; a
+// -1 ends the table.  kLevel2SchedulePageStart[d][page] is the entry
+// index (pairs, not bytes) at which each page begins.
+constexpr std::array<std::array<int, 9>, 6> kLevel2SchedulePageStart{{
+    {0, 0, 4, 8, 12, 16, 20, 24, 28},
+    {0, 0, 5, 9, 13, 18, 22, 26, 30},
+    {0, 0, 4, 8, 12, 16, 20, 24, 28},
+    {0, 0, 4, 9, 13, 17, 22, 26, 30},
+    {0, 0, 4, 8, 12, 16, 20, 24, 28},
+    {0, 0, 4, 8, 12, 15, 19, 24, 27},
+}};
+constexpr std::array<std::array<int, 512>, 6> kLevel2Schedule{{
+    {48, 0, 128, 1, 184, 0, 254, 0, 48, 1, 128, 0, 184, 1, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 0, 184, 1, 254, 0, 48, 0, 128, 0, 184, 1, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 1, 64, 0, 120, 0, 176, 0, 254, 0, 48, 0, 112, 0, 192, 1, 254, 0, 48, 0, 112, 0, 192, 1, 216, 0, 8, 0, 72, 0, 128, 0, 208, 1, 225, 0, 48, 0, 128, 1, 144, 1, 254, 0, 48, 0, 112, 0, 192, 1, 254, 0, 48, 0, 104, 0, 184, 1, 254, 0, 48, 0, 128, 1, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 1, 128, 0, 184, 1, 254, 0, 48, 1, 128, 0, 184, 1, 254, 0, 48, 0, 128, 0, 184, 1, 254, 0, 48, 1, 128, 0, 184, 1, 254, 0, 48, 1, 128, 0, 184, 1, 254, 0, 16, 0, 80, 0, 144, 0, 208, 0, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 32, 1, 112, 1, 176, 1, 240, 0, 48, 0, 128, 0, 184, 1, 254, 0, 48, 0, 128, 1, 144, 1, 168, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 152, 0, 192, 1, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 1, 254, 1, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 16, 1, 96, 1, 168, 0, 232, 0, 32, 1, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 16, 0, 80, 1, 152, 0, 208, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 32, 1, 112, 1, 176, 1, 16, 1, 80, 0, 184, 1, 254, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 48, 1, 128, 1, 184, 1, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 1, 48, 0, 128, 1, 184, 0, 254, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {48, 1, 64, 0, 120, 0, 176, 0, 254, 0, 48, 0, 112, 0, 192, 1, 254, 0, 48, 0, 112, 0, 192, 1, 216, 0, 8, 0, 72, 0, 128, 0, 208, 1, 225, 0, 48, 0, 128, 1, 144, 1, 254, 0, 48, 0, 112, 0, 192, 1, 254, 0, 48, 0, 104, 0, 184, 1, 254, 0, 48, 0, 128, 1, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 1, 128, 0, 184, 1, 254, 0, 48, 1, 128, 0, 184, 1, 254, 0, 48, 0, 128, 0, 184, 1, 254, 0, 48, 1, 128, 0, 184, 1, 254, 0, 48, 1, 128, 0, 184, 1, 254, 0, 16, 0, 80, 0, 144, 0, 208, 0, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 32, 1, 112, 1, 176, 1, 240, 0, 48, 0, 128, 0, 184, 1, 254, 0, 48, 0, 128, 1, 144, 1, 168, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 152, 0, 192, 1, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 1, 254, 1, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 16, 1, 96, 1, 168, 0, 232, 0, 32, 1, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 16, 0, 80, 1, 152, 0, 208, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 32, 1, 112, 1, 176, 1, 16, 1, 80, 0, 184, 1, 254, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 48, 1, 128, 1, 184, 1, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 1, 48, 0, 128, 1, 184, 0, 254, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 1, 128, 0, 184, 1, 254, 0, 48, 1, 128, 0, 184, 1, 254, 0, 48, 0, 128, 0, 184, 1, 254, 0, 48, 1, 128, 0, 184, 1, 254, 0, 48, 1, 128, 0, 184, 1, 254, 0, 16, 0, 80, 0, 144, 0, 208, 0, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 32, 1, 112, 1, 176, 1, 240, 0, 48, 0, 128, 0, 184, 1, 254, 0, 48, 0, 128, 1, 144, 1, 168, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 152, 0, 192, 1, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 1, 254, 1, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 16, 1, 96, 1, 168, 0, 232, 0, 32, 1, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 16, 0, 80, 1, 152, 0, 208, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 32, 1, 112, 1, 176, 1, 16, 1, 80, 0, 184, 1, 254, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 48, 1, 128, 1, 184, 1, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 1, 48, 0, 128, 1, 184, 0, 254, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {16, 0, 80, 0, 144, 0, 208, 0, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 32, 1, 112, 1, 176, 1, 240, 0, 48, 0, 128, 0, 184, 1, 254, 0, 48, 0, 128, 1, 144, 1, 168, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 152, 0, 192, 1, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 1, 254, 1, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 16, 1, 96, 1, 168, 0, 232, 0, 32, 1, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 16, 0, 80, 1, 152, 0, 208, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 32, 1, 112, 1, 176, 1, 16, 1, 80, 0, 184, 1, 254, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 48, 1, 128, 1, 184, 1, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 1, 48, 0, 128, 1, 184, 0, 254, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 152, 0, 192, 1, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 1, 254, 1, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 16, 1, 96, 1, 168, 0, 232, 0, 32, 1, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 16, 0, 80, 1, 152, 0, 208, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 32, 1, 112, 1, 176, 1, 16, 1, 80, 0, 184, 1, 254, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 48, 1, 128, 1, 184, 1, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 1, 48, 0, 128, 1, 184, 0, 254, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {16, 1, 96, 1, 168, 0, 232, 0, 32, 1, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 16, 0, 80, 1, 152, 0, 208, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 32, 1, 112, 1, 176, 1, 16, 1, 80, 0, 184, 1, 254, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 48, 1, 128, 1, 184, 1, 254, 0, 48, 0, 128, 0, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, 48, 0, 128, 1, 184, 0, 254, 1, 48, 0, 128, 1, 184, 0, 254, 1, 48, 0, 112, 0, 152, 0, 192, 1, 254, 0, 48, 0, 128, 1, 184, 0, 254, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+}};
+
+// ---- Event 2 board constants ----------------------------------------------
+
+// Charlie and the monkeys walk the rope at row $88; a jump uses the shared
+// $0420 arc.  These are the same board rows and columns as the other events,
+// mapped onto the native canvas exactly as in Event 3/4.
+constexpr int kLevel2RopeRow = 0x88;
+constexpr int kLevel2SpawnRow = 0x88;
+constexpr int kLevel2CharlieColumn = 0x40;
+
+// The animation scripts $87CE walks: one HD cell and how many frames it is
+// held.  Charlie mirrors on the walk (attribute $20 in the ROM), so the pose
+// index is all the drawing needs.
+enum Level2Script {
+  kLevel2ScriptStanding = 0,   // $E9FF
+  kLevel2ScriptWalking,        // $EBCE
+  kLevel2ScriptJumping,        // $E9CF
+  kLevel2ScriptGoalJump,       // $E9D8
+  kLevel2ScriptCheer,          // $EAAA (goal)
+  kLevel2ScriptFallen,         // $EA9E (OH NO)
+  kLevel2ScriptMonkeyBrown,    // $EBFE
+  kLevel2ScriptMonkeyPurple,   // $EC13
+  kLevel2ScriptMonkeyLeap,     // $EBE9
+  kLevel2ScriptMonkeyTurned,   // $EC28
+};
+
+inline const Level4Pose* level2Script(int script, int& length) {
+  static constexpr std::array<Level4Pose, 4> standing{
+      {{0, 16}, {1, 16}, {2, 16}, {0, 16}}};
+  static constexpr std::array<Level4Pose, 4> walking{
+      {{0, 6}, {1, 6}, {2, 6}, {3, 6}}};
+  static constexpr std::array<Level4Pose, 1> jumping{{{0, 240}}};
+  static constexpr std::array<Level4Pose, 6> goalJump{
+      {{0, 8}, {1, 8}, {2, 8}, {3, 8}, {3, 8}, {4, 80}}};
+  static constexpr std::array<Level4Pose, 2> cheer{{{0, 16}, {1, 16}}};
+  static constexpr std::array<Level4Pose, 1> fallen{{{0, 8}}};
+  static constexpr std::array<Level4Pose, 3> monkeyBrown{
+      {{0, 8}, {1, 6}, {2, 8}}};
+  static constexpr std::array<Level4Pose, 3> monkeyPurple{
+      {{0, 6}, {2, 4}, {1, 6}}};
+  static constexpr std::array<Level4Pose, 3> monkeyLeap{
+      {{0, 8}, {1, 8}, {2, 8}}};
+  static constexpr std::array<Level4Pose, 2> turned{{{0, 248}, {0, 248}}};
+  switch (script) {
+    case kLevel2ScriptWalking: length = 4; return walking.data();
+    case kLevel2ScriptJumping: length = 1; return jumping.data();
+    case kLevel2ScriptGoalJump: length = 6; return goalJump.data();
+    case kLevel2ScriptCheer: length = 2; return cheer.data();
+    case kLevel2ScriptFallen: length = 1; return fallen.data();
+    case kLevel2ScriptMonkeyBrown: length = 3; return monkeyBrown.data();
+    case kLevel2ScriptMonkeyPurple: length = 3; return monkeyPurple.data();
+    case kLevel2ScriptMonkeyLeap: length = 3; return monkeyLeap.data();
+    case kLevel2ScriptMonkeyTurned: length = 2; return turned.data();
+    default: length = 4; return standing.data();
+  }
+}
+
+// $EAFE and $EB23: the goal (FAR OUT / GREAT) and failure (OH NO) callout
+// cells, as (row, column) pairs.  The goal cells sit $52 columns right of the
+// stored value when the stage is not Event 3 ($87A8 adds $52).
+constexpr std::array<std::pair<int, int>, 9> kLevel2GoalCells{{
+    {0x58, 0x20}, {0x58, 0x30}, {0x58, 0x40}, {0x68, 0x6c}, {0x68, 0x7c},
+    {0x68, 0x8c}, {0x58, 0xb0}, {0x58, 0xc0}, {0x58, 0xd0}}};
+constexpr std::array<std::pair<int, int>, 6> kLevel2FailCells{{
+    {0x58, 0x40}, {0x58, 0x50}, {0x58, 0x60}, {0x70, 0xa0}, {0x70, 0xb0},
+    {0x70, 0xc0}}};
+
+// $EB48 stage-2 plaques: three per page, row $E0.  Only the trigger column
+// and the cell they show change.
+constexpr std::array<int, 3> kLevel2PlaqueTriggers{0x80, 0x70, 0x60};
+constexpr std::array<std::array<int, 3>, 10> kLevel2PlaqueCells{{
+    {0xb8, 0xb9, 0xba}, {0xb8, 0xb9, 0xba}, {0xca, 0xc5, 0xbc},
+    {0xca, 0xc1, 0xbc}, {0xca, 0xc0, 0xbc}, {0xca, 0xbf, 0xbc},
+    {0xca, 0xbe, 0xbc}, {0xca, 0xbd, 0xbc}, {0xc2, 0xc3, 0xc4},
+    {0xc2, 0xc3, 0xc4}}};
+
+// ---- Event 2 board helpers ------------------------------------------------
+
+void level2Animate(Level4Record& record) {
+  if (record.animation > 0) {
+    --record.animation;
+    return;
+  }
+  int length = 0;
+  const Level4Pose* script = level2Script(record.script, length);
+  record.pose = (record.pose + 1) % length;
+  record.animation = script[record.pose].delay;
+}
+
+void level2SetScript(Level4Record& record, int script) {
+  record.script = script;
+  record.pose = -1;
+  record.animation = 0;
+}
+
+void level2AddScore(Game& game, int points) { game.score += points; }
+
+// $8267/$82BA: a plaque re-enters from the right edge when the scroll reaches
+// its trigger column.  $8267 seeds them already scrolled off to the left.
+void level2InitPlaques(Game& game) {
+  int page = (-((game.level2Scroll >> 8) & 0xff)) & 0xff;
+  ++page;
+  page = std::clamp(page, 0, 9);
+  for (std::size_t i = 0; i < kLevel2PlaqueTriggers.size(); ++i) {
+    Level4Plaque& plaque = game.level2Plaques[i];
+    plaque.trigger = kLevel2PlaqueTriggers[i];
+    plaque.col = (-(kLevel2PlaqueTriggers[i] + 0x10)) & 0xff;
+    plaque.row = 0xe0;
+    plaque.cell = kLevel2PlaqueCells[static_cast<std::size_t>(page)][i];
+  }
+}
+
+void level2Plaques(Game& game) {
+  int page = (-((game.level2Scroll >> 8) & 0xff)) & 0xff;
+  if (game.level2Charlie.direction != 1) ++page;
+  page = std::clamp(page, 0, 9);
+  const int low = game.level2Scroll & 0xff;
+  for (std::size_t i = 0; i < kLevel2PlaqueTriggers.size(); ++i) {
+    if (kLevel2PlaqueTriggers[i] != low) continue;
+    Level4Plaque& plaque = game.level2Plaques[i];
+    plaque.col = 0xf0;
+    plaque.row = 0xe0;
+    plaque.cell = kLevel2PlaqueCells[static_cast<std::size_t>(page)][i];
+    break;
+  }
+}
+
+// $831D/$82F3: the plaques and the goal stand slide one column with the
+// scroll.  Moving right the columns count down, moving left they count up.
+void level2ScrollProps(Game& game, int delta) {
+  for (auto& plaque : game.level2Plaques) plaque.col = (plaque.col + delta) & 0xff;
+  Level4Record& stand = game.level2Stand;
+  if (stand.active != 0) {
+    stand.col = (stand.col + delta) & 0xff;
+    // $82F3: a stand that scrolls off the right edge is cleared.
+    if (delta > 0 && stand.col >= 0xf8) stand = Level4Record{};
+  }
+}
+
+template <std::size_t N>
+void level2SpawnCallouts(Game& game,
+                         const std::array<std::pair<int, int>, N>& cells,
+                         int kind, int columnBias) {
+  std::size_t cell = 0;
+  for (auto& popup : game.level2Popups) {
+    if (cell >= cells.size()) return;
+    if (popup.active != 0) continue;
+    popup.active = 1;
+    popup.state = 2;
+    popup.row = cells[cell].first;
+    popup.col = (cells[cell].second + columnBias) & 0xff;
+    popup.cell = static_cast<int>(cell);
+    popup.kind = kind;
+    popup.owner = -1;
+    ++cell;
+  }
+}
+
+// ---- $80C2: Charlie against the monkeys ------------------------------------
+
+void level2CharlieMonkeys(Game& game) {
+  Level4Record& charlie = game.level2Charlie;
+  if (charlie.active == 0 || charlie.state >= 3) return;
+  for (auto& monkey : game.level2Monkeys) {
+    if (monkey.active == 0) continue;
+    const int reach = (monkey.col + 0x0d) & 0xff;
+    int colDelta = static_cast<std::int8_t>(
+        (((charlie.col + 0x13) & 0xff) - reach) & 0xff);
+    colDelta = std::abs(colDelta);
+    if (colDelta >= 0x0d) continue;
+    int rowDelta = static_cast<std::int8_t>(((charlie.row - monkey.row)) & 0xff);
+    rowDelta = std::abs(rowDelta);
+    if (rowDelta >= 0x10) continue;
+    if (rowDelta + colDelta >= 0x14) continue;
+    // $8111: both go down.  Charlie loses his direction and takes state 7;
+    // the monkey freezes in state 4.
+    charlie.state = 7;
+    charlie.countdown = 7;
+    charlie.direction = 0;
+    monkey.countdown = 7;
+    monkey.state = 4;
+    ++game.crashAudioSerial;
+    return;
+  }
+}
+
+// ---- $7D06: a purple monkey that catches a brown one leaps over it ---------
+
+void level2MonkeyMonkeys(Game& game) {
+  for (std::size_t x = 4; x < 7; ++x) {   // $2540-$25C0 purple slots
+    Level4Record& purple = game.level2Monkeys[x];
+    if (purple.active == 0 || purple.state != 0) continue;
+    for (std::size_t u = 0; u < 4; ++u) {   // $2440-$2500 brown slots
+      Level4Record& brown = game.level2Monkeys[u];
+      if (brown.active == 0 || brown.state != 0) continue;
+      if (purple.col >= 0xd0) continue;             // $7D29 CMPA #$D0 BCC
+      if (purple.col < 0x30) continue;              // $7D2D CMPA #$30 BCS
+      const int delta = (purple.col - brown.col) & 0xff;
+      if (delta >= 0x18) continue;                  // $7D33 CMPA #$18 BCC
+      // $7D37: the purple starts its leap (state 8) and the brown freezes
+      // (state 9) until it lands.
+      purple.state = 8;
+      brown.state = 9;
+      purple.owner = static_cast<int>(u);
+      level2SetScript(purple, kLevel2ScriptMonkeyLeap);
+      purple.launch = 3;
+      purple.landVelocity = 3;
+      purple.velocity = 0x0320;
+      purple.phase = 0;
+      return;
+    }
+  }
+}
+
+// ---- $8818: the monkey spawner ---------------------------------------------
+
+int level2DifficultyIndex(const Game& game) {
+  int a = 2;
+  if (game.level2Dips != 0) a = (game.level2Dips & 0x60) >> 4;
+  int b = game.level2Visits;
+  if (b != 0) b = (b - 1) * 2;
+  a += b;
+  // $9E2D: two more per $FAE9 threshold of landings passed.
+  static constexpr std::array<int, 8> thresholds{0x14, 0x18, 0x1c, 0x20,
+                                                 0x24, 0x28, 0x2c, 0x30};
+  for (int t : thresholds) {
+    if (game.level2Landings >= t) a += 2; else break;
+  }
+  if (a > 10) a = 10;
+  return a / 2;
+}
+
+Level4Record* level2FreeMonkey(Game& game, bool purple) {
+  const std::size_t begin = purple ? 4 : 0;
+  const std::size_t end = purple ? 7 : 4;
+  for (std::size_t i = begin; i < end; ++i) {
+    Level4Record& m = game.level2Monkeys[i];
+    if (m.active == 0 && m.flag == 0) return &m;
+  }
+  return nullptr;
+}
+
+void level2Spawn(Game& game, int stick) {
+  Level4Record& charlie = game.level2Charlie;
+  if (charlie.state == 4) return;
+  if (charlie.direction == 1) return;   // no spawning while moving left
+  const auto& flat =
+      kLevel2Schedule[static_cast<std::size_t>(game.level2Difficulty)];
+  int index = game.level2SchedIndex;
+  if (2 * index >= static_cast<int>(flat.size()) || flat[2 * index] < 0) return;
+  // $8818 reads $288B, increments it (every frame moving right, three of every
+  // four while standing still), then compares the value it read, so the logged
+  // counter is one past the column a monkey spawns at.
+  (void)stick;
+  const int sampled = game.level2SchedCounter;
+  if (charlie.direction == 2 || (game.level1BoardFrameByte & 3) != 0) {
+    game.level2SchedCounter = (game.level2SchedCounter + 1) & 0xff;
+  }
+  const int column = flat[2 * index];
+  if (sampled != column) return;
+  const int purpleFlag = flat[2 * index + 1];
+  // $8865: a free record must exist in the right block, or the spawn waits.
+  Level4Record* slot = level2FreeMonkey(game, purpleFlag != 0);
+  if (slot == nullptr) return;
+  // $886B: a spawn is blocked while a brown monkey is in columns [$C8,$F2).
+  for (const auto& brown : game.level2Monkeys) {
+    if (brown.active == 0) continue;
+    if (brown.kind != 0) continue;
+    if (brown.col >= 0xf2) continue;
+    if (brown.col >= 0xc8) return;
+  }
+  // $8887: on non-last pages moving right the spawn is unconditional; on the
+  // last page (and standing) it is spaced by $28F8, forced after two skips.
+  const bool gated =
+      !(charlie.direction == 2 && ((game.level2Scroll >> 8) & 0xff) != 0xf8);
+  game.level2SchedIndex = index + 1;   // $88CF advances past this entry
+  if (gated && game.level2Skip != 2) {
+    ++game.level2Skip;
+    return;
+  }
+  game.level2Skip = 0;
+  Level4Record& monkey = *slot;
+  monkey.active = 1;
+  monkey.kind = purpleFlag;
+  monkey.row = kLevel2SpawnRow;
+  monkey.col = 0xf1;
+  monkey.half = 0;
+  monkey.animation = 0;
+  level2SetScript(monkey, purpleFlag != 0 ? kLevel2ScriptMonkeyPurple
+                                          : kLevel2ScriptMonkeyBrown);
+}
+
+// ---- $8809/$88DB: the monkey records --------------------------------------
+
+// The three move helpers advance a monkey's column and half-column exactly as
+// $88E9 ($8900/$8943), $8A25 (a leaping monkey) and $8A40 (a monkey that has
+// just landed a leap) do.  `dir` is Charlie's latched direction.
+void level2WalkMove(Level4Record& m, int dir, bool lastPage) {
+  auto dec = [&] { m.col = (m.col - 1) & 0xff; };
+  if (m.kind != 0) {                        // purple
+    if (!lastPage) {
+      m.half = (m.half + 0x80) & 0xff;
+      if (m.half == 0) dec();               // carry every other frame
+      if (dir == 1) return;
+      dec();
+      if (dir == 0) return;
+      dec();                                // dir 2: 2.5 columns a frame
+    } else {
+      if (dir == 0) { dec(); return; }
+      m.half = (m.half + 0x80) & 0xff;
+      if (m.half == 0) dec();
+      if (dir == 1) return;
+      dec();
+    }
+  } else {                                  // brown
+    if (!lastPage) {
+      const int step = dir == 0 ? 0xc0 : 0x40;
+      const int sum = m.half + step;
+      m.half = sum & 0xff;
+      if (sum > 0xff) dec();
+      if (dir != 2) return;
+      dec();                                // dir 2: 1.25 columns a frame
+    } else {
+      if (dir == 0) {
+        const int sum = m.half + 0xc0;
+        m.half = sum & 0xff;
+        if (sum > 0xff) dec();
+      } else if (dir == 1) {
+        const int sum = m.half + 0x80;
+        m.half = sum & 0xff;
+        if (sum > 0xff) dec();
+      } else {                              // dir 2
+        dec();
+        m.half = 0x80;
+      }
+    }
+  }
+}
+
+void level2LeapMove(Level4Record& m, int dir, bool lastPage) {
+  auto dec = [&] { m.col = (m.col - 1) & 0xff; };
+  if (lastPage || dir == 0) { dec(); return; }
+  if (dir == 2) dec();                 // $8A34
+  const int sum = m.half + 0xc0;       // $8A36
+  if (sum > 0xff) { m.half = sum & 0xff; return; }  // carry: keep the half
+  dec();                               // no carry: a second column, half kept
+}
+
+void level2TurnedMove(Level4Record& m, int dir, bool lastPage) {
+  if (lastPage || dir == 0) return;
+  if (dir == 1) {
+    const int sum = m.half + 0x40;
+    m.half = sum & 0xff;
+    if (sum > 0xff) m.col = (m.col + 1) & 0xff;
+  } else {
+    const int sum = m.half + 0xc0;
+    m.half = sum & 0xff;
+    if (sum > 0xff) m.col = (m.col - 1) & 0xff;
+  }
+}
+
+// $8922: a monkey that has wrapped past the left edge to columns [$F2,$F5) is
+// wiped.
+bool level2WipeCheck(Level4Record& m) {
+  if (m.col < 0xf2 || m.col >= 0xf5) return false;
+  m.state = 2;
+  return true;
+}
+
+void level2Monkeys_(Game& game) {
+  const int dir = game.level2Charlie.direction;
+  const bool lastPage = ((game.level2Scroll >> 8) & 0xff) == 0xf8;
+  for (auto& m : game.level2Monkeys) {
+    if (m.active == 0 && m.flag == 0) continue;
+    switch (m.state) {
+      case 0: {   // $88E9 walking
+        if (dir != 1 || (game.level1BoardFrameByte & 1) == 0) level2Animate(m);
+        level2WalkMove(m, dir, lastPage);
+        level2WipeCheck(m);
+        break;
+      }
+      case 2:     // $899F wiped: the record is cleared
+        m = Level4Record{};
+        break;
+      case 1: {   // $897F turned, then back to walking
+        level2Animate(m);
+        level2TurnedMove(m, dir, lastPage);
+        if (level2WipeCheck(m)) break;
+        if (--m.leapTimer <= 0) {
+          m.leapTimer = 0;
+          m.state = 0;
+          level2SetScript(m, m.kind != 0 ? kLevel2ScriptMonkeyBrown
+                                         : kLevel2ScriptMonkeyPurple);
+        }
+        break;
+      }
+      case 4:     // $89BB struck by Charlie: frozen until the board restarts
+      case 5:     // $89BC also frozen
+        break;
+      case 8: {   // $89C2 leaping
+        level2Animate(m);
+        bool apexStep = false;
+        if (m.phase == 0) {   // rising ($8A02)
+          int velHi = (m.velocity >> 8) & 0xff;
+          int velLo = m.velocity & 0xff;
+          if (velHi != 0) {
+            velLo -= 0x20;
+            if (velLo < 0) { velLo += 0x100; velHi = (velHi - 1) & 0xff; }
+            m.velocity = (velHi << 8) | velLo;
+            m.row = (m.row - velHi) & 0xff;
+            level2LeapMove(m, dir, lastPage);
+            level2WipeCheck(m);
+            break;
+          }
+          // $8A1A: SUBB #$40; without a borrow the rise continues (row -= 0),
+          // with a borrow it is the apex and the code falls into $89D2 (no
+          // hi==0 extra add), leaving the borrow in the low byte.
+          velLo -= 0x40;
+          if (velLo >= 0) {
+            m.velocity = velLo;   // hi still zero
+            level2LeapMove(m, dir, lastPage);
+            level2WipeCheck(m);
+            break;
+          }
+          velLo &= 0xff;
+          m.velocity = velLo;   // hi still zero
+          m.phase = 1;
+          apexStep = true;
+        }
+        // Falling: $89C9 adds a second $20 when the high byte is zero, but the
+        // apex frame reaches $89D2 directly and skips that extra add.
+        int velHi = (m.velocity >> 8) & 0xff;
+        int velLo = m.velocity & 0xff;
+        if (velHi == 0 && !apexStep) velLo += 0x20;
+        velLo += 0x20;
+        if (velLo > 0xff) { velLo -= 0x100; velHi = (velHi + 1) & 0xff; }
+        m.velocity = (velHi << 8) | velLo;
+        m.row = (m.row + velHi) & 0xff;
+        if (velHi == m.landVelocity) {
+          m.phase = 0;
+          m.state = 0;
+          if (m.owner >= 0) {
+            Level4Record& brown = game.level2Monkeys[static_cast<std::size_t>(m.owner)];
+            if (brown.state != 1) brown.state = 0;
+          }
+          level2SetScript(m, kLevel2ScriptMonkeyBrown);
+          // $89E3 leaves $31:$32 (the owner pointer) in place.
+        }
+        level2LeapMove(m, dir, lastPage);
+        level2WipeCheck(m);
+        break;
+      }
+      case 9:     // $8A40 frozen while a purple leaps over it, still drifting
+        level2TurnedMove(m, dir, lastPage);
+        level2WipeCheck(m);
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+// ---- Charlie ($8532, $8362, $8425, $8636) ---------------------------------
+
+constexpr std::array<int, 24> kLevel2ScoreTable{
+    {0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 2000, 3000, 4000,
+     5000, 6000, 7000, 8000, 9000, 10000, 20000, 30000, 10, 20}};
+
+// $8532: latch the joystick into $1B and the button into the one-shot $1A,
+// with the same held flag ($28F0) and buffered-jump ($28D3) rules as Event 4.
+void level2LatchInput(Game& game, int stick, int button) {
+  Level4Record& charlie = game.level2Charlie;
+  charlie.stick = stick & 0x03;
+  if (game.level2Buffered != 0) {
+    if (charlie.phase != 0) return;
+    game.level2Buffered = 0;
+    return;
+  }
+  if (game.level2Held != 0) {
+    if (button == 0) game.level2Held = 0; else charlie.jump = 0;
+    return;
+  }
+  charlie.jump = button;
+  if (button == 0) return;
+  game.level2Held = 1;
+  if (charlie.phase == 2 && charlie.row < 0x68) game.level2Buffered = button;
+}
+
+// $85BE: the browns ($28F9) and purples ($28FA) that are ahead of Charlie
+// within the scoring windows at takeoff.
+void level2ComputeBonus(Game& game) {
+  Level4Record& charlie = game.level2Charlie;
+  game.level2Near = 0;
+  game.level2Far = 0;
+  game.level2NearFirst = -1;
+  game.level2FarFirst = -1;
+  const int dir = charlie.direction;
+  const bool lastPage = ((game.level2Scroll >> 8) & 0xff) == 0xf8;
+  if (dir != 1) {
+    const int window = dir == 0 ? 0x20 : 0x50;
+    for (std::size_t i = 0; i < 4; ++i) {
+      const Level4Record& m = game.level2Monkeys[i];
+      if (m.active == 0) continue;
+      const int gap = (m.col - charlie.col) & 0xff;
+      if (gap >= 0x80) continue;         // behind
+      if (gap >= window) continue;
+      if (game.level2NearFirst < 0) game.level2NearFirst = static_cast<int>(i);
+      ++game.level2Near;
+    }
+  } else if (lastPage) {
+    return;
+  }
+  const int window = dir == 0 ? 0x40 : (dir == 1 ? 0x20 : 0x80);
+  for (std::size_t i = 4; i < 7; ++i) {
+    const Level4Record& m = game.level2Monkeys[i];
+    if (m.active == 0) continue;
+    const int gap = (m.col - charlie.col) & 0xff;
+    if (gap >= 0x80) continue;
+    if (gap >= window) continue;
+    if (game.level2FarFirst < 0) game.level2FarFirst = static_cast<int>(i);
+    ++game.level2Far;
+  }
+}
+
+// $8636: score the browns and purples jumped and start the turned-monkey
+// animation.
+void level2LandingBonus(Game& game) {
+  const int near = game.level2Near;
+  const int far = game.level2Far;
+  int index = 0;
+  int turnRecord = -1;
+  if (near > 0 && far > 0) {
+    index = near + far + 8;
+    game.level2Near = near + far;   // $8643 STB $28F9
+    turnRecord = game.level2NearFirst;
+  } else if (near > 0) {
+    index = near + 1;
+  } else if (far == 1) {
+    index = 3;
+  } else if (far >= 2) {
+    index = far + 8;
+    game.level2Near = far;          // $86BE STB $28F9
+    turnRecord = game.level2FarFirst;
+  }
+  if (index == 0) return;
+  if (index >= static_cast<int>(kLevel2ScoreTable.size())) index = 0;
+  level2AddScore(game, kLevel2ScoreTable[static_cast<std::size_t>(index)]);
+  ++game.level2Landings;
+  game.level2Flash = 0x10;
+  ++game.jumpAudioSerial;
+  if (turnRecord >= 0) {
+    Level4Record& m = game.level2Monkeys[static_cast<std::size_t>(turnRecord)];
+    m.state = 1;
+    m.leapTimer = 0x20;
+    level2SetScript(m, kLevel2ScriptMonkeyTurned);
+    level2SpawnScorePopup(game, turnRecord);
+  }
+  // $8697: $220A takes Charlie's direction, so any jump made while moving
+  // spoils the perfect clear.
+  game.level2Clear = game.level2Charlie.direction;
+}
+
+// $8752: the goal on the last page.
+void level2GoalCheck(Game& game) {
+  Level4Record& charlie = game.level2Charlie;
+  if (((game.level2Scroll >> 8) & 0xff) != 0xf8) return;
+  if (game.level2StandGoal == 0) return;
+  charlie.row = (charlie.row - 6) & 0xff;
+  level2SetScript(charlie, kLevel2ScriptCheer);
+  charlie.state = 4;
+  charlie.countdown = 0xa0;
+  level2SpawnCallouts(game, kLevel2GoalCells, 1, 0x52);
+  // $8097: the 5000-point stand bonus, only if Charlie walked onto the stand.
+  if (game.level2StandHit != 0) {
+    if (game.level2Stand.active != 0) game.level2Stand.state = 1;
+    level2AddScore(game, kLevel2ScoreTable[14]);
+    game.level2StandHit = 0;
+  }
+  game.scene = Scene::Goal;
+  game.goalFrame = 0;
+  // $7EB1: a perfect clear (Charlie only ever jumped on the spot) brings the
+  // bird and its coins; reuse the Event 3 presentation records.
+  if (game.level2Clear == 0) level2StartPerfect(game);
+}
+
+// $8015: walking into column $C0 on the last page raises the goal stand.
+void level2RaiseStand(Game& game) {
+  Level4Record& charlie = game.level2Charlie;
+  if (charlie.phase != 0) return;
+  if (game.level2StandHit != 0) return;
+  game.level2StandHit = 1;
+  Level4Record& stand = game.level2Stand;
+  stand.active = 1;
+  stand.state = 0;
+  stand.row = 0x66;
+  stand.col = 0xc0;
+}
+
+// $8362 with $83AE: the grounded frame picks up a jump or a direction change,
+// then walks and scrolls the world.
+void level2Move(Game& game) {
+  Level4Record& charlie = game.level2Charlie;
+  const bool lastPage = ((game.level2Scroll >> 8) & 0xff) == 0xf8;
+  if (charlie.phase == 0) {
+    if (charlie.jump != 0) {                    // $836E: take off
+      charlie.phase = 1;
+      charlie.direction = charlie.stick;
+      level2ComputeBonus(game);
+      ++game.jumpAudioSerial;
+      level2SetScript(charlie,
+                      lastPage ? kLevel2ScriptGoalJump : kLevel2ScriptJumping);
+      charlie.idleHigh = 0;
+      charlie.idleLow = 0;
+    } else if (charlie.stick != charlie.direction) {   // $838F: turn
+      level2SetScript(charlie, charlie.stick == 0 ? kLevel2ScriptStanding
+                                                  : kLevel2ScriptWalking);
+      charlie.direction = charlie.stick;
+      charlie.idleHigh = 0;
+      charlie.idleLow = 0;
+    }
+  }
+  // $83AE: walk and scroll.  The scroll runs whether or not Charlie is in the
+  // air; only his own column walk is grounded.
+  {
+    const int dir = charlie.direction;
+    const bool airborne = charlie.phase != 0;
+    if (dir == 2) {
+      if (lastPage) {
+        if (charlie.col >= 0xc0) {
+          level2RaiseStand(game);
+        } else {
+          charlie.col = (charlie.col + 1) & 0xff;
+        }
+      } else {
+        if (!airborne && charlie.col < 0x40) {
+          charlie.half = (charlie.half + 1) & 0xff;
+          if ((charlie.half & 1) == 0) charlie.col = (charlie.col + 1) & 0xff;
+        }
+        game.level2Scroll = (game.level2Scroll - 1) & 0xffff;
+        level2ScrollProps(game, -1);
+      }
+    } else if (dir == 1) {
+      if (game.level2Scroll != 0) {
+        if (lastPage) {
+          if (charlie.col >= 0x40) charlie.col = (charlie.col - 1) & 0xff;
+        } else {
+          if (!airborne && charlie.col >= 0x20) {
+            charlie.half = (charlie.half + 1) & 0xff;
+            if ((charlie.half & 1) == 0) charlie.col = (charlie.col - 1) & 0xff;
+          }
+          game.level2HalfStep = (game.level2HalfStep + 1) & 0xff;
+          if ((game.level2HalfStep & 1) == 0) {
+            game.level2Scroll = (game.level2Scroll + 1) & 0xffff;
+            level2ScrollProps(game, 1);
+          }
+        }
+      }
+    }
+  }
+  // $8425: the jump arc.
+  if (charlie.phase == 0) return;
+  if (charlie.phase == 1) {   // rising ($8499)
+    int velHi = (charlie.velocity >> 8) & 0xff;
+    int velLo = charlie.velocity & 0xff;
+    if (velHi != 0) {
+      velLo -= 0x20;
+      if (velLo < 0) { velLo += 0x100; --velHi; }
+      charlie.velocity = ((velHi & 0xff) << 8) | (velLo & 0xff);
+      charlie.row = (charlie.row - velHi) & 0xff;
+    } else {                  // apex ($84B0)
+      velLo -= 0x40;
+      if (velLo < 0) {
+        charlie.velocity = velHi << 8;   // $18 cleared
+        charlie.phase = 2;
+        // fall straight into a falling step
+      } else {
+        charlie.velocity = (velHi << 8) | (velLo & 0xff);
+        charlie.row = (charlie.row - velHi) & 0xff;
+        return;
+      }
+    }
+    if (charlie.phase == 1) return;
+  }
+  // falling ($842C)
+  int velHi = (charlie.velocity >> 8) & 0xff;
+  int velLo = charlie.velocity & 0xff;
+  if (velHi == 0) velLo += 0x20;
+  velLo += 0x20;
+  if (velLo > 0xff) { velLo -= 0x100; ++velHi; }
+  charlie.velocity = ((velHi & 0xff) << 8) | (velLo & 0xff);
+  charlie.row = (charlie.row + velHi) & 0xff;
+  const int newHi = (charlie.velocity >> 8) & 0xff;
+  bool landed = false;
+  if (((game.level2Scroll >> 8) & 0xff) == 0xf8 && charlie.col >= 0xa0 &&
+      charlie.col < 0xca && newHi >= 3 && (charlie.velocity & 0xff) == 0x80) {
+    game.level2StandGoal = 1;
+    landed = true;
+  }
+  if (!landed && newHi != charlie.landVelocity) return;
+  // $846C: grounded again.
+  charlie.phase = 0;
+  charlie.jump = 0;
+  level2SetScript(charlie, charlie.direction != 0 ? kLevel2ScriptWalking
+                                                  : kLevel2ScriptStanding);
+  charlie.landVelocity = charlie.launch;
+  charlie.velocity = (charlie.launch << 8) | 0x20;
+  level2LandingBonus(game);   // $8636
+  level2GoalCheck(game);      // $8752
+}
+
+// ---- $815B: Charlie's state handler ---------------------------------------
+
+void level2CharlieState(Game& game, int stick, int button) {
+  Level4Record& charlie = game.level2Charlie;
+  switch (charlie.state) {
+    case 1: {   // walking the rope
+      int steps = 1;
+      if (charlie.phase == 0 && charlie.direction == 0) {
+        charlie.idleLow = (charlie.idleLow + 2) & 0xff;
+        if (charlie.idleLow == 0) charlie.idleHigh = (charlie.idleHigh + 1) & 0xff;
+        if (charlie.idleHigh >= 3) {
+          charlie.state = 2;
+          charlie.velocity = charlie.launch << 8;
+          break;
+        }
+        if (charlie.idleHigh == 0) {
+          steps = ((charlie.idleLow - 2) & 0xff) == 0 ? 1 : 0;
+        } else if (charlie.idleHigh == 2) {
+          steps = 2;
+        }
+      }
+      for (int s = 0; s < steps; ++s) level2Animate(charlie);
+      level2LatchInput(game, stick, button);
+      level2Move(game);
+      break;
+    }
+    case 2: {   // $8592 falling off the rope
+      if (charlie.direction != 0 && game.level2Scroll != 0) {
+        charlie.col =
+            (charlie.col + (charlie.direction == 2 ? 1 : -1)) & 0xff;
+      }
+      charlie.velocity = (charlie.velocity + 0x20) & 0xffff;
+      charlie.row = (charlie.row + (charlie.velocity >> 8)) & 0xff;
+      if (charlie.row >= 0xd0) {
+        charlie.state = 8;
+        charlie.countdown = 0x28;
+        level2SetScript(charlie, kLevel2ScriptFallen);
+        level2SpawnCallouts(game, kLevel2FailCells, 2, 0);
+        ++game.crashAudioSerial;
+      }
+      break;
+    }
+    case 4:   // $8FD7 the goal celebration
+      if (charlie.countdown > 0) {
+        --charlie.countdown;
+        level2Animate(charlie);
+        if (charlie.countdown == 0) game.level2Finished = true;
+      }
+      break;
+    case 7:   // $84BC struck by a monkey
+      if (charlie.countdown != 0) {
+        --charlie.countdown;
+        level2Animate(charlie);
+        charlie.velocity &= 0xff;   // $84C7 CLR $17,X keeps the low byte
+        break;
+      }
+      charlie.velocity = (charlie.velocity + 0x20) & 0xffff;
+      charlie.row = (charlie.row + (charlie.velocity >> 8)) & 0xff;
+      if (charlie.row >= 0xd0) {
+        charlie.state = 8;
+        charlie.countdown = 0x28;
+        level2SetScript(charlie, kLevel2ScriptFallen);
+        level2SpawnCallouts(game, kLevel2FailCells, 2, 0);
+      }
+      break;
+    case 8:   // $8509 the crowd's reaction, then the restart
+      level2Animate(charlie);
+      if (charlie.countdown > 0) --charlie.countdown;
+      if (charlie.countdown == 0) {
+        int page = (game.level2Scroll >> 8) & 0xff;
+        if (page != 0) page = (page + (page >= 0xfa ? 1 : 2)) & 0xff;
+        game.level2RestartPage = page;
+        game.level2Died = true;
+      }
+      break;
+    default:
+      break;
+  }
+  level2Plaques(game);
+}
+
+// ---- $7D65: the object slots (score popups and callouts) ------------------
+
+void level2Objects(Game& game) {
+  const int dir = game.level2Charlie.direction;
+  const bool lastPage = ((game.level2Scroll >> 8) & 0xff) == 0xf8;
+  for (auto& popup : game.level2Popups) {
+    if (popup.active == 0) continue;
+    if (popup.state == 1) {          // $7D9B a floating score number
+      if (--popup.timer <= 0) { popup.active = 0; popup.col = 0; continue; }
+      Level4Record drift{};
+      drift.col = popup.col;
+      drift.half = popup.value;   // $5,X drift accumulator (not $1,X)
+      level2TurnedMove(drift, dir, lastPage);
+      popup.col = drift.col;
+      popup.value = drift.half;
+    } else if (popup.state == 2) {   // $7DA6 a callout cell
+      if (popup.timer > 0 && --popup.timer == 0) { popup.active = 0; popup.col = 0; }
+    }
+  }
+}
+
+// $8636 also spawns the two cells of the floating number.
+void level2SpawnScorePopup(Game& game, int record) {
+  if (record < 0) return;
+  const Level4Record& monkey = game.level2Monkeys[static_cast<std::size_t>(record)];
+  Level4Popup* first = nullptr;
+  for (int i = 0; i < 6; ++i) {
+    if (game.level2Popups[static_cast<std::size_t>(i)].active == 0) {
+      first = &game.level2Popups[static_cast<std::size_t>(i)];
+      break;
+    }
+  }
+  if (first == nullptr) return;
+  first->active = 1;
+  first->state = 1;
+  first->row = (monkey.row - 0x13) & 0xff;
+  first->col = (monkey.col + 9) & 0xff;
+  first->flag = 0;
+  first->timer = 0x20;
+  for (int i = 0; i < 6; ++i) {
+    Level4Popup& slot = game.level2Popups[static_cast<std::size_t>(i)];
+    if (slot.active != 0) continue;
+    slot.active = 1;
+    slot.state = 1;
+    slot.row = first->row;
+    slot.col = (first->col + 0x0f) & 0xff;
+    slot.flag = 0;
+    slot.timer = 0x20;
+    break;
+  }
+}
+
+// ---- $BB73: the bonus countdown and its time-out --------------------------
+
+void level2Bonus(Game& game) {
+  if (game.level2Charlie.state == 4) return;
+  if (game.bonus > 0) {
+    --game.bonus;
+    if (game.bonus != 0) return;
+  }
+  const int before = game.level2Timeout--;
+  if (before == 0) { game.level2Timeout = 0; return; }
+  if (before == 2 && game.level2Charlie.state == 1) {
+    game.level2Charlie.state = 7;
+    game.level2Charlie.countdown = 7;
+    ++game.crashAudioSerial;
+  }
+}
+
+// $7EB1/$7F3B: reuse the Event 3 bird and coin records for the perfect clear.
+void level2StartPerfect(Game& game) {
+  game.level3BirdActive = true;
+  game.level3BirdState = 3;
+  game.level3BirdX = 0xe8;
+  game.level3BirdBagX = 0xf0;
+  game.level3CoinIndex = 0;
+  game.level3CoinCount = 0;
+  game.level3CoinStarted = false;
+  for (auto& coin : game.level3Coins) coin = Level3Coin{};
+}
+
+// ---- $8136 init and the frame ($7CE8) -------------------------------------
+
+void level2InitBonus(Game& game, int page) {
+  if (page == 0 && !game.level2Started) {
+    game.bonus = 6410;
+    game.level2Started = true;
+  } else if (page == 0 || page >= 0xfe) {
+    game.bonus = 4000;
+  } else if (page >= 0xfc) {
+    game.bonus = 3500;
+  } else {
+    game.bonus = 3000;
+  }
+}
+
+void initializeLevel2Board(Game& game, int page) {
+  game.level2Scroll = (page << 8) & 0xffff;
+  game.level2HalfStep = 0;
+  game.level2Charlie = Level4Record{};
+  for (auto& m : game.level2Monkeys) m = Level4Record{};
+  for (auto& popup : game.level2Popups) popup = Level4Popup{};
+  game.level2Stand = Level4Record{};
+  game.level2Flash = 0;
+  game.level2Buffered = 0;
+  game.level2Held = 0;
+  game.level2Timeout = 0x40;
+  game.level2StandHit = 0;
+  game.level2StandGoal = 0;
+  game.level2Landings = 0;
+  game.level2Skip = 0;
+  game.level2SchedCounter = 0;
+  game.level2Died = false;
+  game.level2Finished = false;
+  level2InitBonus(game, page);
+  level2InitPlaques(game);
+  // $81A6: pick the schedule table (fixed for this life) and its start page.
+  const int difficulty = level2DifficultyIndex(game);
+  game.level2Difficulty = difficulty;
+  int schedPage = (-((game.level2Scroll >> 8) & 0xff)) & 0xff;
+  if (schedPage != 5) ++schedPage;   // $81D1 quirk: page 5 is not advanced
+  schedPage = std::clamp(schedPage, 0, 8);
+  game.level2SchedIndex =
+      kLevel2SchedulePageStart[static_cast<std::size_t>(difficulty)]
+                              [static_cast<std::size_t>(schedPage)];
+  // $8239/$8148: Charlie on the rope at column $40.
+  Level4Record& charlie = game.level2Charlie;
+  charlie.active = 1;
+  charlie.state = 1;
+  charlie.row = kLevel2RopeRow;
+  charlie.col = kLevel2CharlieColumn;
+  charlie.launch = 4;
+  charlie.landVelocity = 4;
+  charlie.velocity = 0x0420;
+  level2SetScript(charlie, kLevel2ScriptStanding);
+}
+
+// The board rows and columns become world pixels for the renderer.
+void syncLevel2World(Game& game) {
+  const int progress = (-game.level2Scroll) & 0xffff;
+  const float scale = kWorldWidth / 224.0F;
+  game.cameraX = static_cast<float>(progress) * scale;
+  game.player.position = {
+      static_cast<float>(progress + game.level2Charlie.col) * scale,
+      level3RowToY(static_cast<float>(game.level2Charlie.row))};
+  game.player.grounded = game.level2Charlie.phase == 0;
+  // Give the renderer a jump-arc position so it can pick the airborne pose.
+  game.player.jumpFrame = game.level2Charlie.phase == 0 ? -1
+                          : (game.level2Charlie.phase == 1 ? 14 : 42);
+  game.player.facingRight = game.level2Charlie.direction != 1;
+  game.player.alive = game.level2Charlie.state != 7 &&
+                      game.level2Charlie.state != 8 &&
+                      game.level2Charlie.state != 2;
+  // Rebuild the legacy monkey list the renderer draws from the board records.
+  game.stage2Monkeys.clear();
+  for (const auto& m : game.level2Monkeys) {
+    if (m.active == 0) continue;
+    Stage2Monkey draw{};
+    draw.worldX = static_cast<float>(progress + m.col) * scale;
+    draw.kind = m.kind != 0 ? Stage2MonkeyKind::Purple : Stage2MonkeyKind::Brown;
+    draw.leaping = m.state == 8;
+    draw.leapFrame = m.pose >= 0 ? m.pose * 18 : 0;
+    game.stage2Monkeys.push_back(draw);
+  }
+}
+
+void updateLevel2(Game& game, const Uint8* keyboard, bool jumpPressed,
+                  float controllerAxis) {
+  game.player.previous = game.player.position;
+  game.previousCameraX = game.cameraX;
+
+  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
+                        keyboard[SDL_SCANCODE_A] || controllerAxis < -0.35F;
+  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
+                         keyboard[SDL_SCANCODE_D] || controllerAxis > 0.35F;
+  const int stick = resolveStick((moveLeft ? 1 : 0) | (moveRight ? 2 : 0),
+                                 game.level2Charlie.stick, game.level2BothStick);
+  const bool button = jumpPressed || keyboard[SDL_SCANCODE_SPACE] ||
+                      keyboard[SDL_SCANCODE_Z];
+
+  level2CharlieMonkeys(game);      // $80C2
+  level2MonkeyMonkeys(game);       // $7D06
+  level2Spawn(game, stick);        // $8818
+  level2Monkeys_(game);            // $8809
+  if (game.level3BirdActive) level3UpdatePresentation(game);   // $7DF2
+  level2Objects(game);             // $7D65
+  level2CharlieState(game, stick, button ? 0x10 : 0);          // $8125
+  if (game.level3BirdActive) level3SpawnCoin(game);            // $7F3B
+  level2Bonus(game);               // $BB73
+  if ((game.level2Flash != 0 || game.level2Charlie.state == 4) &&
+      (game.level1BoardFrameByte & 3) == 0) {
+    game.level2Flash = (game.level2Flash - 1) & 0xff;          // $81FA
+  }
+
+  if (game.level2Finished) {
+    game.level2Finished = false;
+    game.scene = Scene::Tally;
+    game.tallyFrame = 0;
+  } else if (game.level2Died) {
+    game.level2Died = false;
+    game.scene = Scene::Crashed;
+    game.crashFrame = 0;
+    game.crashDurationFrames = 96;
+    if (game.lives > 0) --game.lives;
+  }
+  syncLevel2World(game);
+}
+
 void updateStage2(Game& game, const Uint8* keyboard, bool jumpPressed,
                   float controllerAxis) {
   game.player.previous = game.player.position;
@@ -5205,12 +6255,24 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         // the same frame (the capture shows row $B0 on the re-init frame).
         updateLevel3(game, keyboard, controllerAxis);
       }
+      if (game.selectedEvent == 1 && game.scene == Scene::Playing) {
+        // $8136 initialises the board and runs the first walking tick in the
+        // same frame.
+        initializeLevel2Board(game, game.level2RestartPage);
+        updateLevel2(game, keyboard, jumpPressed, controllerAxis);
+      }
     }
     return;
   }
 
   if (game.scene == Scene::Goal && game.selectedEvent == 3) {
     updateLevel4(game, keyboard, jumpPressed, controllerAxis);
+    return;
+  }
+
+  if (game.scene == Scene::Goal && game.selectedEvent == 1) {
+    // $8FD7: the stage handler keeps running through the celebration.
+    updateLevel2(game, keyboard, jumpPressed, controllerAxis);
     return;
   }
 
@@ -5287,7 +6349,7 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   if (game.scene != Scene::Playing) return;
 
   if (game.selectedEvent == 1) {
-    updateStage2(game, keyboard, jumpPressed, controllerAxis);
+    updateLevel2(game, keyboard, jumpPressed, controllerAxis);
     return;
   }
   if (game.selectedEvent == 2) {
@@ -7501,7 +8563,7 @@ int main(int argc, char** argv) {
   std::size_t replayIndex = 0;
   std::ofstream replayOutput;
   if (!options.replayPath.empty() &&
-      (options.replayEvent == 2 || options.replayEvent == 3)) {
+      (options.replayEvent >= 1 && options.replayEvent <= 3)) {
     // Level 3 capture: one row per emulated frame, "rel" counts from the
     // frame that runs $8C61 (initialisation plus the first rebound tick),
     // which is also the first native update.
@@ -7565,7 +8627,33 @@ int main(int argc, char** argv) {
                                      : replayRows[replayIndex].frameByte - 1);
     game.level3Invulnerable = options.replayInvulnerable;
     game.level3ClearProjectiles = options.replayClearProjectiles;
-    if (!options.replayOutput.empty() && options.replayEvent == 3) {
+    if (!options.replayOutput.empty() && options.replayEvent == 1) {
+      replayOutput.open(options.replayOutput);
+      replayOutput << "frame,rel,input,state,y,x,half,phase,landvel,launch,dir,"
+                      "vel,jump,stick,idle_hi,idle_lo,countdown,code,scroll,"
+                      "halfstep,score,bonus,lives,sched,schedptr,buffered,stand,"
+                      "goalhit,jumps,held,skip,browns,purples,flash,timeout,"
+                      "missed,leftbonus,perfect,visits";
+      for (int index = 0; index < 7; ++index) {
+        for (const char* name : {"active", "flag", "state", "y", "x", "half",
+                                 "phase", "landvel", "vel", "timer", "kind",
+                                 "owner", "code"}) {
+          replayOutput << ",mk" << index << '_' << name;
+        }
+      }
+      replayOutput << ",stand_active,stand_state,stand_y,stand_x,stand_x2,"
+                      "stand_x3";
+      for (int index = 0; index < 12; ++index) {
+        for (const char* name : {"state", "flag", "y", "x", "timer"}) {
+          replayOutput << ",fx" << index << '_' << name;
+        }
+      }
+      replayOutput << ",plaque0_x,plaque1_x,plaque2_x,bird_state,bird_x,bird_bagx";
+      for (int index = 0; index < 13; ++index) {
+        replayOutput << ",coin" << index << "_y,coin" << index << "_x";
+      }
+      replayOutput << ",coinidx,coincount,phase05,phase06,frame_byte,dips\n";
+    } else if (!options.replayOutput.empty() && options.replayEvent == 3) {
       replayOutput.open(options.replayOutput);
       replayOutput << "frame,rel,input,state,y,x,phase,landvel,launch,dir,vel,jump,"
                       "stick,idle_hi,idle_lo,countdown,ball_active,ball_flag,"
@@ -7726,6 +8814,24 @@ int main(int argc, char** argv) {
         game.selectedEvent = 3;
       }
       startGame(game);
+    }
+    if (options.captureScene == "stage2") {
+      // Play the rope with the joystick held right, jumping over each monkey,
+      // so the capture shows a real board frame from the ROM model.
+      std::array<Uint8, SDL_NUM_SCANCODES> scripted{};
+      scripted[SDL_SCANCODE_RIGHT] = 1;
+      for (int frame = 0; frame < 360; ++frame) {
+        bool jump = false;
+        if (game.level2Charlie.phase == 0 && game.level2Charlie.state == 1) {
+          for (const auto& m : game.level2Monkeys) {
+            if (m.active == 0) continue;
+            const int gap = (m.col - game.level2Charlie.col) & 0xff;
+            if (gap < 0x2c && gap >= 0x1c) jump = true;
+          }
+        }
+        ++game.level1BoardFrameByte;
+        updateLevel2(game, scripted.data(), jump, 0.0F);
+      }
     }
     if (options.captureScene == "stage4" ||
         options.captureScene == "stage4-jump" ||
@@ -8233,12 +9339,79 @@ int main(int argc, char** argv) {
       jumpQueued = false;
       accumulator -= kFixedDt;
       if (replaying &&
-          (options.replayEvent == 2 || options.replayEvent == 3)) {
+          (options.replayEvent >= 1 && options.replayEvent <= 3)) {
         if (replayFrame == 0 && replayRows[replayIndex].bonus >= 0) {
           // The capture may poke the bonus digits on its first stage frame.
           game.bonus = replayRows[replayIndex].bonus;
         }
-        if (replayOutput && options.replayEvent == 3) {
+        if (replayOutput && options.replayEvent == 1) {
+          const Level4Record& c = game.level2Charlie;
+          const int phase6 = game.scene == Scene::Crashed ? 5
+                             : (game.scene == Scene::Tally ? 4 : 3);
+          auto owner = [&](const Level4Record& m) {
+            return m.owner;
+          };
+          replayOutput << replayFrame << ',' << replayRows[replayIndex].rel
+                       << ',' << std::hex << replayInput << std::dec << ','
+                       << c.state << ',' << c.row << ',' << c.col << ','
+                       << c.half << ',' << c.phase << ',' << c.landVelocity
+                       << ',' << c.launch << ',' << c.direction << ','
+                       << c.velocity << ',' << c.jump << ',' << c.stick << ','
+                       << c.idleHigh << ',' << c.idleLow << ',' << c.countdown
+                       << ",0," << game.level2Scroll << ',' << game.level2HalfStep
+                       << ',' << game.score << ',' << game.bonus << ','
+                       << game.lives << ',' << game.level2SchedCounter
+                       << ",0000," << game.level2Buffered << ','
+                       << game.level2StandHit << ',' << game.level2StandGoal
+                       << ',' << game.level2Landings << ',' << game.level2Held
+                       << ',' << game.level2Skip << ',' << game.level2Near
+                       << ',' << game.level2Far << ',' << game.level2Flash
+                       << ',' << game.level2Timeout << ',' << game.level2Clear
+                       << ",0,0," << game.level2Visits;
+          for (const auto& m : game.level2Monkeys) {
+            if (m.active == 0 && m.flag == 0) {
+              replayOutput << ",0,0,0,0,0,0,0,0,0,0,0,0,0";
+            } else {
+              replayOutput << ',' << m.active << ',' << m.flag << ','
+                           << m.state << ',' << m.row << ',' << m.col << ','
+                           << m.half << ',' << m.phase << ',' << m.landVelocity
+                           << ',' << m.velocity << ',' << m.leapTimer << ','
+                           << m.kind << ',' << owner(m) << ",0";
+            }
+          }
+          const Level4Record& st = game.level2Stand;
+          replayOutput << ',' << st.active << ',' << st.state << ',' << st.row
+                       << ',' << st.col << ',' << st.col << ',' << st.col;
+          for (const auto& popup : game.level2Popups) {
+            if (popup.active == 0) {
+              replayOutput << ",-1,0,0,0,0";
+            } else {
+              replayOutput << ',' << popup.state << ',' << popup.flag << ','
+                           << popup.row << ',' << popup.col << ',' << popup.timer;
+            }
+          }
+          for (const auto& plaque : game.level2Plaques) {
+            replayOutput << ',' << plaque.col;
+          }
+          if (!game.level3BirdActive) {
+            replayOutput << ",-1,0,0";
+          } else {
+            replayOutput << ',' << game.level3BirdState << ','
+                         << static_cast<int>(game.level3BirdX) << ','
+                         << static_cast<int>(game.level3BirdBagX);
+          }
+          for (const auto& coin : game.level3Coins) {
+            if (!coin.active) {
+              replayOutput << ",-1,0";
+            } else {
+              replayOutput << ',' << static_cast<int>(coin.y) << ','
+                           << static_cast<int>(coin.x);
+            }
+          }
+          replayOutput << ',' << game.level3CoinIndex << ','
+                       << game.level3CoinCount << ",0," << phase6 << ','
+                       << static_cast<int>(game.level1BoardFrameByte) << ",180\n";
+        } else if (replayOutput && options.replayEvent == 3) {
           const Level4Record& charlie = game.level4Charlie;
           const Level4Record& ball = game.level4Ball;
           const int phase6 = game.scene == Scene::Crashed ? 5
