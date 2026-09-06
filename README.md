@@ -29,7 +29,11 @@ Vector rendering remains only as a fallback if an asset cannot be loaded.
 - Portrait gameplay world: `480 × 640` logical units.
 - Exact fixed simulation cadence: approximately `60.606060 Hz`, matching the
   documented original board timing.
-- Rendering resolution is dynamic. The logical units do not limit art detail.
+- The frame is rendered at a portrait resolution of at most `480 × 640` (the
+  logical playfield) and then scaled to the display, so no monitor shows more
+  than that; `--render 240x320` renders at a low-resolution cabinet's size
+  (low-detail drawing and nearest-neighbour scaling switch on at 320 lines)
+  and `--render native` uses the display's full resolution.
 - The upper zeppelin/tent marquee and black score panel remain fixed.
 - The Ferris wheel rotates in place while its gondolas stay upright.
 - The lower arena wall, crowd, floor, distance signs, and goal scroll with
@@ -72,6 +76,12 @@ Progressive 240p cabinet mode:
 
 ```sh
 ./build/circus_charlie_hd --mode 320x240 --rotate 90 --fullscreen
+```
+
+Any portrait monitor drawn at 240x320 and scaled up:
+
+```sh
+./build/circus_charlie_hd --render 240x320 --fullscreen
 ```
 
 Modern 1080p display:

@@ -257,6 +257,13 @@ constexpr int kEventColumns = 3;
 struct Options {
   int width = 480;
   int height = 640;
+  // The portrait resolution the frame is rendered at before it is scaled to
+  // the display: by default the game's own 480x640, so no monitor shows more
+  // than the logical playfield; 240x320 reproduces a low-resolution cabinet
+  // (low-detail drawing and nearest-neighbour scaling switch on at 320
+  // lines); 0x0 renders at the display's full resolution.
+  int renderWidth = 480;
+  int renderHeight = 640;
   int rotation = 0;
   bool fullscreen = false;
   bool debug = false;
@@ -1161,6 +1168,7 @@ void printUsage() {
   std::cout
       << "Circus Charlie HD\n"
       << "  --mode WIDTHxHEIGHT\n"
+      << "  --render WIDTHxHEIGHT|native   (portrait render resolution, default 480x640)\n"
       << "  --rotate 0|90|180|270\n"
       << "  --fullscreen\n"
       << "  --event 1|2|3|4|5|6\n"
@@ -1291,6 +1299,15 @@ std::optional<Options> parseOptions(int argc, char** argv) {
     } else if (argument == "--mode" && index + 1 < argc) {
       if (!parseMode(argv[++index], options.width, options.height)) {
         std::cerr << "Invalid display mode.\n";
+        return std::nullopt;
+      }
+    } else if (argument == "--render" && index + 1 < argc) {
+      const std::string value = argv[++index];
+      if (value == "native" || value == "full") {
+        options.renderWidth = 0;
+        options.renderHeight = 0;
+      } else if (!parseMode(value, options.renderWidth, options.renderHeight)) {
+        std::cerr << "Invalid render resolution.\n";
         return std::nullopt;
       }
     } else if (argument == "--event" && index + 1 < argc) {
@@ -6522,6 +6539,10 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   updateLevel1(game, keyboard, jumpPressed, controllerAxis);
 }
 
+// The portrait size the frame is rendered at; 0 means the display's size.
+int gRenderWidth = 480;
+int gRenderHeight = 640;
+
 RenderSurface buildRenderSurface(SDL_Renderer* renderer, SDL_Window* window,
                                  int rotation, RenderSurface oldSurface) {
   if (oldSurface.texture) SDL_DestroyTexture(oldSurface.texture);
@@ -6557,6 +6578,12 @@ RenderSurface buildRenderSurface(SDL_Renderer* renderer, SDL_Window* window,
   surface.height = rotated ? destinationWidth : destinationHeight;
   surface.width = std::max(surface.width, 240);
   surface.height = std::max(surface.height, 320);
+  // Never render more pixels than the requested portrait resolution; the
+  // scaled copy below fills the display.
+  if (gRenderWidth > 0 && gRenderHeight > 0) {
+    surface.width = std::min(surface.width, gRenderWidth);
+    surface.height = std::min(surface.height, gRenderHeight);
+  }
   surface.texture = SDL_CreateTexture(
       renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
       surface.width, surface.height);
@@ -8828,6 +8855,8 @@ int main(int argc, char** argv) {
   if (!parsedOptions) return argc > 1 ? 1 : 0;
   const Options options = *parsedOptions;
   if (options.showHelp) return 0;
+  gRenderWidth = options.renderWidth;
+  gRenderHeight = options.renderHeight;
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0) {
     std::cerr << "SDL initialization failed: " << SDL_GetError() << '\n';
