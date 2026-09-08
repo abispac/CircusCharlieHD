@@ -9610,7 +9610,7 @@ int main(int argc, char** argv) {
     // the boot video and the selection screen.
     insertCoin(game);
     enterEventSelect(game);
-    game.selectedEvent = std::min(options.startEvent - 1, 3);
+    game.selectedEvent = options.startEvent - 1;
     confirmEventSelection(game);
   }
   if (game.scene == Scene::Boot) playBootAudio(audio);
