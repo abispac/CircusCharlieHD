@@ -514,6 +514,7 @@ constexpr int kLevel4StartColumn = 0x50;
 constexpr int kLevel4CharlieRow = 0xa4;
 constexpr int kLevel4RestartFrames = 96;
 constexpr int kLevel5RestartFrames = 96;
+constexpr int kLevel6RestartFrames = 96;
 // $FB80 on a fresh start, then $BD1C by page.
 constexpr int kLevel4FirstBonus = 6410;
 constexpr int kLevel4RestartBonus[3] = {4000, 3500, 3000};
@@ -721,6 +722,7 @@ constexpr std::array<int, 6> level1RiderCodes(Level1RiderState state) {
 }
 
 #include "level5_types.inc"
+#include "level6_types.inc"
 
 struct Game {
   Scene scene = Scene::Boot;
@@ -892,6 +894,8 @@ struct Game {
   int level4LatchedButton = 0;
   int level4BothStick = 0;   // which way a two-key overlap resolves
   Level5 level5;             // ---- Event 5 (pony and springboards) board ----
+  Level6 level6;             // ---- Event 6 (the trapeze) board ----
+  int level6BonusHold = 0;   // $2276 on the trapeze
   bool level4Died = false;
   bool level4Finished = false;
   // ---- Event 2 (tightrope and monkeys) board ----
@@ -970,6 +974,7 @@ struct Game {
   std::uint32_t eventSelectConfirmAudioSerial = 0;
   std::uint32_t stage3BounceAudioSerial = 0;
   std::uint32_t stage5SpringAudioSerial = 0;   // $BA97 -> $4B
+  std::uint32_t stage6BounceAudioSerial = 0;   // $BA7F -> $45
   std::uint32_t stage5FallAudioSerial = 0;     // $BA93 -> $4A
   std::uint32_t stage3OverjumpAudioSerial = 0;
   std::uint32_t level3ShowerAudioSerial = 0;
@@ -1074,6 +1079,8 @@ struct Assets {
   SDL_Texture* stage4Ball = nullptr;
   SDL_Texture* stage5Pony = nullptr;
   SDL_Texture* stage5Springboard = nullptr;
+  SDL_Texture* stage6Trapeze = nullptr;
+  SDL_Texture* stage6Trampoline = nullptr;
 };
 
 struct AudioClip {
@@ -1098,6 +1105,8 @@ struct AudioEngine {
   AudioClip stage2Music;
   AudioClip stage3Music;
   AudioClip stage4Music;
+  AudioClip stage6Music;       // $16: the aerial-bar piece, played once
+  AudioClip stage6Bounce;      // $45: the trampoline
   AudioClip boot;
   AudioClip stage3Bounce;
   AudioClip stage5Springboard;
@@ -1517,6 +1526,8 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.stage4Ball = loadAsset(renderer, "stage4-ball-centered-v2.png");
   assets.stage5Pony = loadAsset(renderer, "stage5-pony-8-v1.png");
   assets.stage5Springboard = loadAsset(renderer, "stage5-springboard-v1.png");
+  assets.stage6Trapeze = loadAsset(renderer, "stage6-trapeze-v1.png");
+  assets.stage6Trampoline = loadAsset(renderer, "stage6-trampoline-v1.png");
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.riderRunA || !assets.riderRunB ||
       !assets.riderRunC ||
@@ -1592,6 +1603,8 @@ void destroyAssets(Assets& assets) {
   if (assets.stage4Ball) SDL_DestroyTexture(assets.stage4Ball);
   if (assets.stage5Pony) SDL_DestroyTexture(assets.stage5Pony);
   if (assets.stage5Springboard) SDL_DestroyTexture(assets.stage5Springboard);
+  if (assets.stage6Trapeze) SDL_DestroyTexture(assets.stage6Trapeze);
+  if (assets.stage6Trampoline) SDL_DestroyTexture(assets.stage6Trampoline);
   assets = {};
 }
 
@@ -1716,6 +1729,8 @@ bool loadAudio(AudioEngine& audio) {
   loadAudioAsset("coin.wav", audio.creditInsert);
   loadAudioAsset("stage5-springboard.wav", audio.stage5Springboard);
   loadAudioAsset("stage5-fall.wav", audio.stage5Fall);
+  loadAudioAsset("event6-stage.wav", audio.stage6Music);
+  loadAudioAsset("stage6-bounce.wav", audio.stage6Bounce);
 
   if (!matchesReference(audio.jump) || !matchesReference(audio.fail) ||
       !matchesReference(audio.miss) ||
@@ -1782,13 +1797,17 @@ void setStageMusicFast(AudioEngine& audio, bool fast) {
 }
 
 void playStageMusic(AudioEngine& audio, int selectedEvent, bool fast) {
+  // Event 5 ($13) shares Event 1's piece; Event 6 ($16) has its own, which
+  // the sound board plays through once.
+  const bool trapeze = selectedEvent == 5 && audio.stage6Music.data;
   const AudioClip& music =
       selectedEvent == 1 ? audio.stage2Music
       : selectedEvent == 2 ? audio.stage3Music
       : selectedEvent == 3 ? audio.stage4Music
-                           : audio.stageMusic;
+      : trapeze ? audio.stage6Music
+                : audio.stageMusic;
   setAudioVoice(audio, 0, music,
-                static_cast<int>(SDL_MIX_MAXVOLUME * 0.58F), true);
+                static_cast<int>(SDL_MIX_MAXVOLUME * 0.58F), !trapeze);
   setStageMusicFast(audio, fast);
 }
 
@@ -1864,6 +1883,11 @@ void playStage3BounceSound(AudioEngine& audio) {
 void playStage5SpringSound(AudioEngine& audio) {
   if (!audio.stage5Springboard.data) return;
   setAudioVoice(audio, 1, audio.stage5Springboard, SDL_MIX_MAXVOLUME, false);
+}
+
+void playStage6BounceSound(AudioEngine& audio) {
+  if (!audio.stage6Bounce.data) return;
+  setAudioVoice(audio, 1, audio.stage6Bounce, SDL_MIX_MAXVOLUME, false);
 }
 
 void playStage5FallSound(AudioEngine& audio) {
@@ -2230,6 +2254,10 @@ void level5Init(Game& game);
 void syncLevel5World(Game& game);
 void updateLevel5(Game& game, const Uint8* keyboard, bool jumpPressed,
                   float controllerAxis);
+void level6Init(Game& game);
+void syncLevel6World(Game& game);
+void updateLevel6(Game& game, const Uint8* keyboard, bool jumpPressed,
+                  float controllerAxis);
 void updateLevel2(Game& game, const Uint8* keyboard, bool jumpPressed,
                   float controllerAxis, bool restartFrame = false);
 
@@ -2338,6 +2366,23 @@ void resetCourse(Game& game) {
     syncLevel5World(game);
     return;
   }
+  if (game.selectedEvent == 5) {
+    game.hoops.clear();
+    game.firePots.clear();
+    game.bonusRings.clear();
+    game.stage2Monkeys.clear();
+    game.stage4Balls.clear();
+    game.prizeBagsAvailable = 0;
+    {
+      const int visits = game.level6.visits;   // $2213 survives the course reset
+      game.level6 = Level6{};
+      game.level6.visits = visits;
+    }
+    game.level6BonusHold = 0;
+    level6Init(game);
+    syncLevel6World(game);
+    return;
+  }
 
 
   game.stage2Monkeys.clear();
@@ -2378,7 +2423,7 @@ void confirmEventSelection(Game& game) {
     game.scene = Scene::Title;
     return;
   }
-  if (game.selectedEvent > 4) game.selectedEvent = 0;
+  if (game.selectedEvent > 5) game.selectedEvent = 0;
   ++game.eventSelectConfirmAudioSerial;
   --game.credits;
   startGame(game);
@@ -4381,6 +4426,7 @@ void updateLevel4(Game& game, const Uint8* keyboard, bool jumpPressed,
 
 
 #include "level5_logic.inc"
+#include "level6_logic.inc"
 
 // ============================================================================
 // Event 2 (tightrope and monkeys): a clean-room port of the circusc4 stage
@@ -6488,6 +6534,10 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
         level5Init(game);
         syncLevel5World(game);
       }
+      if (game.selectedEvent == 5 && game.scene == Scene::Playing) {
+        level6Init(game);
+        syncLevel6World(game);
+      }
     }
     return;
   }
@@ -6499,6 +6549,10 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
 
   if (game.scene == Scene::Goal && game.selectedEvent == 4) {
     updateLevel5(game, keyboard, jumpPressed, controllerAxis);
+    return;
+  }
+  if (game.scene == Scene::Goal && game.selectedEvent == 5) {
+    updateLevel6(game, keyboard, jumpPressed, controllerAxis);
     return;
   }
 
@@ -6594,6 +6648,10 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
   }
   if (game.selectedEvent == 4) {
     updateLevel5(game, keyboard, jumpPressed, controllerAxis);
+    return;
+  }
+  if (game.selectedEvent == 5) {
+    updateLevel6(game, keyboard, jumpPressed, controllerAxis);
     return;
   }
 
@@ -8662,6 +8720,7 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
 }
 
 #include "level5_draw.inc"
+#include "level6_draw.inc"
 
 void drawTallyScreen(SDL_Renderer* renderer, const Game& game,
                      bool complete, const Assets& assets,
@@ -8825,6 +8884,11 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
   }
   if (game.selectedEvent == 4) {
     drawStage5Scene(renderer, game, assets, timeSeconds, interpolation);
+    if (game.debug) drawDebug(renderer, game, surface);
+    return;
+  }
+  if (game.selectedEvent == 5) {
+    drawStage6Scene(renderer, game, assets, timeSeconds, interpolation);
     if (game.debug) drawDebug(renderer, game, surface);
     return;
   }
@@ -9004,7 +9068,7 @@ int main(int argc, char** argv) {
   std::size_t replayIndex = 0;
   std::ofstream replayOutput;
   if (!options.replayPath.empty() &&
-      (options.replayEvent >= 1 && options.replayEvent <= 4)) {
+      (options.replayEvent >= 1 && options.replayEvent <= 5)) {
     // Level 3 capture: one row per emulated frame, "rel" counts from the
     // frame that runs $8C61 (initialisation plus the first rebound tick),
     // which is also the first native update.
@@ -9051,7 +9115,8 @@ int main(int argc, char** argv) {
     bool found = false;
     // Event 5's init frame ($9FF9) does not tick; the first native update is
     // the capture's rel 1.
-    const int firstRel = (options.replayEvent == 4 && options.replayOffset == 0)
+    const int firstRel = ((options.replayEvent == 4 || options.replayEvent == 5) &&
+                          options.replayOffset == 0)
                              ? 1 : options.replayOffset;
     for (std::size_t row = 0; row < replayRows.size(); ++row) {
       if (replayRows[row].rel == firstRel) {
@@ -9065,6 +9130,7 @@ int main(int argc, char** argv) {
       return 1;
     }
     game.selectedEvent = options.replayEvent;
+    game.level6.visits = options.replayVisits;   // $A8FB spawns at set-up
     startGame(game);
     // <$14 advances before the first update; the capture logs it after.
     game.level1BoardFrameByte = static_cast<std::uint8_t>(
@@ -9073,6 +9139,7 @@ int main(int argc, char** argv) {
     game.level3Invulnerable = options.replayInvulnerable;
     game.level2Perfect = options.replayPerfect;
     game.level5.visits = options.replayVisits;
+    game.level6.visits = options.replayVisits;
     game.level3ClearProjectiles = options.replayClearProjectiles;
     if (!options.replayOutput.empty() && options.replayEvent == 1) {
       replayOutput.open(options.replayOutput);
@@ -9100,6 +9167,27 @@ int main(int argc, char** argv) {
         replayOutput << ",coin" << index << "_y,coin" << index << "_x";
       }
       replayOutput << ",coinidx,coincount,phase05,phase06,frame_byte,dips\n";
+    } else if (!options.replayOutput.empty() && options.replayEvent == 5) {
+      replayOutput.open(options.replayOutput);
+      replayOutput << "frame,rel,input,phase,stage,scroll,page,low,spawncount,perfect,"
+                      "v220b,lives,score,bonus";
+      for (int a = 0xb0; a <= 0xff; ++a) {
+        replayOutput << ",v" << std::hex << a << std::dec;
+      }
+      replayOutput << ",ch_row,ch_col,ch_code,ch2_row,ch2_col,ch2_code,"
+                      "tr0_row,tr0_col,tr0_code,tr1_row,tr1_col,tr1_code,"
+                      "goal_row,goal_col,goal_code,pl_row,pl_col,pl_code";
+      for (int i = 0; i < 5; ++i) {
+        for (int b = 0; b < 16; ++b) {
+          replayOutput << ",t" << i << '_' << std::hex << b << std::dec;
+        }
+      }
+      for (int r = 0; r < 3; ++r) {
+        for (int c = 0; c < 16; ++c) {
+          replayOutput << ",r" << r << '_' << std::hex << c << std::dec;
+        }
+      }
+      replayOutput << ",v287d,v287e,v287f,v2213,phase05,phase06,frame_byte,dips\n";
     } else if (!options.replayOutput.empty() && options.replayEvent == 4) {
       replayOutput.open(options.replayOutput);
       replayOutput << "frame,rel,input,phase,stage,scroll,page,low,spawncount,perfect,"
@@ -9539,6 +9627,7 @@ int main(int argc, char** argv) {
       game.eventSelectConfirmAudioSerial;
   std::uint32_t observedStage5SpringAudioSerial = game.stage5SpringAudioSerial;
   std::uint32_t observedStage5FallAudioSerial = game.stage5FallAudioSerial;
+  std::uint32_t observedStage6BounceAudioSerial = game.stage6BounceAudioSerial;
   std::uint32_t observedStage3BounceAudioSerial =
       game.stage3BounceAudioSerial;
   std::uint32_t observedLevel3ShowerAudioSerial = 0;
@@ -9777,7 +9866,7 @@ int main(int argc, char** argv) {
       // the held button, so they get the level of the port bit, not an edge.
       traceKeyboard[SDL_SCANCODE_SPACE] =
           (options.replayEvent == 1 || options.replayEvent == 3 ||
-           options.replayEvent == 4) &&
+           options.replayEvent == 4 || options.replayEvent == 5) &&
                   (replayInput & 0x10) == 0
               ? 1
               : 0;
@@ -9812,7 +9901,7 @@ int main(int argc, char** argv) {
       jumpQueued = false;
       accumulator -= kFixedDt;
       if (replaying &&
-          (options.replayEvent >= 1 && options.replayEvent <= 4)) {
+          (options.replayEvent >= 1 && options.replayEvent <= 5)) {
         if (replayFrame == 0 && replayRows[replayIndex].bonus >= 0) {
           // The capture may poke the bonus digits on its first stage frame.
           game.bonus = replayRows[replayIndex].bonus;
@@ -9885,6 +9974,32 @@ int main(int argc, char** argv) {
             }
           }
           replayOutput << ",0,0,0," << phase6 << ','
+                       << static_cast<int>(game.level1BoardFrameByte) << ",180\n";
+        } else if (replayOutput && options.replayEvent == 5) {
+          const Level6& l = game.level6;
+          const auto m = [&](int a) { return static_cast<int>(l.ram[static_cast<std::size_t>(a & 0x3fff)]); };
+          const int phase6 = game.scene == Scene::Crashed ? 5
+                             : (game.scene == Scene::Tally ? 4 : 3);
+          replayOutput << replayFrame << ',' << replayRows[replayIndex].rel
+                       << ',' << std::hex << replayInput << std::dec << ','
+                       << m(0x2800) << ",5," << ((m(0x2203) << 8) | m(0x2204)) << ','
+                       << m(0x2203) << ',' << m(0x2204) << ',' << m(0x2208) << ','
+                       << m(0x220a) << ',' << m(0x220b) << ',' << game.lives << ','
+                       << game.score << ',' << game.bonus;
+          for (int a = 0x20b0; a <= 0x20ff; ++a) replayOutput << ',' << m(a);
+          for (int a : {0x2774, 0x2776, 0x277e, 0x2764, 0x2766, 0x276e,
+                        0x2734, 0x2736, 0x273e, 0x2724, 0x2726, 0x272e,
+                        0x27e4, 0x27e6, 0x27ee, 0x2714, 0x2716, 0x271e}) {
+            replayOutput << ',' << m(a);
+          }
+          for (int i = 0; i < 5; ++i) {
+            for (int b = 0; b < 16; ++b) replayOutput << ',' << m(0x2900 + i * 0x30 + b);
+          }
+          for (int r = 0; r < 3; ++r) {
+            for (int c = 0; c < 16; ++c) replayOutput << ',' << m(0x24f6 + r * 0x100 - c * 0x10);
+          }
+          replayOutput << ',' << m(0x287d) << ',' << m(0x287e) << ',' << m(0x287f)
+                       << ',' << l.visits << ",0," << phase6 << ','
                        << static_cast<int>(game.level1BoardFrameByte) << ",180\n";
         } else if (replayOutput && options.replayEvent == 4) {
           const Level5& l5 = game.level5;
@@ -10198,7 +10313,8 @@ int main(int argc, char** argv) {
     // miss cue and the restart.
     const bool shouldPlayStageMusic =
         game.scene == Scene::Playing &&
-        !(game.selectedEvent == 4 && game.level5.phase == 2);
+        !(game.selectedEvent == 4 && game.level5.phase == 2) &&
+        !(game.selectedEvent == 5 && game.level6.ram[0x2800] == 3);
     const bool shouldUseFastStageMusic =
         shouldPlayStageMusic && game.bonus <= 499;
     if (!shouldPlayEventSelectMusic &&
@@ -10271,6 +10387,10 @@ int main(int argc, char** argv) {
     if (observedStage5FallAudioSerial != game.stage5FallAudioSerial) {
       playStage5FallSound(audio);
       observedStage5FallAudioSerial = game.stage5FallAudioSerial;
+    }
+    if (observedStage6BounceAudioSerial != game.stage6BounceAudioSerial) {
+      playStage6BounceSound(audio);
+      observedStage6BounceAudioSerial = game.stage6BounceAudioSerial;
     }
     if (observedStage3OverjumpAudioSerial !=
         game.stage3OverjumpAudioSerial) {

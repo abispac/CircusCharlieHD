@@ -17,9 +17,11 @@ contain extracted graphics, program code, or logos. User-supplied
 soundtrack and effects are loaded only from the ignored local `assets/audio`
 folder and are not stored in this repository.
 
-The current milestone includes playable Event 1, Event 2, Event 3 and Event 4,
-plus a faithful six-event HD selection screen.  Events 1, 2, 3 and 4 are
-frame-synchronized with the original board (see below). The
+The current milestone includes all six playable events -- the lion and the
+rings, the tightrope, the trampolines, the rolling balls, the pony and
+springboards, and the trapeze -- behind a faithful six-event HD selection
+screen.  Every event is frame-synchronized with the original board (see
+below). The
 friendly blond Charlie rider uses the production Run A/B/C poses plus the
 backward walking poses E/F while retaining the original HD lion artwork.
 Vector rendering remains only as a fallback if an asset cannot be loaded.
@@ -265,6 +267,35 @@ the 192-frame idle slip, the ball-versus-ball collision and the goal stand.
 `tools/compare_level4_replay.py` compares every column of every playing
 frame; the five captures in `docs/diagnostics/level4-replay/` replay with no
 mismatches.
+
+## Event 5 board model and replay verification
+
+Event 5 runs the `circusc4` pony-and-springboards handler documented in
+`docs/LEVEL5_ROM_MODEL.md`: the three paces of the pony, the `$F67C`
+springboard schedule that the difficulty dips and the visit count start
+into, the doubles every fourth spawn, the landing window and the diagonal
+pole test, the BCD landing points that double with every pace step, the
+tumble after a double bounce, the goal stand and the extra-life bird.
+`tools/autoplay_level5_headless.lua` captures the board frame by frame (its
+`search` mode finds a clear with save states) and
+`tools/compare_level5_replay.py` compares every column of every playing
+frame; the eight captures in `docs/diagnostics/level5-replay/` replay with
+no mismatches.
+
+## Event 6 board model and replay verification
+
+Event 6 runs the `circusc4` trapeze handler documented in
+`docs/LEVEL6_ROM_MODEL.md`.  The handler works on RAM -- five trapeze
+records, the sprite table and the direct page -- so the port keeps a byte
+mirror of the board's work RAM and transcribes each routine against it: the
+swing phase and amplitude tables, the pump on the stick, the release with
+the bar's averaged velocity, the catch window and its points, the
+trampolines and their rebounds, the sixteen-swing drop, the goal platform on
+page 6 and the three-act celebration.  `tools/autoplay_level6_headless.lua`
+captures the board (its `search` mode finds a clear) and
+`tools/compare_level6_replay.py` compares every column of every playing
+frame; the seven captures in `docs/diagnostics/level6-replay/` replay with
+no mismatches.
 
 ## Vertical monitors
 
