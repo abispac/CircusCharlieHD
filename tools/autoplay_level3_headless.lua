@@ -20,6 +20,8 @@
 --   CIRCUS_L3_LAST     n       stop after n emulated frames (default 3400)
 --   CIRCUS_L3_L2       n       $220F (Level 2 visit count) poked after the
 --                              start so the coin shower scores 100 (default 1)
+--   CIRCUS_L3_WATER    1       set $2207 and $2210 = 2 with the stage: the water round
+--   CIRCUS_L3_SNAPDIR  path    write a snapshot every CIRCUS_L3_SNAPEVERY stage frames
 --   CIRCUS_L3_BONUS    dddd    poke the bonus digits $227C-$227F on the first
 --                              stage frame (e.g. 0050 to reach the time-out)
 local machine = manager.machine
@@ -34,6 +36,9 @@ local out_path = os.getenv("CIRCUS_L3_OUT") or "/tmp/circusc4-level3.csv"
 local last_frame = tonumber(os.getenv("CIRCUS_L3_LAST") or "3400")
 local level2_visits = tonumber(os.getenv("CIRCUS_L3_L2") or "1")
 local bonus_poke = os.getenv("CIRCUS_L3_BONUS")
+local water = os.getenv("CIRCUS_L3_WATER") == "1"
+local snap_dir = os.getenv("CIRCUS_L3_SNAPDIR")
+local snap_every = tonumber(os.getenv("CIRCUS_L3_SNAPEVERY") or "0")
 local script = {}
 do
   local path = os.getenv("CIRCUS_L3_SCRIPT")
@@ -85,6 +90,12 @@ end
 for i = 0, 2 do
   for _, n in ipairs({"state", "x", "key", "timer"}) do header[#header + 1] = "bag" .. i .. "_" .. n end
 end
+if water then
+  for i = 0, 3 do
+    for _, n in ipairs({"st","y","x","b7","v17","v18","v23","v25","v38","v39","v3b","v3c","spr"}) do header[#header + 1] = "dol" .. i .. "_" .. n end
+  end
+  header[#header + 1] = "v28fb"; header[#header + 1] = "v28fd"
+end
 header[#header + 1] = "bird_state"; header[#header + 1] = "bird_x"; header[#header + 1] = "bird_bagx"
 for i = 0, 12 do header[#header + 1] = "coin" .. i .. "_y"; header[#header + 1] = "coin" .. i .. "_x" end
 for _, n in ipairs({"coinidx", "coincount", "bonus", "lives", "phase05", "phase06", "frame_byte"}) do header[#header + 1] = n end
@@ -115,6 +126,12 @@ local function row(rel)
     if u8(a) == 0 then push(-1); push(0); push(0); push(0)
     else push(u8(a + 2)); push(u8(a + 6)); push(u8(a + 9)); push(u8(a + 0xa)) end
   end
+  if water then
+    for _, a in ipairs({0x2440, 0x2480, 0x24c0, 0x2500}) do
+      push(u8(a + 2)); push(u8(a + 4)); push(u8(a + 6)); push(u8(a + 7)); push(u8(a + 0x17)); push(u8(a + 0x18)); push(u8(a + 0x23)); push(u8(a + 0x25)); push(u8(a + 0x38)); push(u8(a + 0x39)); push(u8(a + 0x3b)); push(u8(a + 0x3c)); push(u16(a + 0xc))
+    end
+    push(u8(0x28fb)); push(u8(0x28fd))
+  end
   if u8(0x2700) == 0 then push(-1); push(0); push(0) else push(u8(0x2702)); push(u8(0x2706)); push(u8(0x2726)) end
   for a = 0x2730, 0x27f0, 0x10 do
     if u8(a) == 0 then push(-1); push(0) else push(u8(a + 4)); push(u8(a + 6)) end
@@ -129,11 +146,17 @@ emu.register_frame_done(function()
   frame = frame + 1
   set(coin, between(300, 306))
   set(start, between(400, 406))
-  if frame >= 402 and frame <= 470 then program:write_u8(0x2201, 2) end
+  if frame >= 402 and frame <= 470 then
+    program:write_u8(0x2201, 2)
+    -- The water variant ($2207, see $8FF9) must be set before $6D0F picks
+    -- the stage map, i.e. in the same window as the stage number.
+    if water then program:write_u8(0x2207, 1); program:write_u8(0x2210, 2) end
+  end
   if frame == 471 and not poked then
     -- As if Levels 1 and 2 had been played once: $220E/$220F visit counts
     -- and the Level 3 count that $6BD5 could not increment before the poke.
-    program:write_u8(0x220e, 1); program:write_u8(0x220f, level2_visits); program:write_u8(0x2210, 1)
+    program:write_u8(0x220e, 1); program:write_u8(0x220f, level2_visits); program:write_u8(0x2210, water and 2 or 1)
+    if water then program:write_u8(0x2207, 1) end
     poked = true
   end
   if stage_start == nil and frame > 470 and u8(0x2400) ~= 0 and u8(0x2402) == 1 and u8(0x2201) == 2 then
@@ -168,6 +191,9 @@ emu.register_frame_done(function()
     for a = 0x2540, 0x25ff do program:write_u8(a, 0) end
   end
   row(rel)
+  if snap_dir and snap_every > 0 and rel >= 0 and rel % snap_every == 0 then
+    machine.video:snapshot(string.format("%s/f%05d.png", snap_dir, rel))
+  end
   if frame >= last_frame then
     out:close()
     machine:exit()

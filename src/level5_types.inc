@@ -89,6 +89,8 @@ struct Level5Spring {
   int halfC = 0;    // $C,U  pole strike half width
   int tileD = 0;    // $D,U / $E,U  the compressed platform tiles
   int tileE = 0;
+  int hdX = 0;      // HD only: the screen column unwrapped, so a board that
+                    // has left by the left edge never reappears on the right
 };
 
 struct Level5 {
@@ -115,6 +117,9 @@ struct Level5 {
   int prevInput = 0;          // $2035: last frame's port image
   int flashState = 0, flashTimer = 0, flashPhase = 0;   // $287D $287E $287F
   int lyingTimer = 0;
+  int hdAir = 0;              // HD animation: frames since the $29 cells came up
+  bool hdRising = false;      // HD animation: the row went up this frame
+  int hdPrevRow = 0;
   bool started = false;
   bool died = false;
   bool finished = false;

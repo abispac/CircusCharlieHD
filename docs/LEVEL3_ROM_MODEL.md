@@ -171,3 +171,56 @@ poked to 0090 (`timeout-clear`).  `circus_charlie_hd --replay capture.csv
 --replay-output native.csv` replays the joystick column and
 `tools/compare_level3_replay.py capture.csv native.csv` compares every
 column of every playing frame: all seven captures replay with no mismatch.
+
+## The water round (`$2207`, the dolphins)
+
+`$8FF9` runs at the goal: with `$2210` (the Level 3 visit count) even it
+toggles `$2207`, and `$6BD5` only raises the visit count while `$2207` is
+clear, so the second visit is played twice, and `$6B49` keeps `$2201` on
+Level 3 for the second run instead of advancing to Level 4.  The second run
+is the water round: `$6D0F`/`$9096` take map 6 (`$D4C5`) and the `$E915`
+page data, where the grass below tile row 26 is water (`$B6`), the drums
+stand in it on the same columns as before, a pool ladder sits on tile row 3
+of every page, and `$8B3E`/`$8BA9` skip the flame and knife collisions
+while `$8BF9` tests the dolphins' bodies.  The visit count is odd again
+after the water goal, so the round comes back on the fourth, sixth, ...
+visit.
+
+Dolphins fill the performer records (`$93F8`, state 3, `$969C`):
+
+- Spawn only while moving right, at the same `$2204` keys and slots as the
+  performers, from the `$F5C5` tables (six by nine by three); the table
+  index is the dip difficulty plus `2 * (visits - 1)` plus two for every
+  `$FAA1` bag threshold passed (`$958B`), capped at ten.  Slot bytes: 1 a
+  dolphin starting with a leap, 2 one starting with a dive, 3 a pair (the
+  first free record from `$2440` gets a leaper at the same spot, with no
+  type, timer or key), `$82` a diver moved under water by `($2D, $28)`
+  rows and columns (`($25, $20)` in slot 0) to phase 4 with no velocity,
+  invisible (`$EE66` blank pose) and flagged in `$25` so it survives its
+  first wrap.  `$38`/`$3C` keep the byte's low bits minus one.
+- Row `$C8`, column `$F1`, launch velocity `$0480` (`$9735`), phase 1 or
+  3, dive counter `$23` = slot; slot 0 starts with the low launch `$0420`
+  (`$9731`) and the `$EDCE`/`$EE2E` scripts.
+- Odd phases (`$9745`, 1 leap up, 3 dive down): `row -= / += velocity_hi;
+  velocity -= $30` until the high byte is zero, then the next phase.  Even
+  phases (`$96BC`, 2 fall, 4 surface): `row += / -= velocity_hi; velocity
+  += $30` until it equals the launch value, then `row += / -= launch_hi`,
+  the counter is decremented (0: low launch `$0420` with `$EDCE`/`$EE2E`;
+  -1: reset to 2; otherwise `$0480` with `$ED9E`/`$EDFE`), the phase
+  advances (5 wraps to 1) and `$9799` puts a splash in the first free
+  `$2580`-`$25E0` record (state 3, row - 4, `$EE5E` out of or `$EE62`
+  into the water, 32 frames, `$9320`).
+- Horizontal (`$9769`): two columns left a frame on page 0 or with no
+  direction, none moving left, four moving right.  A column in `[$F1,$F4)`
+  retires the record unless `$25` is set, which it clears.
+- Collision (`$8BF9`, Charlie in state 1): `|column - dolphin| < 11`,
+  `|row - dolphin_row| < 8` and their sum `< 17`; the dolphin is frozen
+  (state 4) and Charlie takes the `$EC78` tumble into `$8B93`.
+- The pose scripts (`$91DE`, nine bytes a pose, hold + 1 frames): `$ED9E`
+  and `$EDFE` hold 11, 12, 12, 11, 9; `$EDCE` and `$EE2E` 9, 11, 11, 9, 9.
+
+`CIRCUS_L3_WATER=1` makes `tools/autoplay_level3_headless.lua` set `$2207`
+and `$2210 = 2` while the stage is forced, and log the dolphin fields
+(`dol*`).  The five `water-*` captures (RIGHT with three deaths, RIGHT
+without death, the all-bags run, a left/right script and a time-out) replay
+with `--replay-water` and no mismatch.

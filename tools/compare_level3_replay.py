@@ -38,6 +38,10 @@ def main():
             continue
         reference = mame[rel]
         candidate = native[rel]
+        # After the tally (phase06 4) the board plays the next stage, which
+        # the native game does not replay.
+        if reference.get("phase06") == "4":
+            break
         # Only playing frames: the restart phases and the frame that runs
         # $8C61 again (state 0) belong to the board's own transition.
         if reference.get("phase06") != "3" or reference.get("state") == "0":

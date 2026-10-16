@@ -39,65 +39,91 @@ constexpr float kLevel5GroundRow = 0xd0;
 // ($A5E5 tests the diagonal band under the platform).
 void drawStage5Springboard(SDL_Renderer* renderer, const Assets& assets,
                            const Level5Spring& spring) {
-  if (spring.state < 2 || spring.row == 0) return;
+  (void)assets;
+  // Only a live board (state 3) has its position: while the board's tiles
+  // are still being drawn in from the edge (state 2) the record keeps the
+  // previous board's x and row, which showed up as a phantom springboard.
+  if (spring.state != 3 || spring.row == 0) return;
   const float scale = kSourceToWorldX;
-  const float centerX = static_cast<float>(spring.x) * scale;
+  // The record's screen column is a byte: a board scrolling off the left
+  // edge wraps to the right.  The unwrapped column keeps it off-screen.
+  const float centerX = static_cast<float>(spring.hdX) * scale;
   if (centerX < -200.0F || centerX > kWorldWidth + 200.0F) return;
-  const float halfWidth = static_cast<float>(spring.halfB) * scale;
-  const float bottomY = level3RowToY(static_cast<float>(spring.row));
-  const float groundY = level3RowToY(kLevel5GroundRow);
-  const float frameHeight = 16.0F * 2.5F;
-  const bool pressed = spring.tileE != 0;
-
-  // The pole: from the frame's right end down to the grass, leaning right.
-  const float poleTopX = centerX + halfWidth - 6.0F;
-  const float poleBottomX = poleTopX + 10.0F;
-  const SDL_Color poleLight = color(214, 214, 226);
-  const SDL_Color poleDark = color(132, 132, 150);
-  for (int i = -2; i <= 2; ++i) {
-    line(renderer, poleTopX + static_cast<float>(i), bottomY - 4.0F,
-         poleBottomX + static_cast<float>(i), groundY,
-         i == 2 ? poleDark : poleLight);
+  // Measured on MAME: the frame's tiles span columns $8 - $B .. $8 + $B - 20
+  // and rows $9 - 8 .. $9 + 7.  The striped bars are the top two and the
+  // bottom two rows, blue-and-white checkered pillars stand at both ends
+  // between them, and two grey poles with a hook run from the frame's
+  // middle row down to the grass (row 199): the left one nine columns in
+  // from the left end, the right one three columns past the right end.
+  // A pressed board ($A4B3 writes tile $55) sinks its bottom bar.
+  const float left = (static_cast<float>(spring.hdX - spring.halfB)) * scale;
+  const float right = (static_cast<float>(spring.hdX + spring.halfB - 19)) * scale;
+  const float halfWidth = (right - left) * 0.5F;
+  const float topY = level3RowToY(static_cast<float>(spring.row) - 8.0F);
+  const float bottomY = level3RowToY(static_cast<float>(spring.row) + 8.0F);
+  const bool pressed = spring.tileD == 0x55;
+  const float grassY = level3RowToY(200.0F);
+  const SDL_Color poleLight = color(226, 226, 236);
+  const SDL_Color poleDark = color(138, 138, 160);
+  for (const float px : {left + 9.0F * scale, right + 3.0F * scale}) {
+    const float poleTop = topY + 8.0F * kLevel3RowScale;
+    fillRect(renderer, px - 2.0F, poleTop, 4.0F, grassY - poleTop, poleDark);
+    fillRect(renderer, px - 2.0F, poleTop, 2.0F, grassY - poleTop, poleLight);
+    // The hook: a short arm back toward the frame.
+    fillRect(renderer, px - 7.0F, poleTop - 4.0F, 7.0F, 3.0F, poleLight);
+    fillRect(renderer, px - 7.0F, poleTop - 1.0F, 7.0F, 2.0F, poleDark);
   }
-
-  const float drawHeight = pressed ? frameHeight * 0.62F : frameHeight;
-  if (assets.stage5Springboard) {
-    const SDL_FRect destination{centerX - halfWidth, bottomY - drawHeight,
-                                halfWidth * 2.0F, drawHeight};
-    SDL_RenderCopyF(renderer, assets.stage5Springboard, nullptr, &destination);
-    return;
-  }
-  // Vector fallback: two striped bars on checkered posts.
-  const SDL_Color yellow = color(255, 226, 74);
-  const SDL_Color blue = color(46, 120, 247);
-  fillRect(renderer, centerX - halfWidth, bottomY - drawHeight,
-           halfWidth * 2.0F, 6.0F, yellow);
-  fillRect(renderer, centerX - halfWidth, bottomY - 6.0F, halfWidth * 2.0F,
-           6.0F, yellow);
-  fillRect(renderer, centerX - halfWidth, bottomY - drawHeight, 8.0F,
-           drawHeight, blue);
-  fillRect(renderer, centerX + halfWidth - 8.0F, bottomY - drawHeight, 8.0F,
-           drawHeight, blue);
+  const float barHeight = 2.0F * kLevel3RowScale;
+  const float frameBottom = pressed ? bottomY - 4.0F : bottomY;
+  auto stripedBar = [&](float y) {
+    fillRect(renderer, left, y, halfWidth * 2.0F, barHeight, color(255, 226, 40));
+    for (float x = left; x < right; x += 8.0F * scale) {
+      fillRect(renderer, x + 3.0F * scale, y, 2.0F * scale, barHeight,
+               color(250, 60, 30));
+    }
+    fillRect(renderer, left, y + barHeight - 1.5F, halfWidth * 2.0F, 1.5F,
+             color(150, 60, 20));
+  };
+  auto pillar = [&](float x) {
+    const float w = 4.0F * scale;
+    const float top = topY + barHeight;
+    const float h = frameBottom - barHeight - top;
+    fillRect(renderer, x, top, w, h, color(40, 110, 240));
+    for (float y = top; y < top + h; y += 2.0F * kLevel3RowScale) {
+      const bool odd = static_cast<int>((y - top) / (2.0F * kLevel3RowScale)) & 1;
+      fillRect(renderer, x + (odd ? w * 0.5F : 0.0F), y, w * 0.5F,
+               2.0F * kLevel3RowScale, color(235, 245, 255));
+    }
+  };
+  pillar(left + 1.0F * scale);
+  pillar(right - 5.0F * scale);
+  stripedBar(topY);
+  stripedBar(frameBottom - barHeight);
 }
 
-// The pony: three cells wide (48 source columns) and two tall, its leading
-// cell at $2676 / $2674.  The sheet's eight frames pair up with the four
-// board gaits ($EECA).
 void drawStage5Pony(SDL_Renderer* renderer, const Assets& assets,
                     const Level5& l5) {
   if (l5.ponyCol == 0 || l5.ponyCode == 0) return;
   const float scale = kSourceToWorldX;
-  const float centerX = (static_cast<float>(l5.ponyCol) + 24.0F) * scale;
-  const float bottomY = level3RowToY(static_cast<float>(l5.ponyRow) + 32.0F);
+  const float centerX = (static_cast<float>(l5.ponyCol) + 8.0F) * scale;
+  const float bottomY = level3RowToY(static_cast<float>(l5.ponyRow) + 30.0F);
   int gait = 0;
   for (std::size_t i = 0; i < kLevel5PonyCells.size(); ++i) {
     if (kLevel5PonyCells[i] == l5.ponyCode) gait = static_cast<int>(i);
   }
-  const float width = 56.0F * scale;
-  const float height = width * 244.0F / 370.0F;
+  // The board's pony composite is 48 columns wide and rides low on the
+  // grass; the painting is drawn a little larger than that so the pair reads
+  // at the size of the arcade's.
+  // Measured on MAME: the pony's pixels span columns $6 - 14 .. $6 + 30 and
+  // rows $4 + 1 .. $4 + 29, so it is 45 columns wide and 29 rows tall,
+  // centred eight columns past its record column.
+  const float width = 45.0F * scale;
+  const float height = 29.0F * kLevel3RowScale;
+  const float ponyCenter = (static_cast<float>(l5.ponyCol) + 8.0F) * scale;
+  const float ponyBottom = level3RowToY(static_cast<float>(l5.ponyRow) + 30.0F);
   if (assets.stage5Pony) {
-    drawSheetFrame(renderer, assets.stage5Pony, 4, 2, gait * 2, centerX,
-                   bottomY + 2.0F, width, height);
+    drawSheetFrame(renderer, assets.stage5Pony, 4, 2, gait * 2, ponyCenter,
+                   ponyBottom, width * 1.08F, height * 1.08F);
     return;
   }
   fillRect(renderer, centerX - width * 0.5F, bottomY - height * 0.6F, width,
@@ -115,45 +141,67 @@ void drawStage5Charlie(SDL_Renderer* renderer, const Assets& assets,
                        const Level5& l5) {
   if (l5.chCol == 0 && l5.chRow == 0) return;
   const float scale = kSourceToWorldX;
-  const float centerX = (static_cast<float>(l5.chCol) + 16.0F) * scale;
-  const float feetY = level3RowToY(static_cast<float>(l5.chRow) + 32.0F);
+  // Measured on MAME: riding, Charlie's pixels span columns $6 - 9 .. $6 + 9
+  // and rows $4 + 2 .. $4 + 28 (19 by 27), so he is centred on his record
+  // column with his shoes 29 rows below its row; the atlases' standing
+  // frames are about 220 px tall.
+  const float centerX = static_cast<float>(l5.chCol) * scale;
+  const float feetY = level3RowToY(static_cast<float>(l5.chRow) + 29.0F);
   const int code = l5.chCode;
-  const float unit = kStage2CharlieUnitsPerPixel;
+  const float unit = 27.0F * kLevel3RowScale / 222.0F;
   if (code >= 0x95 && code <= 0xac) {
-    // The tumble: the stage-3 sheet's somersault row.
+    // The tumble after a double bounce: six somersault frames.
     const int step = code - 0x95;
-    drawSheetFrame(renderer, assets.stage3Charlie, 4, 3, 4 + (step & 3),
-                   centerX, feetY - 6.0F, 110.0F, 110.0F);
+    drawStage2Pose(renderer, assets.stage6CharlieTumble, assets.stage6CharlieTumbleCells,
+                   step % 6, centerX, feetY, unit);
     return;
   }
   if (code == 0xad || code == 0xb1) {
-    drawSheetFrame(renderer, assets.stage3Charlie, 4, 3,
-                   code == 0xad ? 11 : 10, centerX, feetY + 4.0F, 104.0F,
-                   104.0F);
+    // Cheering on the drum: $AD arms up, $B1 the other cell; the HD cheer
+    // and a wave alternate.
+    // The painted drum's top surface sits about 20 units under its top edge.
+    drawStage2Pose(renderer, assets.stage6CharlieFloor, assets.stage6CharlieFloorCells,
+                   2, centerX, feetY + 3.0F * kLevel3RowScale + 20.0F, unit);
     return;
   }
   if (code == 0x31) {
-    // Sitting on the grass after the fall.
-    drawSheetFrame(renderer, assets.stage4Charlie, 4, 3, 9, centerX,
-                   feetY + 6.0F, 100.0F, 100.0F);
+    // Sitting on the grass after the fall, dazed.
+    drawStage2Pose(renderer, assets.stage5CharlieSit, assets.stage5CharlieSitCells,
+                   0, centerX, feetY + 6.0F, unit);
     return;
   }
+  // The jump is the ball stage's: the cabinet leaps the same way on both,
+  // so the $E9B4 cells' painted frames serve here.  The rider crouches 27
+  // rows tall, which is a 33-row figure standing, so the standing frame
+  // sets that scale and the split-leg leap comes out the rider's size.
+  const SheetCells& jumpCells = assets.stage4CharlieCells;
+  const float jumpUnit =
+      jumpCells.valid() && jumpCells.bounds[0].h > 0
+          ? 33.0F * kLevel3RowScale / static_cast<float>(jumpCells.bounds[0].h)
+          : unit;
   if (code == 0x19) {
-    drawSheetFrame(renderer, assets.stage4Charlie, 4, 3, 6, centerX, feetY,
-                   104.0F, 104.0F);
+    // Reaching for the platform edge.
+    drawStage2Pose(renderer, assets.stage4Charlie, jumpCells, 5, centerX, feetY, jumpUnit);
     return;
   }
   if (code == 0x29) {
-    drawSheetFrame(renderer, assets.stage4Charlie, 4, 3, 5, centerX,
-                   feetY + 2.0F, 104.0F, 104.0F);
+    // The leap: legs split while rising, the other split on the way down,
+    // knees bent as the cells have only just landed.
+    int frame = 6;
+    if (l5.hdRising) {
+      frame = l5.hdAir < 3 ? 8 : 5;
+    } else if (l5.hdAir < 3) {
+      frame = 8;
+    }
+    drawStage2Pose(renderer, assets.stage4Charlie, jumpCells, frame, centerX,
+                   feetY + 2.0F, jumpUnit);
     return;
   }
-  // Riding: the crouch sits into the saddle; the gait rocks him slightly.
+  // Riding: one seated pose per pony gait, rocking slightly.
   const int gait = (code >> 2) & 3;
   const float bob = (gait == 1 || gait == 2) ? -3.0F : 0.0F;
-  (void)unit;
-  drawSheetFrame(renderer, assets.stage3Charlie, 4, 3, gait & 1 ? 2 : 1,
-                 centerX, feetY + 16.0F + bob, 100.0F, 100.0F);
+  drawStage2Pose(renderer, assets.stage5CharlieRide, assets.stage5CharlieRideCells,
+                 gait, centerX, feetY + bob, unit);
 }
 
 // The six popup cells: the OH NO callout ($A5FE) or the GREAT / points cells
@@ -198,14 +246,19 @@ void drawStage5GoalStand(SDL_Renderer* renderer, const Assets& assets,
   }
   const float centerX = static_cast<float>(column) * scale;
   if (centerX < -200.0F || centerX > kWorldWidth + 200.0F) return;
-  const float topY = level3RowToY(0xa1);
-  if (assets.goalPlatform) {
-    const SDL_FRect destination{centerX - 86.0F, topY, 172.0F, 48.0F};
-    SDL_RenderCopyF(renderer, assets.goalPlatform, nullptr, &destination);
+  // The cabinet's goal is the pink-and-white drum (60 columns wide, rows
+  // 170-212, Charlie's shoes on its top at row 170); the Event 3 goal
+  // painting is that drum.
+  const float topY = level3RowToY(170.0F);
+  const float bottomY = level3RowToY(212.0F);
+  if (assets.stage3GoalTambourine) {
+    const float width = 60.0F * scale;
+    const SDL_FRect destination{centerX - width * 0.5F, topY, width, bottomY - topY};
+    SDL_RenderCopyF(renderer, assets.stage3GoalTambourine, nullptr, &destination);
     return;
   }
-  fillRect(renderer, centerX - 80.0F, topY, 160.0F, 40.0F,
-           color(200, 60, 60));
+  fillRect(renderer, centerX - 64.0F, topY, 128.0F, bottomY - topY,
+           color(240, 150, 200));
 }
 
 void drawStage5Scene(SDL_Renderer* renderer, const Game& game,

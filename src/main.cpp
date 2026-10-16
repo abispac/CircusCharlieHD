@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <filesystem>
+#include <functional>
 #include <iostream>
 #include <iomanip>
 #include <optional>
@@ -77,6 +78,31 @@ constexpr std::array<std::array<std::array<std::uint8_t, 3>, 9>, 6> kLevel3Perfo
     {{{0,1,1},{0,1,1},{2,2,0},{1,2,0},{3,3,0},{1,3,2},{0,1,1},{3,3,0},{3,3,0}}},
     {{{0,1,1},{0,1,1},{1,2,0},{1,3,2},{0,1,2},{1,3,2},{1,2,0},{3,3,0},{3,3,0}}},
     {{{0,1,1},{0,1,1},{2,2,1},{2,2,1},{1,3,1},{1,3,2},{3,2,1},{3,3,0},{3,3,0}}}}};
+// $F5C5: the water round's six tables of nine pages.  Slot bytes 1 and 2 are
+// dolphins that start with a leap (1) or a dive (2), 3 is a pair (a diver and
+// a leaper in one spot) and bit 7 ($82) is a diver that is moved under water
+// to the left edge of the screen when it spawns.  In the water round $958B
+// also moves the table index up two for every bag threshold passed.
+constexpr std::array<std::array<std::array<std::uint8_t, 3>, 9>, 6> kLevel3WaterTables{{
+    {{{0x00,0x03,0x03},{0x00,0x03,0x03},{0x82,0x82,0x82},{0x02,0x02,0x02},{0x01,0x01,0x02},{0x82,0x82,0x82},{0x02,0x02,0x02},{0x02,0x01,0x00},{0x02,0x01,0x00}}},
+    {{{0x02,0x02,0x02},{0x02,0x02,0x02},{0x02,0x02,0x02},{0x01,0x01,0x82},{0x01,0x02,0x01},{0x01,0x02,0x01},{0x01,0x02,0x01},{0x02,0x82,0x00},{0x02,0x82,0x00}}},
+    {{{0x01,0x02,0x01},{0x01,0x02,0x01},{0x02,0x01,0x02},{0x82,0x82,0x82},{0x01,0x01,0x03},{0x82,0x82,0x82},{0x01,0x01,0x03},{0x01,0x82,0x00},{0x01,0x82,0x00}}},
+    {{{0x02,0x03,0x02},{0x02,0x03,0x02},{0x02,0x02,0x03},{0x82,0x82,0x82},{0x01,0x01,0x01},{0x01,0x01,0x01},{0x01,0x01,0x01},{0x82,0x82,0x00},{0x82,0x82,0x00}}},
+    {{{0x01,0x02,0x01},{0x01,0x02,0x01},{0x82,0x82,0x82},{0x01,0x01,0x02},{0x01,0x01,0x02},{0x01,0x01,0x02},{0x01,0x02,0x01},{0x03,0x03,0x00},{0x03,0x03,0x00}}},
+    {{{0x82,0x82,0x03},{0x82,0x82,0x03},{0x82,0x03,0x82},{0x82,0x03,0x82},{0x01,0x03,0x01},{0x02,0x01,0x02},{0x01,0x02,0x01},{0x00,0x03,0x03},{0x82,0x82,0x00}}}}};
+// The dolphin pose scripts ($91DE, nine bytes per pose): five poses each
+// whose hold byte keeps the pose for hold + 1 frames.  $ED9E/$EDCE leap
+// (nose up), $EDFE/$EE2E dive (nose down); the second of each pair is used
+// for the low leap.  $EE66 is the under-water pose of a moved diver.
+enum Level3DolphinScript { kDolphinLeap = 0, kDolphinLeapLow = 1,
+                           kDolphinDive = 2, kDolphinDiveLow = 3,
+                           kDolphinUnderWater = 4 };
+constexpr std::array<std::array<std::uint8_t, 5>, 5> kLevel3DolphinHolds{{
+    {0x0a, 0x0b, 0x0b, 0x0a, 0x08},   // $ED9E
+    {0x08, 0x0a, 0x0a, 0x08, 0x08},   // $EDCE
+    {0x0a, 0x0b, 0x0b, 0x0a, 0x08},   // $EDFE
+    {0x08, 0x0a, 0x0a, 0x08, 0x08},   // $EE2E
+    {0x0a, 0x0b, 0x0b, 0x0a, 0x08}}}; // $EE66 (shares $EDFE's timing)
 // $F9B0: coin shower columns offsets and 8.8 drift speeds (bit 7 = leftward).
 constexpr std::array<std::pair<std::uint8_t, std::uint8_t>, 13> kLevel3CoinLanes{{
     {0x00, 0x00}, {0x01, 0x20}, {0xff, 0xe0}, {0x00, 0x00}, {0x01, 0x14},
@@ -107,12 +133,17 @@ constexpr float kStage4GoalTopY = kStage4CharlieBaselineY + 18.0F;
 // than the arcade sprite. Lift only the painted rider; physics and landing
 // measurements continue to use the ball's true top surface.
 constexpr float kStage4CharlieVisualLift = 6.0F;
-constexpr int kBootFrameCount = 483;
+// The power-on footage (assets/boot/boot-NNNN.png, 30 fps) and the title
+// footage between the demos (assets/between/between-NNNN.jpg, 30 fps): the
+// counts are read from the files when the game starts.
 constexpr float kBootFramesPerSecond = 30.0F;
-constexpr int kBootDurationFrames = static_cast<int>(
-    (static_cast<float>(kBootFrameCount) / kBootFramesPerSecond) *
-        static_cast<float>(kBoardRefresh) +
-    0.5F);
+int gBootFrameCount = 1;
+int gBetweenFrameCount = 0;
+int bootDurationFrames() {
+  return static_cast<int>((static_cast<float>(gBootFrameCount) / kBootFramesPerSecond) *
+                              static_cast<float>(kBoardRefresh) +
+                          0.5F);
+}
 
 float level3RowToY(float row) {
   return row * kLevel3RowScale + kLevel3RowOffset;
@@ -252,6 +283,8 @@ constexpr int kDefaultHighScore = 19830;
 constexpr int kFirstScoreLife = 20000;
 constexpr int kRecurringScoreLife = 70000;
 constexpr int kEventCount = 6;
+constexpr int kEventPlayLimit = 5;    // plays per event once the screen is open
+constexpr int kTrapezeEvent = 5;
 constexpr int kEventColumns = 3;
 
 struct Options {
@@ -270,6 +303,12 @@ struct Options {
   bool lionTest = false;
   bool showHelp = false;
   std::string capturePath;
+  // --record DIR: write the playfield of every Nth board frame as a JPEG
+  // frame of an attract clip, from the first playing frame, for
+  // recordSeconds, then quit.
+  std::string recordDir;
+  int recordSeconds = 60;   // the cap; the clip normally ends with the fall
+  int recordFps = 20;
   std::string captureScene = "gameplay";
   std::string tracePath;
   std::string traceMode = "hold-right";
@@ -289,7 +328,9 @@ struct Options {
   // Level 3 replays read tools/autoplay_level3_headless.lua captures.
   int replayEvent = 0;
   bool replayInvulnerable = false;
-  bool replayPerfect = false;   // Event 2: neutralise the $869B store
+  bool replayPerfect = false;
+  bool replayWater = false;     // Event 3: the capture was made with $2207 set
+  bool startWater = false;      // --event 3 --water   // Event 2: neutralise the $869B store
   int replayVisits = 1;         // Event 5: the $2212 visit count of the capture
   bool replayClearProjectiles = false;
 };
@@ -381,17 +422,33 @@ struct Level3Performer {
   std::uint8_t timerReload = 0;  // $37
   int pose = 0;               // 0 idle, 1 breathing, 2 throwing, 3 catching
   int poseFrame = 0;
+  // The water round ($2207) fills the same records with dolphins ($969C):
+  int state = 0;              // $2: 0 performer, 3 dolphin
+  std::uint8_t y = 0;         // $4: row of the lower cells
+  int phase = 0;              // $7: 1 leaping, 2 falling, 3 diving, 4 surfacing
+  std::uint16_t velocity = 0; // $17:$18 (8.8)
+  std::uint16_t launch = 0;   // $8:$3A: the velocity a dive or a leap starts with
+  int counter = 0;            // $23: counts the dives down to the low leap
+  bool offset = false;        // $25: spawned under water, survives one wrap
+  std::uint8_t key = 0;       // $3B: $2204 at the spawn
+  int script = 0;             // which of the five-pose scripts animates it
+  int scriptIndex = 0;        // pose within the script
+  std::uint8_t scriptHold = 0;  // $B
 };
 
 // Flame records $2580/$25A0/$25C0 ($9273): two cells, bottom cell at y.
+// The fourth record ($25E0) is only ever used by the dolphins' splashes
+// (state 3, $9799), which the fire breathers' spawn loop never reaches.
 struct Level3Flame {
   bool active = false;
-  int state = 0;              // 0 at the mouth, 1 rising, 4 frozen by a hit
+  int state = 0;              // 0 at the mouth, 1 rising, 3 splash, 4 frozen by a hit
   std::uint8_t x = 0;
   std::uint8_t y = 0;
   std::uint16_t velocity = 0; // $7:$8
   bool apex = false;          // $9
   std::uint8_t hold = 0;      // $3
+  std::uint8_t lifetime = 0;  // $11: the splash's 32 frames
+  bool diving = false;        // $EE62 (a dolphin going in) or $EE5E (coming out)
   int age = 0;
 };
 
@@ -644,6 +701,8 @@ struct Player {
 enum class Scene {
   Boot,
   Title,
+  Attract,   // the demo clips the cabinet shows while no coin is in
+  GameOver,  // the card after the last life, before the title
   EventSelect,
   Playing,
   Crashed,
@@ -742,6 +801,24 @@ struct Game {
   int selectedEvent = 0;
   int bootFrame = 0;
   int eventSelectFrame = 0;
+  // Attract mode: frames idle on the title with no credit, then the clip
+  // playing, its frame and the tick within it.
+  int titleIdleFrames = 0;
+  // The cabinet's run: a coin starts Event 1 and a clear moves on to the
+  // next; clearing the trapeze unlocks the event screen.  Each event may
+  // then be picked five times (its visit count sets the difficulty, as the
+  // board's $220F-$2213 do) before it locks; the trapeze never locks.
+  bool arcadeRun = true;
+  bool selectUnlocked = false;
+  std::array<int, 6> playCount{};
+  int completeFrame = 0;
+  bool selectContinuing = false;
+  int gameOverFrame = 0;
+  int attractClip = 0;        // the stage clip the next demo plays
+  int attractTick = 0;
+  int attractFrameCount = 0;
+  bool attractBetween = true; // playing the title footage, not a clip
+  std::uint32_t betweenAudioSerial = 0;
   int eventSelectDurationFrames =
       static_cast<int>(17.0 * kBoardRefresh);
   int bonus = 6000;
@@ -859,7 +936,7 @@ struct Game {
   Level3Pose level3Pose = Level3Pose::Stationary;
   int level3PoseFrame = 0;
   std::array<Level3Performer, 4> level3Performers{};
-  std::array<Level3Flame, 3> level3Flames{};
+  std::array<Level3Flame, 4> level3Flames{};   // the fourth only for splashes
   std::array<Level3Knife, 4> level3Knives{};
   std::array<Level3Bag, 3> level3Bags{};
   int level3BagValueIndex = 0;            // $28F1 (300 + 100 * index, max 900)
@@ -867,7 +944,7 @@ struct Game {
   int level3Missed = 0;                   // $220A: bags scrolled off (+ shower end)
   int level3TileTimer = 0;                // $28F4 pressed-drum frames
   int level3PressedDrum = -1;
-  int level3DeathKind = 0;                // 1 flame, 2 knife, 3 roof, 4 time
+  int level3DeathKind = 0;                // 1 flame, 2 knife, 3 roof, 4 time, 5 dolphin
   int level3RestartPage = 0;              // $2203 after $8517
   Level4Record level4Charlie;             // $2400
   Level4Record level4Ball;                // $2440 the ball he rides
@@ -924,6 +1001,9 @@ struct Game {
   int level2FarFirst = -1;
   int level2Dips = 0xb4;                     // $202F
   int level2Visits = 1;                      // $220F
+  int level2WalkAge = 0;      // HD animation: frames spent walking
+  int level2JumpAge = 0;      // HD animation: frames spent in a jump
+  int level2MonkeyAge = 0;    // HD animation: frames the monkeys have walked
   bool level2Started = false;
   int level2RestartPage = 0;
   int level2BothStick = 0;
@@ -952,6 +1032,7 @@ struct Game {
   int level3PileFrame = 0;
   int level3Difficulty = 2;               // $28F3 (default dip setting)
   int level3Visits = 1;                   // $2210
+  bool level3Water = false;               // $2207: the water round with the dolphins
   int level3Level2Visits = 1;             // $220F selects the coin value
   bool level3Invulnerable = false;        // replay aid: mirrors the MAME taps
   bool level3ClearProjectiles = false;    // replay aid: projectiles wiped
@@ -975,6 +1056,9 @@ struct Game {
   std::uint32_t stage3BounceAudioSerial = 0;
   std::uint32_t stage5SpringAudioSerial = 0;   // $BA97 -> $4B
   std::uint32_t stage6BounceAudioSerial = 0;   // $BA7F -> $45
+  std::uint32_t stage6GoalAudioSerial = 0;     // $BB0A: the landing on the plank
+  std::uint32_t stage6FloorAudioSerial = 0;    // $B857: the floor
+  int level6FloorRestartFrames = 0;            // crash frames after a floor fall
   std::uint32_t stage5FallAudioSerial = 0;     // $BA93 -> $4A
   std::uint32_t stage3OverjumpAudioSerial = 0;
   std::uint32_t level3ShowerAudioSerial = 0;
@@ -1034,6 +1118,9 @@ struct SheetCells {
 struct Assets {
   mutable SDL_Texture* bootFrameTexture = nullptr;
   mutable int bootFrameTextureIndex = -1;
+  mutable SDL_Texture* attractFrame = nullptr;
+  mutable int attractFrameClip = -1;
+  mutable int attractFrameIndex = -1;
   SDL_Texture* arena = nullptr;
   SDL_Texture* marquee = nullptr;
   SDL_Texture* ferrisWheel = nullptr;
@@ -1061,7 +1148,12 @@ struct Assets {
   SDL_Texture* stage2PurpleWalk = nullptr;
   SDL_Texture* stage2PurpleJump = nullptr;
   SDL_Texture* stage2GoalRig = nullptr;
+  SDL_Texture* stage2Backdrop = nullptr;    // the big top behind the rope
   SheetCells stage2CharlieCells;
+  SDL_Texture* stage2CharlieWalk = nullptr;   // the nine-frame walk cycle
+  SDL_Texture* stage2CharlieJump = nullptr;   // the ten-frame jump
+  SheetCells stage2CharlieWalkCells;
+  SheetCells stage2CharlieJumpCells;
   SheetCells stage2BrownCells;
   SheetCells stage2PurpleCells;
   SheetCells stage2PurpleJumpCells;
@@ -1075,12 +1167,44 @@ struct Assets {
   SDL_Texture* stage3FlameThrower = nullptr;
   SDL_Texture* stage3Projectiles = nullptr;
   SDL_Texture* stage3FlameProjectile = nullptr;
+  SDL_Texture* stage3Dolphin = nullptr;
+  SDL_Texture* stage3Splash = nullptr;
+  SDL_Texture* stage3WaterTile = nullptr;
+  SDL_Texture* stage3WaterSurface = nullptr;
+  SDL_Texture* stage3PoolLadder = nullptr;
+  SDL_Texture* stage3DrumRing = nullptr;
   SDL_Texture* stage4Charlie = nullptr;
   SDL_Texture* stage4Ball = nullptr;
   SDL_Texture* stage5Pony = nullptr;
   SDL_Texture* stage5Springboard = nullptr;
   SDL_Texture* stage6Trapeze = nullptr;
   SDL_Texture* stage6Trampoline = nullptr;
+  // Charlie atlases from tools/import_sprites.py (Events 5 and 6).
+  SDL_Texture* stage5CharlieRide = nullptr;
+  SDL_Texture* stage5CharlieLeap = nullptr;
+  SDL_Texture* stage5CharlieFall = nullptr;
+  SheetCells stage4CharlieCells;              // the ball stage's cells, reused by Event 5
+  SDL_Texture* stage5CharlieSit = nullptr;    // Event 5: dazed on the grass
+  SheetCells stage5CharlieSitCells;
+  SDL_Texture* stage6CharlieHang = nullptr;
+  SDL_Texture* stage6CharlieTumble = nullptr;
+  SDL_Texture* stage6CharlieFloor = nullptr;
+  SDL_Texture* stage6Tub = nullptr;         // the "trampoline": a circus tub
+  SDL_Texture* stage6Plank = nullptr;       // the goal platform's plank
+  SDL_Texture* stage6Lattice = nullptr;     // one bay of the goal tower
+  SDL_Texture* stage6Truss = nullptr;       // one bay of the overhead truss
+  SDL_Texture* stage6Catcher = nullptr;     // the partner on the decorated bars
+  SDL_Texture* stage6Girl = nullptr;        // the partner on the goal platform
+  SDL_Texture* stage6Kiss = nullptr;        // Charlie and his partner at the goal
+  SheetCells stage6KissCells;
+  SheetCells stage6CatcherCells;
+  SheetCells stage6GirlCells;
+  SheetCells stage5CharlieRideCells;
+  SheetCells stage5CharlieLeapCells;
+  SheetCells stage5CharlieFallCells;
+  SheetCells stage6CharlieHangCells;
+  SheetCells stage6CharlieTumbleCells;
+  SheetCells stage6CharlieFloorCells;
 };
 
 struct AudioClip {
@@ -1105,9 +1229,10 @@ struct AudioEngine {
   AudioClip stage2Music;
   AudioClip stage3Music;
   AudioClip stage4Music;
-  AudioClip stage6Music;       // $16: the aerial-bar piece, played once
+  AudioClip stage6Music;       // $16: the aerial-bar piece
   AudioClip stage6Bounce;      // $45: the trampoline
   AudioClip boot;
+  AudioClip between;           // the title footage's sound
   AudioClip stage3Bounce;
   AudioClip stage5Springboard;
   AudioClip stage5Fall;
@@ -1161,6 +1286,36 @@ int loadHighScore(const std::string& path) {
   return std::max(kDefaultHighScore, savedScore);
 }
 
+// The cabinet's battery RAM: the event screen's unlock and each event's
+// plays, in <prefs>/progress.txt as "unlocked p1 p2 p3 p4 p5 p6".
+std::string progressMemoryPath(const std::string& highScorePath) {
+  if (highScorePath.empty()) return {};
+  return (std::filesystem::path(highScorePath).parent_path() / "progress.txt").string();
+}
+
+void loadProgress(const std::string& path, Game& game) {
+  if (path.empty()) return;
+  std::ifstream input(path);
+  int unlocked = 0;
+  if (!(input >> unlocked)) return;
+  std::array<int, 6> plays{};
+  for (int& value : plays) {
+    if (!(input >> value) || value < 0 || value > 9999) return;
+  }
+  game.selectUnlocked = unlocked != 0;
+  game.playCount = plays;
+}
+
+bool saveProgress(const std::string& path, const Game& game) {
+  if (path.empty()) return false;
+  std::ofstream output(path, std::ios::trunc);
+  if (!output) return false;
+  output << (game.selectUnlocked ? 1 : 0);
+  for (const int value : game.playCount) output << ' ' << value;
+  output << '\n';
+  return output.good();
+}
+
 bool saveHighScore(const std::string& path, int highScore) {
   if (path.empty()) return false;
   std::ofstream output(path, std::ios::trunc);
@@ -1192,6 +1347,9 @@ void printUsage() {
       << "  --rotate 0|90|180|270\n"
       << "  --fullscreen\n"
       << "  --event 1|2|3|4|5|6\n"
+      << "  --record DIR [--record-seconds N] [--record-fps F]\n"
+      << "        write an attract clip (JPEG frames) of the event from its first\n"
+      << "        playing frame until Charlie's fall has played out (or N s), then quit\n"
       << "  --debug\n"
       << "  --lion-test\n"
       << "  --capture FILE.png\n"
@@ -1201,7 +1359,7 @@ void printUsage() {
          "successful-hoop|air-right-hold|air-right-left|"
          "air-right-release|air-left-right|air-left-release|air-neutral|"
          "start-neutral|start-left|start-right|start-right-left\n"
-      << "  --capture-scene start|select|layout|large|prize|gameplay|stage2|stage2-goal|stage3|stage3-transfer|stage3-approach|stage3-goal|stage3-roof|stage4|stage4-jump|stage4-fall|stage4-goal|ring|extra|crash|goal|tally\n";
+      << "  --capture-scene start|select|layout|large|prize|gameplay|stage2|stage2-goal|stage3|stage3-transfer|stage3-approach|stage3-goal|stage3-roof|stage3-water|stage3-water-2|stage4|stage4-jump|stage4-fall|stage4-goal|ring|extra|crash|goal|tally\n";
 }
 
 std::optional<Options> parseOptions(int argc, char** argv) {
@@ -1216,6 +1374,12 @@ std::optional<Options> parseOptions(int argc, char** argv) {
       options.debug = true;
     } else if (argument == "--capture" && index + 1 < argc) {
       options.capturePath = argv[++index];
+    } else if (argument == "--record" && index + 1 < argc) {
+      options.recordDir = argv[++index];
+    } else if (argument == "--record-seconds" && index + 1 < argc) {
+      options.recordSeconds = std::max(1, std::atoi(argv[++index]));
+    } else if (argument == "--record-fps" && index + 1 < argc) {
+      options.recordFps = std::clamp(std::atoi(argv[++index]), 1, 60);
     } else if (argument == "--trace" && index + 1 < argc) {
       options.tracePath = argv[++index];
     } else if (argument == "--trace-mode" && index + 1 < argc) {
@@ -1284,6 +1448,10 @@ std::optional<Options> parseOptions(int argc, char** argv) {
       options.replayEvent = std::stoi(argv[++index]) - 1;
     } else if (argument == "--replay-invulnerable") {
       options.replayInvulnerable = true;
+    } else if (argument == "--replay-water") {
+      options.replayWater = true;
+    } else if (argument == "--water") {
+      options.startWater = true;
     } else if (argument == "--replay-perfect") {
       options.replayPerfect = true;
     } else if (argument == "--replay-visits" && index + 1 < argc) {
@@ -1305,6 +1473,8 @@ std::optional<Options> parseOptions(int argc, char** argv) {
           options.captureScene != "stage3-approach" &&
           options.captureScene != "stage3-goal" &&
           options.captureScene != "stage3-roof" &&
+          options.captureScene != "stage3-water" &&
+          options.captureScene != "stage3-water-2" &&
           options.captureScene != "stage4" &&
           options.captureScene != "stage4-jump" &&
           options.captureScene != "stage4-fall" &&
@@ -1487,27 +1657,36 @@ Assets loadAssets(SDL_Renderer* renderer) {
       loadAsset(renderer, "event-select-selected-v7.png");
   assets.stage2Charlie =
       loadAsset(renderer, "stage2-charlie-sheet-v1.png");
+  assets.stage2CharlieWalk =
+      loadAsset(renderer, "stage2-charlie-walk-9-v2.png");
+  assets.stage2CharlieJump =
+      loadAsset(renderer, "stage2-charlie-jump-10-v2.png");
   assets.stage2BrownWalk =
-      loadAsset(renderer, "stage2-brown-walk-v1.png");
+      loadAsset(renderer, "stage2-brown-walk-4-v3.png");
   assets.stage2PurpleWalk =
-      loadAsset(renderer, "stage2-purple-walk-v1.png");
+      loadAsset(renderer, "stage2-purple-walk-4-v3.png");
   assets.stage2PurpleJump =
-      loadAsset(renderer, "stage2-purple-jump-v1.png");
+      loadAsset(renderer, "stage2-purple-leap-3-v3.png");
   assets.stage2GoalRig =
       loadAsset(renderer, "stage2-goal-rig-v1.png");
+  assets.stage2Backdrop = loadAsset(renderer, "stage2-backdrop-v1.png");
   assets.stage2CharlieCells =
       measureSheetCells("stage2-charlie-sheet-v1.png", 3, 2);
-  assets.stage2BrownCells = measureSheetCells("stage2-brown-walk-v1.png", 3, 2);
+  assets.stage2CharlieWalkCells =
+      measureSheetCells("stage2-charlie-walk-9-v2.png", 9, 1);
+  assets.stage2CharlieJumpCells =
+      measureSheetCells("stage2-charlie-jump-10-v2.png", 10, 1);
+  assets.stage2BrownCells = measureSheetCells("stage2-brown-walk-4-v3.png", 4, 1);
   assets.stage2PurpleCells =
-      measureSheetCells("stage2-purple-walk-v1.png", 3, 2);
+      measureSheetCells("stage2-purple-walk-4-v3.png", 4, 1);
   assets.stage2PurpleJumpCells =
-      measureSheetCells("stage2-purple-jump-v1.png", 3, 2);
+      measureSheetCells("stage2-purple-leap-3-v3.png", 3, 1);
   assets.stage3Charlie =
-      loadAsset(renderer, "stage3-charlie-bounce-12-v1.png");
+      loadAsset(renderer, "stage3-charlie-bounce-12-v2.png");
   assets.stage3CharlieTuck =
       loadAsset(renderer, "stage3-charlie-wam-tuck-hd-v1.png");
   assets.stage3CharlieVertical =
-      loadAsset(renderer, "stage3-charlie-vertical-front-12-v2.png");
+      loadAsset(renderer, "stage3-charlie-vertical-12-v3.png");
   assets.stage3CharlieRoofHead =
       loadAsset(renderer, "stage3-charlie-roof-head-4-v2.png");
   assets.stage3Tambourine =
@@ -1515,19 +1694,50 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.stage3GoalTambourine =
       loadAsset(renderer, "stage3-goal-tambourine-v1.png");
   assets.stage3KnifeThrower =
-      loadAsset(renderer, "stage3-knife-thrower-12-v3.png");
+      loadAsset(renderer, "stage3-knife-thrower-12-v4.png");
   assets.stage3FlameThrower =
-      loadAsset(renderer, "stage3-fire-breather-vertical-12-v3.png");
+      loadAsset(renderer, "stage3-fire-breather-12-v5.png");
   assets.stage3Projectiles =
       loadAsset(renderer, "stage3-projectiles-8-v1.png");
   assets.stage3FlameProjectile =
       loadAsset(renderer, "stage3-flame-projectile-4-v3.png");
+  assets.stage3Dolphin = loadAsset(renderer, "stage3-dolphin-6-v2.png");
+  assets.stage3Splash = loadAsset(renderer, "stage3-splash-4-v2.png");
+  assets.stage3WaterTile = loadAsset(renderer, "stage3-water-tile-v1.png");
+  assets.stage3WaterSurface = loadAsset(renderer, "stage3-water-surface-v1.png");
+  assets.stage3PoolLadder = loadAsset(renderer, "stage3-pool-ladder-v1.png");
+  assets.stage3DrumRing = loadAsset(renderer, "stage3-drum-ring-v1.png");
   assets.stage4Charlie = loadAsset(renderer, "stage4-charlie-12-v2.png");
+  assets.stage4CharlieCells = measureSheetCells("stage4-charlie-12-v2.png", 4, 3);
   assets.stage4Ball = loadAsset(renderer, "stage4-ball-centered-v2.png");
   assets.stage5Pony = loadAsset(renderer, "stage5-pony-8-v1.png");
   assets.stage5Springboard = loadAsset(renderer, "stage5-springboard-v1.png");
   assets.stage6Trapeze = loadAsset(renderer, "stage6-trapeze-v1.png");
   assets.stage6Trampoline = loadAsset(renderer, "stage6-trampoline-v1.png");
+  assets.stage5CharlieRide = loadAsset(renderer, "stage5-charlie-ride-4-v3.png");
+  assets.stage5CharlieLeap = loadAsset(renderer, "stage5-charlie-leap-6-v1.png");
+  assets.stage5CharlieFall = loadAsset(renderer, "stage5-charlie-fall-4-v1.png");
+  assets.stage5CharlieSit = loadAsset(renderer, "stage5-charlie-sit-1-v2.png");
+  assets.stage5CharlieSitCells = measureSheetCells("stage5-charlie-sit-1-v2.png", 1, 1);
+  assets.stage6CharlieHang = loadAsset(renderer, "stage6-charlie-hang-6-v2.png");
+  assets.stage6CharlieTumble = loadAsset(renderer, "stage6-charlie-tumble-6-v1.png");
+  assets.stage6CharlieFloor = loadAsset(renderer, "stage6-charlie-floor-4-v1.png");
+  assets.stage5CharlieRideCells = measureSheetCells("stage5-charlie-ride-4-v3.png", 4, 1);
+  assets.stage5CharlieLeapCells = measureSheetCells("stage5-charlie-leap-6-v1.png", 6, 1);
+  assets.stage5CharlieFallCells = measureSheetCells("stage5-charlie-fall-4-v1.png", 4, 1);
+  assets.stage6CharlieHangCells = measureSheetCells("stage6-charlie-hang-6-v2.png", 6, 1);
+  assets.stage6CharlieTumbleCells = measureSheetCells("stage6-charlie-tumble-6-v1.png", 6, 1);
+  assets.stage6CharlieFloorCells = measureSheetCells("stage6-charlie-floor-4-v1.png", 4, 1);
+  assets.stage6Tub = loadAsset(renderer, "stage6-tub-v1.png");
+  assets.stage6Plank = loadAsset(renderer, "stage6-plank-v1.png");
+  assets.stage6Lattice = loadAsset(renderer, "stage6-lattice-v1.png");
+  assets.stage6Truss = loadAsset(renderer, "stage6-truss-v2.png");
+  assets.stage6Catcher = loadAsset(renderer, "stage6-catcher-3-v2.png");
+  assets.stage6Girl = loadAsset(renderer, "stage6-girl-4-v2.png");
+  assets.stage6CatcherCells = measureSheetCells("stage6-catcher-3-v2.png", 3, 1);
+  assets.stage6GirlCells = measureSheetCells("stage6-girl-4-v2.png", 4, 1);
+  assets.stage6Kiss = loadAsset(renderer, "stage6-kiss-1-v2.png");
+  assets.stage6KissCells = measureSheetCells("stage6-kiss-1-v2.png", 1, 1);
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.riderRunA || !assets.riderRunB ||
       !assets.riderRunC ||
@@ -1557,6 +1767,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
 
 void destroyAssets(Assets& assets) {
   if (assets.bootFrameTexture) SDL_DestroyTexture(assets.bootFrameTexture);
+  if (assets.attractFrame) SDL_DestroyTexture(assets.attractFrame);
   if (assets.arena) SDL_DestroyTexture(assets.arena);
   if (assets.marquee) SDL_DestroyTexture(assets.marquee);
   if (assets.ferrisWheel) SDL_DestroyTexture(assets.ferrisWheel);
@@ -1580,6 +1791,8 @@ void destroyAssets(Assets& assets) {
   if (assets.eventSelectProps) SDL_DestroyTexture(assets.eventSelectProps);
   if (assets.eventSelectChosen) SDL_DestroyTexture(assets.eventSelectChosen);
   if (assets.stage2Charlie) SDL_DestroyTexture(assets.stage2Charlie);
+  if (assets.stage2CharlieWalk) SDL_DestroyTexture(assets.stage2CharlieWalk);
+  if (assets.stage2CharlieJump) SDL_DestroyTexture(assets.stage2CharlieJump);
   if (assets.stage2BrownWalk) SDL_DestroyTexture(assets.stage2BrownWalk);
   if (assets.stage2PurpleWalk) SDL_DestroyTexture(assets.stage2PurpleWalk);
   if (assets.stage2PurpleJump) SDL_DestroyTexture(assets.stage2PurpleJump);
@@ -1605,6 +1818,15 @@ void destroyAssets(Assets& assets) {
   if (assets.stage5Springboard) SDL_DestroyTexture(assets.stage5Springboard);
   if (assets.stage6Trapeze) SDL_DestroyTexture(assets.stage6Trapeze);
   if (assets.stage6Trampoline) SDL_DestroyTexture(assets.stage6Trampoline);
+  for (SDL_Texture* texture : {assets.stage5CharlieRide, assets.stage5CharlieLeap,
+                               assets.stage5CharlieFall, assets.stage5CharlieSit,
+                               assets.stage6CharlieHang,
+                               assets.stage6CharlieTumble, assets.stage6CharlieFloor,
+                               assets.stage6Catcher, assets.stage6Girl,
+                               assets.stage6Kiss, assets.stage6Tub, assets.stage6Plank,
+                               assets.stage6Lattice, assets.stage6Truss}) {
+    if (texture) SDL_DestroyTexture(texture);
+  }
   assets = {};
 }
 
@@ -1730,6 +1952,7 @@ bool loadAudio(AudioEngine& audio) {
   loadAudioAsset("stage5-springboard.wav", audio.stage5Springboard);
   loadAudioAsset("stage5-fall.wav", audio.stage5Fall);
   loadAudioAsset("event6-stage.wav", audio.stage6Music);
+  loadAudioAsset("between.wav", audio.between);
   loadAudioAsset("stage6-bounce.wav", audio.stage6Bounce);
 
   if (!matchesReference(audio.jump) || !matchesReference(audio.fail) ||
@@ -1797,8 +2020,9 @@ void setStageMusicFast(AudioEngine& audio, bool fast) {
 }
 
 void playStageMusic(AudioEngine& audio, int selectedEvent, bool fast) {
-  // Event 5 ($13) shares Event 1's piece; Event 6 ($16) has its own, which
-  // the sound board plays through once.
+  // Event 5 ($13) shares Event 1's piece; Event 6 ($16) has its own, the
+  // aerial-bar piece, which loops like the others so a long act is never
+  // left in silence.
   const bool trapeze = selectedEvent == 5 && audio.stage6Music.data;
   const AudioClip& music =
       selectedEvent == 1 ? audio.stage2Music
@@ -1807,7 +2031,7 @@ void playStageMusic(AudioEngine& audio, int selectedEvent, bool fast) {
       : trapeze ? audio.stage6Music
                 : audio.stageMusic;
   setAudioVoice(audio, 0, music,
-                static_cast<int>(SDL_MIX_MAXVOLUME * 0.58F), !trapeze);
+                static_cast<int>(SDL_MIX_MAXVOLUME * 0.58F), true);
   setStageMusicFast(audio, fast);
 }
 
@@ -1818,6 +2042,11 @@ void playEventSelectMusic(AudioEngine& audio) {
 
 void playBootAudio(AudioEngine& audio) {
   setAudioVoice(audio, 0, audio.boot, SDL_MIX_MAXVOLUME, false);
+}
+
+void playBetweenAudio(AudioEngine& audio) {
+  if (!audio.between.data) return;
+  setAudioVoice(audio, 0, audio.between, SDL_MIX_MAXVOLUME, false);
 }
 
 void stopStageMusic(AudioEngine& audio) {
@@ -1837,9 +2066,16 @@ void playFailMusic(AudioEngine& audio) {
   setAudioVoice(audio, 0, audio.fail, SDL_MIX_MAXVOLUME, false);
 }
 
-void playCrowdCheer(AudioEngine& audio) {
+void playCrowdCheer(AudioEngine& audio, bool loop = false) {
   setAudioVoice(audio, 4, audio.crowdCheer,
-                static_cast<int>(SDL_MIX_MAXVOLUME * 0.86F), false);
+                static_cast<int>(SDL_MIX_MAXVOLUME * 0.86F), loop);
+}
+
+void stopCrowdCheer(AudioEngine& audio) {
+  if (!audio.available) return;
+  SDL_LockAudioDevice(audio.device);
+  audio.voices[4].active = false;
+  SDL_UnlockAudioDevice(audio.device);
 }
 
 void playBirdCoinDrop(AudioEngine& audio) {
@@ -2403,10 +2639,75 @@ void resetCourse(Game& game) {
   syncLevel1World(game);
 }
 
-void startGame(Game& game) {
+bool eventLocked(const Game& game, int event) {
+  return event != kTrapezeEvent &&
+         game.playCount[static_cast<std::size_t>(event)] >= kEventPlayLimit;
+}
+
+// Start an event: its visit count (one more than the plays so far) sets the
+// board's difficulty tables, and the run's score and lives carry over when
+// `keepProgress` is set.
+void startEvent(Game& game, int event, bool keepProgress, bool water = false) {
+  const int score = game.score;
+  const int lives = game.lives;
+  const int nextLife = game.nextScoreLife;
+  game.selectedEvent = event;
+  if (water) {
+    // $8FF9: the goal of an even visit of Event 3 toggles $2207 and $6BD5
+    // leaves the visit count alone, so the water round runs on the same
+    // visit, straight after the drums, and is not a play of its own.
+    game.level3Water = true;
+  } else {
+    const int visits = game.playCount[static_cast<std::size_t>(event)] + 1;
+    game.level3Water = false;
+    switch (event) {
+      case 1: game.level2Visits = visits; break;
+      case 2:
+        game.level3Visits = visits;
+        game.level3Level2Visits = game.level2Visits;
+        break;
+      case 3: game.level4Visits = visits; break;
+      case 4: game.level5.visits = visits; break;
+      case 5: game.level6.visits = visits; break;
+      default: break;
+    }
+    ++game.playCount[static_cast<std::size_t>(event)];
+  }
   game.scene = Scene::Playing;
-  game.lives = 3;
+  if (!keepProgress) game.lives = 3;
   resetCourse(game);
+  if (keepProgress) {
+    game.score = score;
+    game.lives = lives;
+    game.nextScoreLife = nextLife;
+  }
+}
+
+void startGame(Game& game) {
+  startEvent(game, game.selectedEvent, false);
+}
+
+// The next event of the run after a clear, or the event screen once the
+// trapeze has been cleared.
+void advanceAfterClear(Game& game) {
+  if (game.selectedEvent == 2 && !game.level3Water && game.level3Visits % 2 == 0) {
+    // The drums cleared on an even visit: the dolphins follow at once.
+    startEvent(game, 2, true, true);
+    return;
+  }
+  if (game.selectedEvent >= kTrapezeEvent) game.selectUnlocked = true;
+  if (game.selectUnlocked) {
+    game.scene = Scene::EventSelect;
+    game.eventSelectFrame = 0;
+    game.selectContinuing = true;
+    int next = (game.selectedEvent + 1) % kEventCount;
+    for (int tries = 0; tries < kEventCount && eventLocked(game, next); ++tries) {
+      next = (next + 1) % kEventCount;
+    }
+    game.selectedEvent = next;
+    return;
+  }
+  startEvent(game, game.selectedEvent + 1, true);
 }
 
 void enterEventSelect(Game& game) {
@@ -2424,7 +2725,14 @@ void confirmEventSelection(Game& game) {
     return;
   }
   if (game.selectedEvent > 5) game.selectedEvent = 0;
+  if (eventLocked(game, game.selectedEvent)) return;
   ++game.eventSelectConfirmAudioSerial;
+  if (game.selectContinuing) {
+    // Coming off a cleared trapeze: the same credit goes on.
+    game.selectContinuing = false;
+    startEvent(game, game.selectedEvent, true);
+    return;
+  }
   --game.credits;
   startGame(game);
 }
@@ -2433,8 +2741,11 @@ void moveEventSelection(Game& game, int direction) {
   if (game.scene != Scene::EventSelect || direction == 0) return;
   const int oldEvent = game.selectedEvent;
   const int step = direction < 0 ? -1 : 1;
-  game.selectedEvent =
-      (oldEvent + step + kEventCount) % kEventCount;
+  int next = (oldEvent + step + kEventCount) % kEventCount;
+  for (int tries = 0; tries < kEventCount && eventLocked(game, next); ++tries) {
+    next = (next + step + kEventCount) % kEventCount;
+  }
+  game.selectedEvent = next;
   ++game.eventSelectMoveAudioSerial;
 }
 
@@ -2446,7 +2757,14 @@ void insertCoin(Game& game) {
 
 bool startWithCredit(Game& game) {
   if (game.credits <= 0) return false;
-  enterEventSelect(game);
+  if (game.selectUnlocked) {
+    enterEventSelect(game);
+    game.selectContinuing = false;
+    return true;
+  }
+  --game.credits;
+  game.selectedEvent = 0;
+  startGame(game);
   return true;
 }
 
@@ -2460,8 +2778,11 @@ bool startWithCredit(Game& game) {
 void pressStart(Game& game) {
   if (game.scene == Scene::EventSelect) {
     confirmEventSelection(game);
-  } else if (game.scene == Scene::Boot || game.scene == Scene::Title ||
-             game.scene == Scene::Complete) {
+  } else if (game.scene == Scene::Attract || game.scene == Scene::GameOver) {
+    game.scene = Scene::Title;
+    game.titleIdleFrames = 0;
+    startWithCredit(game);
+  } else if (game.scene == Scene::Boot || game.scene == Scene::Title) {
     startWithCredit(game);
   }
 }
@@ -2476,7 +2797,8 @@ void awardScoreLives(Game& game) {
 
 void restartAfterCrash(Game& game) {
   if (game.lives <= 0) {
-    game.scene = Scene::Title;
+    game.scene = Scene::GameOver;
+    game.gameOverFrame = 0;
     return;
   }
   game.scene = Scene::Playing;
@@ -2849,6 +3171,26 @@ void level3Hit(Game& game, int kind) {
 // the previous frame's positions.
 void level3Collisions(Game& game) {
   if (game.level3State >= 2 || !game.player.alive) return;
+  if (game.level3Water) {
+    // $8BF9: in the water round only the dolphins' bodies are tested:
+    // |columns| < 11, |rows| < 8 and their sum < 17.
+    for (auto& dolphin : game.level3Performers) {
+      if (!dolphin.active) continue;
+      const std::uint8_t dx = level3Abs8(static_cast<std::uint8_t>(
+          static_cast<std::uint8_t>(game.level3X + 0x10) -
+          static_cast<std::uint8_t>(dolphin.x + 0x10)));
+      if (dx >= 0x0b) continue;
+      const std::uint8_t dy = level3Abs8(static_cast<std::uint8_t>(
+          game.level3Y - dolphin.y));
+      if (dy >= 8) continue;
+      if (static_cast<std::uint8_t>(dx + dy) >= 0x11) continue;
+      if (game.level3Invulnerable) continue;
+      dolphin.state = 4;   // $8BA2: frozen where it is ($97D4)
+      level3Hit(game, 5);
+      return;
+    }
+    return;
+  }
   for (auto& flame : game.level3Flames) {
     if (!flame.active) continue;
     const std::uint8_t dx = level3Abs8(static_cast<std::uint8_t>(
@@ -2881,9 +3223,68 @@ void level3Collisions(Game& game) {
 // $93F8-$9549: the first free performer record is the only candidate; it is
 // filled when $2204 (before this frame's scroll) equals a slot key and the
 // difficulty table has a performer for the current page and slot.
+// $91DE: load the next pose of a dolphin script ($C), looping at its end.
+// The capture logs $C, which points past the loaded pose.
+void level3DolphinLoadPose(Level3Performer& dolphin, int script, int index) {
+  dolphin.script = script;
+  dolphin.scriptIndex = index;
+  dolphin.scriptHold = kLevel3DolphinHolds[static_cast<std::size_t>(script)]
+                                          [static_cast<std::size_t>(index)];
+  if (script == kDolphinUnderWater) {
+    // $EE66: a blank pose held one frame, then $EDFE's fourth pose for 129.
+    dolphin.scriptHold = index == 0 ? 0 : 0x80;
+  }
+}
+
+void level3DolphinAnimate(Level3Performer& dolphin) {
+  if (dolphin.scriptHold != 0) {
+    --dolphin.scriptHold;
+    return;
+  }
+  const int count = dolphin.script == kDolphinUnderWater ? 2 : 5;
+  level3DolphinLoadPose(dolphin, dolphin.script,
+                        (dolphin.scriptIndex + 1) % count);
+}
+
+// $9735/$9731: the launch velocity of the next leap or dive, $0480 or $0420.
+void level3DolphinSetLaunch(Level3Performer& dolphin, bool low) {
+  if (!low) {
+    dolphin.launch = 0x0480;
+    dolphin.velocity = 0x0480;
+  } else {
+    dolphin.launch = static_cast<std::uint16_t>((dolphin.launch & 0xff00) | 0x20);
+    dolphin.velocity = static_cast<std::uint16_t>((dolphin.velocity & 0xff00) | 0x20);
+  }
+}
+
+// $94F0/$9500: fill a record with a dolphin: row $C8, column $F1, phase 1
+// (leap) for a type-1 byte or 3 (dive) otherwise, the launch velocity and the
+// slot number as the dive counter; slot 0 starts with the low leap.
+void level3FillDolphin(Level3Performer& dolphin, int kind, int slot) {
+  dolphin.active = true;
+  dolphin.state = 3;
+  dolphin.x = 0xf1;
+  dolphin.y = 0xc8;
+  dolphin.poseFrame = 0;
+  level3DolphinSetLaunch(dolphin, false);
+  dolphin.phase = kind == 1 ? 1 : 3;
+  dolphin.counter = slot;
+  int script = kind == 1 ? kDolphinLeap : kDolphinDive;
+  if (slot == 0) {
+    level3DolphinSetLaunch(dolphin, true);
+    script = dolphin.phase == 1 ? kDolphinLeapLow : kDolphinDiveLow;
+  }
+  dolphin.script = script;
+  dolphin.scriptIndex = -1;   // nothing loaded until the first $91DE
+  dolphin.scriptHold = 0;
+}
+
 void level3SpawnPerformer(Game& game) {
   if (game.level3Direction == 0) return;
-  for (auto& performer : game.level3Performers) {
+  // $93FB: dolphins only come while Charlie moves right.
+  if (game.level3Water && game.level3Direction != 2) return;
+  for (std::size_t index = 0; index < game.level3Performers.size(); ++index) {
+    auto& performer = game.level3Performers[index];
     if (performer.active) continue;
     const std::uint8_t low = level3OffsetByte(game);
     int slot = -1;
@@ -2893,14 +3294,23 @@ void level3SpawnPerformer(Game& game) {
     if (slot < 0) return;
     int difficulty = game.level3Difficulty +
                      (game.level3Visits == 0 ? 0 : (game.level3Visits - 1) * 2);
+    if (game.level3Water) {
+      // $958B: two more per bag threshold already passed in this game.
+      for (const int threshold : kLevel3BagThresholds) {
+        if (game.level3BagsTotal >= threshold) difficulty += 2;
+      }
+    }
     difficulty = std::min(difficulty, 10);
     int page = level3PageIndex(game);
     if (game.level3Direction == 1 && page != 0) --page;
     if (page > 8) return;
-    const int kind = kLevel3PerformerTables[static_cast<std::size_t>(difficulty / 2)]
-                                           [static_cast<std::size_t>(page)]
-                                           [static_cast<std::size_t>(slot)];
-    if (kind == 0) return;
+    const auto& tables = game.level3Water ? kLevel3WaterTables
+                                          : kLevel3PerformerTables;
+    const int byte = tables[static_cast<std::size_t>(difficulty / 2)]
+                           [static_cast<std::size_t>(page)]
+                           [static_cast<std::size_t>(slot)];
+    if (byte == 0) return;
+    const int kind = byte & 0x7f;
     performer.active = true;
     performer.x = 0xf1;
     performer.type = kind - 1;
@@ -2913,8 +3323,32 @@ void level3SpawnPerformer(Game& game) {
     period = std::min(period, 9);
     performer.timerReload = kLevel3AttackPeriods[static_cast<std::size_t>(period)];
     performer.timer = performer.timerReload;
+    performer.key = static_cast<std::uint8_t>(
+        game.level3Visits == 0 ? 0 : game.level3Visits - 1);
     performer.pose = 0;
     performer.poseFrame = 0;
+    if (!game.level3Water) return;
+    // $9500: the dolphin ($38/$3C keep kind - 1 like the performers).
+    level3FillDolphin(performer, kind, slot);
+    if (kind == 3) {
+      // $9533: a pair: the first free record (searched from the first) gets
+      // a leaper in the same spot, without a type, timer or key of its own.
+      for (auto& second : game.level3Performers) {
+        if (second.active) continue;
+        second = Level3Performer{};
+        level3FillDolphin(second, 1, slot);
+        break;
+      }
+    } else if ((byte & 0x80) != 0) {
+      // $9556: moved under water and to the left edge, where it waits with
+      // no velocity, invisible until its first wrap.
+      performer.y = static_cast<std::uint8_t>(performer.y + (slot == 0 ? 0x25 : 0x2d));
+      performer.x = static_cast<std::uint8_t>(performer.x + (slot == 0 ? 0x20 : 0x28));
+      performer.phase = 4;
+      performer.velocity = 0;
+      performer.offset = true;
+      level3DolphinLoadPose(performer, kDolphinUnderWater, 0);
+    }
     return;
   }
 }
@@ -2925,14 +3359,102 @@ void level3ClearPerformer(Level3Performer& performer) {
 
 // $95B7: attack timer, then the performer follows the scroll and retires
 // once it wraps back to column $F1.
+// $9799: a splash in the first free flame record (all four), four rows above
+// the dolphin, for 32 frames.
+void level3SpawnSplash(Game& game, const Level3Performer& dolphin) {
+  for (auto& flame : game.level3Flames) {
+    if (flame.active) continue;
+    flame = Level3Flame{};
+    flame.active = true;
+    flame.state = 3;
+    flame.y = static_cast<std::uint8_t>(dolphin.y - 4);
+    flame.x = dolphin.x;
+    flame.diving = dolphin.phase != 1;
+    flame.lifetime = 0x20;
+    return;
+  }
+}
+
+// $969C: a dolphin.  Odd phases decelerate (a leap up, a dive down) until the
+// velocity is spent; even phases accelerate back until the launch velocity
+// returns, when the dive counter picks the next launch and a splash appears.
+void level3UpdateDolphin(Game& game, Level3Performer& dolphin) {
+  ++dolphin.poseFrame;
+  if (!dolphin.offset) level3DolphinAnimate(dolphin);
+  // $96B2
+  const int phase = dolphin.phase;
+  const std::uint8_t high = static_cast<std::uint8_t>(dolphin.velocity >> 8);
+  if ((phase & 1) != 0) {
+    // $9745
+    dolphin.y = static_cast<std::uint8_t>(phase == 3 ? dolphin.y + high
+                                                     : dolphin.y - high);
+    bool spent = high == 0;
+    if (!spent) {
+      dolphin.velocity = static_cast<std::uint16_t>(dolphin.velocity - 0x30);
+      spent = dolphin.velocity == 0;
+    }
+    if (spent) {
+      dolphin.velocity &= 0xff00;
+      ++dolphin.phase;
+    }
+  } else {
+    dolphin.y = static_cast<std::uint8_t>(phase == 4 ? dolphin.y - high
+                                                     : dolphin.y + high);
+    dolphin.velocity = static_cast<std::uint16_t>(dolphin.velocity + 0x30);
+    if (dolphin.velocity == dolphin.launch) {
+      const std::uint8_t launchHigh = static_cast<std::uint8_t>(dolphin.launch >> 8);
+      dolphin.y = static_cast<std::uint8_t>(phase == 4 ? dolphin.y - launchHigh
+                                                       : dolphin.y + launchHigh);
+      --dolphin.counter;
+      int script;
+      if (dolphin.counter == 0) {
+        // $971D: the low leap.
+        level3DolphinSetLaunch(dolphin, true);
+        script = phase == 4 ? kDolphinLeapLow : kDolphinDiveLow;
+      } else {
+        if (dolphin.counter == -1) dolphin.counter = 2;
+        level3DolphinSetLaunch(dolphin, false);
+        script = phase == 4 ? kDolphinLeap : kDolphinDive;
+      }
+      dolphin.script = script;
+      dolphin.scriptIndex = -1;
+      dolphin.scriptHold = 0;
+      dolphin.phase = phase + 1 >= 5 ? 1 : phase + 1;
+      level3SpawnSplash(game, dolphin);
+    }
+  }
+  // $9769: the dolphins swim left two columns a frame in the world: on the
+  // first page or with Charlie stopped two on screen, none while he walks
+  // back, four while he moves right.
+  int step = -2;
+  if (level3PageByte(game) != 0 && game.level3Direction != 0) {
+    step = game.level3Direction == 1 ? 0 : -4;
+  }
+  dolphin.x = static_cast<std::uint8_t>(dolphin.x + step);
+  if (dolphin.x >= 0xf1 && dolphin.x < 0xf4) {
+    if (!dolphin.offset) {
+      dolphin = Level3Performer{};
+      return;
+    }
+    dolphin.offset = false;
+  }
+}
+
 void level3UpdatePerformer(Game& game, std::size_t index) {
   auto& performer = game.level3Performers[index];
   if (!performer.active) return;
+  if (performer.state == 3) {
+    level3UpdateDolphin(game, performer);
+    return;
+  }
+  if (performer.state == 4) return;   // a dolphin frozen by the hit
   ++performer.poseFrame;
   if (performer.type == 0) {
     performer.timer = static_cast<std::uint8_t>(performer.timer - 1);
     if (performer.timer == 0) {
-      for (auto& flame : game.level3Flames) {
+      // $95F0: only the first three flame records are candidates.
+      for (std::size_t slot = 0; slot < 3; ++slot) {
+        auto& flame = game.level3Flames[slot];
         if (flame.active) continue;
         flame = Level3Flame{};
         flame.active = true;
@@ -3018,6 +3540,16 @@ bool level3Rise(Record& record) {
 void level3UpdateFlame(Game& game, Level3Flame& flame) {
   if (!flame.active) return;
   ++flame.age;
+  if (flame.state == 3) {
+    // $9320: a dolphin's splash, retired after its 32 frames or at the wrap.
+    flame.lifetime = static_cast<std::uint8_t>(flame.lifetime - 1);
+    if (flame.lifetime == 0) {
+      flame = Level3Flame{};
+      return;
+    }
+    level3ScrollFollow(game, flame);
+    return;
+  }
   if (flame.state == 0) {
     if (!level3ScrollFollow(game, flame)) return;
     flame.hold = static_cast<std::uint8_t>(flame.hold - 1);
@@ -5494,6 +6026,18 @@ void updateLevel2(Game& game, const Uint8* keyboard, bool jumpPressed,
   const bool button = jumpPressed || keyboard[SDL_SCANCODE_SPACE] ||
                       keyboard[SDL_SCANCODE_Z];
 
+  // HD animation counters (the board's scripts only step a few cells).
+  if (game.level2Charlie.script == kLevel2ScriptWalking &&
+      game.level2Charlie.direction != 0) {
+    ++game.level2WalkAge;
+  }
+  if (game.level2Charlie.script == kLevel2ScriptJumping) {
+    ++game.level2JumpAge;
+  } else {
+    game.level2JumpAge = 0;
+  }
+  ++game.level2MonkeyAge;
+
   if (!restartFrame) {
     level2CharlieMonkeys(game);      // $80C2
     level2MonkeyMonkeys(game);       // $7D06
@@ -6462,6 +7006,91 @@ void updateLevel1(Game& game, const Uint8* keyboard, bool jumpPressed,
   if (game.bonus > 0) --game.bonus;
 }
 
+// Attract clips: assets/attract/stageN/frame-NNNN.jpg, recorded with
+// --record at kAttractFps.  The title waits kAttractIdleFrames with no
+// coin before the first clip and kAttractTitleFrames between clips.
+constexpr int kAttractFps = 20;
+constexpr int kBetweenFps = 30;
+constexpr float kAttractFadeFrames = 30.0F;   // half a second in and out
+constexpr int kAttractIdleFrames = 60 * 3;
+constexpr int kGameOverFrames = 60 * 4;
+
+std::string attractFramePath(int clip, int frame) {
+  std::array<char, 96> name{};
+  std::snprintf(name.data(), name.size(), "attract/stage%d/frame-%04d.jpg", clip + 1, frame);
+  return name.data();
+}
+
+std::string assetPathFor(const std::string& relative) {
+  const std::string local = "assets/" + relative;
+  if (std::filesystem::exists(local)) return local;
+  char* basePath = SDL_GetBasePath();
+  if (!basePath) return local;
+  const std::string executablePath = std::string(basePath) + "assets/" + relative;
+  SDL_free(basePath);
+  return executablePath;
+}
+
+std::string betweenFramePath(int frame) {
+  std::array<char, 64> name{};
+  std::snprintf(name.data(), name.size(), "between/between-%04d.jpg", frame);
+  return name.data();
+}
+
+int countFrames(const std::function<std::string(int)>& pathOf) {
+  int count = 0;
+  while (count < 20000 && std::filesystem::exists(assetPathFor(pathOf(count)))) ++count;
+  return count;
+}
+
+int attractClipFrameCount(int clip) {
+  int count = 0;
+  while (count < 10000 && std::filesystem::exists(assetPathFor(attractFramePath(clip, count)))) {
+    ++count;
+  }
+  return count;
+}
+
+// The cabinet's loop: the title footage (stars, ranking), a stage demo,
+// the footage again, the next demo...  Events without a clip are skipped;
+// with no footage at all the loop is the demos alone.
+void nextAttractSegment(Game& game) {
+  game.attractTick = 0;
+  const bool wantDemo = game.attractBetween || gBetweenFrameCount <= 0;
+  if (wantDemo) {
+    // After the footage (or with none), the next event that has a clip.
+    for (int tries = 0; tries < kEventCount; ++tries) {
+      game.attractClip = (game.attractClip + 1) % kEventCount;
+      const int count = attractClipFrameCount(game.attractClip);
+      if (count > 0) {
+        game.attractBetween = false;
+        game.attractFrameCount = count;
+        return;
+      }
+    }
+    if (gBetweenFrameCount <= 0) {
+      // Nothing to show at all: the coin screen.
+      game.scene = Scene::Title;
+      game.titleIdleFrames = 0;
+      return;
+    }
+  }
+  // After a demo (or with no demos), the title footage.
+  game.attractBetween = true;
+  game.attractFrameCount = gBetweenFrameCount;
+  ++game.betweenAudioSerial;
+}
+
+void startAttract(Game& game) {
+  game.scene = Scene::Attract;
+  game.titleIdleFrames = 0;
+  game.attractTick = 0;
+  // A demo first (the boot footage already showed the title), then the
+  // title footage between the demos.
+  game.attractBetween = true;
+  nextAttractSegment(game);
+}
+
 void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
                 float controllerAxis) {
   // <$14 is the board's free-running frame byte.  It is not reset when a
@@ -6471,8 +7100,12 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
 
   if (game.scene == Scene::Boot) {
     ++game.bootFrame;
-    if (game.bootFrame >= kBootDurationFrames) {
-      enterEventSelect(game);
+    if (game.bootFrame >= bootDurationFrames()) {
+      if (game.credits > 0) {
+        game.scene = Scene::Title;
+      } else {
+        startAttract(game);
+      }
     }
     return;
   }
@@ -6481,6 +7114,39 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
     if (game.eventSelectFrame >= game.eventSelectDurationFrames) {
       confirmEventSelection(game);
     }
+    return;
+  }
+  if (game.scene == Scene::Title) {
+    // The coin screen: with no credit it falls back into the attract loop
+    // after a moment, the way the cabinet goes on with its title footage.
+    if (game.credits > 0) {
+      game.titleIdleFrames = 0;
+    } else if (++game.titleIdleFrames >= kAttractIdleFrames) {
+      startAttract(game);
+    }
+    return;
+  }
+  if (game.scene == Scene::GameOver) {
+    if (++game.gameOverFrame >= kGameOverFrames) {
+      if (game.credits > 0) {
+        game.scene = Scene::Title;
+        game.titleIdleFrames = 0;
+      } else {
+        startAttract(game);
+      }
+    }
+    return;
+  }
+  if (game.scene == Scene::Attract) {
+    if (game.attractTick == 0 && std::getenv("CIRCUS_TRACE_SCENES")) {
+      std::cerr << (game.attractBetween ? "attract: title footage" : "attract: demo of event ")
+                << (game.attractBetween ? "" : std::to_string(game.attractClip + 1))
+                << " (" << game.attractFrameCount << " frames)\n";
+    }
+    ++game.attractTick;
+    const int fps = game.attractBetween ? kBetweenFps : kAttractFps;
+    const int frame = game.attractTick * fps / static_cast<int>(kBoardRefresh);
+    if (frame >= game.attractFrameCount) nextAttractSegment(game);
     return;
   }
 
@@ -6628,7 +7294,15 @@ void updateGame(Game& game, const Uint8* keyboard, bool jumpPressed,
       game.score += game.clearBonus;
       game.timeScoreApplied = true;
     }
-    if (game.tallyFrame >= 280) game.scene = Scene::Complete;
+    if (game.tallyFrame >= 280) {
+      game.scene = Scene::Complete;
+      game.completeFrame = 0;
+    }
+    return;
+  }
+  if (game.scene == Scene::Complete) {
+    // The run goes straight on to the next event.
+    if (++game.completeFrame >= 90 && game.arcadeRun) advanceAfterClear(game);
     return;
   }
 
@@ -6791,15 +7465,11 @@ void drawReddishMarqueeSky(SDL_Renderer* renderer) {
            color(112, 12, 18, 64));
 }
 
-void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
-                  const Assets& assets, const Game& game,
-                  double timeSeconds, bool showCeilingTrack = true) {
-  fillRect(renderer, 0.0F, 0.0F, kWorldWidth, kWorldHeight,
-           color(5, 18, 51));
-
-  // Original layer model: the zeppelin/tent crown, wheel, and black score
-  // panel stay fixed. Only the lower arena wall, crowd, floor, and meter
-  // markers travel with Charlie.
+// The fixed band above the score panel: the tent's crown and red sky, the
+// wheel and the bonus zeppelin.  Every event shares it.
+void drawMarqueeBand(SDL_Renderer* renderer, bool lowDetail,
+                     const Assets& assets, const Game& game,
+                     double timeSeconds) {
   if (assets.marquee) {
     const SDL_FRect marqueeDestination{
         0.0F, 0.0F, static_cast<float>(kWorldWidth), kMarqueeHeight};
@@ -6822,6 +7492,18 @@ void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
   drawFerrisWheel(renderer, assets.ferrisWheel, assets.ferrisGondola,
                   timeSeconds);
   drawZeppelinBonus(renderer, game.bonus);
+}
+
+void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
+                  const Assets& assets, const Game& game,
+                  double timeSeconds, bool showCeilingTrack = true) {
+  fillRect(renderer, 0.0F, 0.0F, kWorldWidth, kWorldHeight,
+           color(5, 18, 51));
+
+  // Original layer model: the zeppelin/tent crown, wheel, and black score
+  // panel stay fixed. Only the lower arena wall, crowd, floor, and meter
+  // markers travel with Charlie.
+  drawMarqueeBand(renderer, lowDetail, assets, game, timeSeconds);
 
   if (assets.arena) {
     int textureWidth = 0;
@@ -7757,6 +8439,35 @@ void drawCoinWaitingScreen(SDL_Renderer* renderer, const Game& game,
            486.0F, 1.55F, color(67, 201, 255), true);
 }
 
+// The card after the last life: the marquee, the panel with the final
+// score and GAME OVER, then the title.
+void drawGameOverScreen(SDL_Renderer* renderer, const Game& game,
+                        const Assets& assets, double timeSeconds) {
+  fillRect(renderer, 0.0F, 0.0F, kWorldWidth, kWorldHeight, color(0, 0, 0));
+  if (assets.marquee) {
+    const SDL_FRect marqueeDestination{
+        0.0F, 0.0F, static_cast<float>(kWorldWidth), kMarqueeHeight};
+    SDL_RenderCopyF(renderer, assets.marquee, nullptr, &marqueeDestination);
+    drawReddishMarqueeSky(renderer);
+  }
+  drawFerrisWheel(renderer, assets.ferrisWheel, assets.ferrisGondola, timeSeconds);
+  drawZeppelinBonus(renderer, -1);
+  Game hudGame = game;
+  hudGame.lives = 0;
+  drawHud(renderer, hudGame, assets.charlieLife);
+  const bool visible = (game.gameOverFrame / 30) % 2 == 0;
+  if (visible) {
+    drawText(renderer, "GAME OVER", kWorldWidth * 0.5F, 300.0F, 3.2F,
+             color(255, 64, 64), true);
+  }
+  drawText(renderer, "SCORE " + std::to_string(game.score), kWorldWidth * 0.5F,
+           370.0F, 1.8F, color(255, 230, 38), true);
+  if (game.score >= game.highScore && game.score > 0) {
+    drawText(renderer, "NEW HIGH SCORE", kWorldWidth * 0.5F, 410.0F, 1.55F,
+             color(67, 201, 255), true);
+  }
+}
+
 void drawEventSelectBulbs(SDL_Renderer* renderer, float x, float y,
                           float width, float height, int phase,
                           bool drawTop, bool drawBottom, bool drawLeft,
@@ -7857,6 +8568,19 @@ void drawEventSelectionScreen(SDL_Renderer* renderer, const Game& game,
              y + 7.0F, 1.0F, color(62, 204, 255));
     drawText(renderer, difficulty[static_cast<size_t>(eventIndex)],
              x + 18.0F, y + 7.0F, 0.92F, color(255, 230, 38));
+    const int plays = game.playCount[static_cast<std::size_t>(eventIndex)];
+    if (eventLocked(game, eventIndex)) {
+      fillRect(renderer, x, y, panelWidth, panelHeight, color(0, 0, 0, 170));
+      drawText(renderer, "LOCKED", x + panelWidth * 0.5F, y + panelHeight * 0.5F - 6.0F,
+               1.4F, color(255, 80, 80), true);
+    } else if (plays > 0) {
+      // Plays so far, out of the five the screen allows (the trapeze is open-ended).
+      const std::string tally = eventIndex == kTrapezeEvent
+                                    ? "ROUND " + std::to_string(plays + 1)
+                                    : std::to_string(plays) + "/" + std::to_string(kEventPlayLimit);
+      drawText(renderer, tally, x + panelWidth * 0.5F, y + panelHeight - 16.0F, 0.92F,
+               color(255, 255, 255), true);
+    }
   }
 }
 
@@ -7900,10 +8624,36 @@ void drawStage2Pose(SDL_Renderer* renderer, SDL_Texture* texture,
                     flip);
 }
 
+// The same, hung from the top of its opaque bounds (hands on a bar).
+void drawPoseFromTop(SDL_Renderer* renderer, SDL_Texture* texture,
+                     const SheetCells& cells, int frame, float centerX,
+                     float topY, float unitsPerPixel, double angle = 0.0) {
+  if (!texture || !cells.valid()) return;
+  frame = std::clamp(frame, 0, static_cast<int>(cells.bounds.size()) - 1);
+  const SDL_Rect& source = cells.bounds[static_cast<std::size_t>(frame)];
+  const float width = static_cast<float>(source.w) * unitsPerPixel;
+  const float height = static_cast<float>(source.h) * unitsPerPixel;
+  // The hands are centred in the cell by the importer; the opaque bounds
+  // may be offset, so centre on the cell rather than the bounds.
+  const float cellCenter = static_cast<float>(
+      (frame % cells.columns) * cells.cellWidth + cells.cellWidth / 2);
+  const float offset = (static_cast<float>(source.x) + static_cast<float>(source.w) * 0.5F -
+                        cellCenter) * unitsPerPixel;
+  const SDL_FRect destination{centerX + offset - width * 0.5F, topY, width, height};
+  // Rotate about the hands (the top centre of the cell).
+  const SDL_FPoint pivot{-offset + width * 0.5F, 0.0F};
+  SDL_RenderCopyExF(renderer, texture, &source, &destination, angle, &pivot,
+                    SDL_FLIP_NONE);
+}
+
 // Source-pixel sizes measured in MAME: Charlie is 23x26, a monkey 21x18.
 // The HD cells are scaled so those bodies keep their board size.
 constexpr float kStage2CharlieUnitsPerPixel = 66.0F / 376.0F;
 constexpr float kStage2MonkeyUnitsPerPixel = 45.0F / 228.0F;
+// The v2 atlases (tools/import_sprites.py): Charlie stands 250 px tall in
+// the walk cycle and the jump was scaled to match; a monkey is 160 px.
+constexpr float kStage2CharlieV2UnitsPerPixel = 66.0F / 250.0F;
+constexpr float kStage2MonkeyV2UnitsPerPixel = 45.0F / 160.0F;
 
 // The rope sits on source rows 152-153, the start platform on 147-153 over
 // columns 0-43 with its truss at 17-30, the distance signs on rows 168-178,
@@ -8000,68 +8750,90 @@ std::string level2PlaqueText(int cell) {
 // lands on them with his feet on row $85.  The HD rig's platforms are cut
 // apart so the upper one sits where the bags stand, the lower one at the
 // rope, and the truss runs on down to the arena floor.
+// The scroll stops at page $F8: progress $10000 - $F8FF.
+constexpr int kStage2GoalProgress = 0x10000 - 0xf8ff;
+
+// The goal rig at the end of the rope, as measured on MAME: a lattice tower
+// 16 columns wide from the grass up to a high platform (48 columns, rows
+// 132-135, green over red) that carries the bag pile; a lower platform
+// (rows 146-153, red over green) 96 columns wide starts 40 columns left of
+// the tower at the rope's height, and the rope ends at its left edge.  A
+// weight hangs on a string under the high platform's right end.
+constexpr float kStage2TowerColumn = static_cast<float>(kStage2GoalProgress + 0xc0 - 9);
+void drawStage2GoalTower(SDL_Renderer* renderer, const Assets& assets,
+                         float x) {
+  const float scale = kSourceToWorldX;
+  const float highTop = level3RowToY(132.0F);
+  const float highBottom = level3RowToY(136.0F);
+  const float lowTop = level3RowToY(146.0F);
+  const float lowBottom = level3RowToY(154.0F);
+  const float floorY = level3RowToY(224.0F);
+  const float towerWidth = 16.0F * scale;
+  if (assets.stage6Lattice) {
+    const float bay = 16.0F * kLevel3RowScale;
+    for (float y = highBottom; y < floorY; y += bay) {
+      const float h = std::min(bay, floorY - y);
+      const SDL_Rect source{0, 0, 300, static_cast<int>(160.0F * h / bay)};
+      const SDL_FRect destination{x - towerWidth * 0.5F, y, towerWidth, h};
+      SDL_RenderCopyF(renderer, assets.stage6Lattice, &source, &destination);
+    }
+  } else {
+    fillRect(renderer, x - 8.0F, highBottom, 16.0F, floorY - highBottom,
+             color(201, 209, 218));
+  }
+  // The lower platform: red over green.
+  const float lowLeft = x - 40.0F * scale;
+  const float lowWidth = 96.0F * scale;
+  fillRect(renderer, lowLeft, lowTop, lowWidth, (lowBottom - lowTop) * 0.5F,
+           color(234, 47, 49));
+  fillRect(renderer, lowLeft, lowTop + (lowBottom - lowTop) * 0.5F, lowWidth,
+           (lowBottom - lowTop) * 0.5F, color(60, 214, 90));
+  fillRect(renderer, lowLeft, lowTop, lowWidth, 2.0F, color(255, 150, 150));
+  // The high platform: green over red.
+  const float highLeft = x - 24.0F * scale;
+  const float highWidth = 48.0F * scale;
+  fillRect(renderer, highLeft, highTop, highWidth, (highBottom - highTop) * 0.5F,
+           color(60, 214, 90));
+  fillRect(renderer, highLeft, highTop + (highBottom - highTop) * 0.5F, highWidth,
+           (highBottom - highTop) * 0.5F, color(234, 47, 49));
+  fillRect(renderer, highLeft, highTop, highWidth, 2.0F, color(170, 255, 180));
+  // The weight on its string under the right end.
+  const float stringX = highLeft + highWidth - 4.0F * scale;
+  fillRect(renderer, stringX - 0.7F, highBottom, 1.4F, 8.0F * kLevel3RowScale,
+           color(230, 230, 240));
+  filledCircle(renderer, stringX, highBottom + 8.0F * kLevel3RowScale + 4.0F, 5.0F,
+               color(250, 205, 40));
+  filledCircle(renderer, stringX - 1.5F, highBottom + 8.0F * kLevel3RowScale + 2.5F,
+               1.6F, color(255, 245, 190));
+}
+
 void drawStage2GoalStand(SDL_Renderer* renderer, const Game& game,
                          const Assets& assets) {
+  // $2760: the bag pile on the high platform (two bags below, one on top;
+  // the cells sit at col-8, col+8 and col, nine columns left of the record)
+  // and, once Charlie has landed on it, the 5000 sign.
   const Level4Record& stand = game.level2Stand;
   if (stand.active == 0) return;
   const float scale = kSourceToWorldX;
-  const float x = static_cast<float>(stand.col - 8) * scale;
-  const float platformTop = level3RowToY(static_cast<float>(stand.row) + 32.0F);
-  const float ropeTop = kStage2RopeY;
-  const float floorY = level3RowToY(224.0F);
-  if (assets.stage2GoalRig) {
-    constexpr float k = 0.25F;   // units per source pixel of the rig
-    // Truss (source x 707-827, y 160-800) from under the top platform to
-    // the floor.
-    {
-      const SDL_Rect source{700, 160, 135, 640};
-      const SDL_FRect destination{x - 135.0F * k * 0.5F, platformTop + 20.0F,
-                                  135.0F * k, floorY - platformTop - 20.0F};
-      SDL_RenderCopyF(renderer, assets.stage2GoalRig, &source, &destination);
-    }
-    // Lower platform (source y 800-975) with its top surface at the rope.
-    {
-      const SDL_Rect source{466, 800, 603, 175};
-      const SDL_FRect destination{x - 603.0F * k * 0.5F,
-                                  ropeTop - 64.0F * k, 603.0F * k,
-                                  175.0F * k};
-      SDL_RenderCopyF(renderer, assets.stage2GoalRig, &source, &destination);
-    }
-    // Upper platform (source y 40-160) with its top surface under the bags.
-    {
-      const SDL_Rect source{620, 40, 295, 120};
-      const SDL_FRect destination{x - 295.0F * k * 0.5F,
-                                  platformTop - 16.0F * k, 295.0F * k,
-                                  120.0F * k};
-      SDL_RenderCopyF(renderer, assets.stage2GoalRig, &source, &destination);
-    }
-  } else {
-    fillRect(renderer, x - 8.0F, platformTop, 16.0F, floorY - platformTop,
-             color(201, 209, 218));
-    fillRect(renderer, x - 36.0F, platformTop - 6.0F, 72.0F, 8.0F,
-             color(34, 194, 70));
-    fillRect(renderer, x - 40.0F, ropeTop, 96.0F, 8.0F, color(234, 47, 49));
-  }
-  const float bagW = 34.0F;
-  const float bagH = 40.0F;
+  const float x = (static_cast<float>(stand.col) - 9.0F) * scale;
+  const float platformTop = level3RowToY(132.0F);
+  const float bagW = 16.0F * scale;
+  const float bagH = 15.0F * kLevel3RowScale;
   if (stand.state == 0) {
-    // Two bags below, one on top ($2760 cells at col-8/col+8 and col).
     const auto bag = [&](float cx, float bottom) {
       if (assets.rewardBag) {
-        const SDL_FRect destination{cx - bagW * 0.5F, bottom - bagH, bagW,
-                                    bagH};
+        const SDL_FRect destination{cx - bagW * 0.5F, bottom - bagH, bagW, bagH};
         SDL_RenderCopyF(renderer, assets.rewardBag, nullptr, &destination);
       } else {
         fillRect(renderer, cx - bagW * 0.5F, bottom - bagH, bagW, bagH,
                  color(232, 214, 160));
       }
     };
-    bag(x - 15.0F, platformTop);
-    bag(x + 15.0F, platformTop);
+    bag(x - 8.0F * scale, platformTop);
+    bag(x + 8.0F * scale, platformTop);
     bag(x, platformTop - bagH + 2.0F);
   } else {
-    // $8097: the bags become the 5000 sign once Charlie has landed on them.
-    drawStage2ScoreBox(renderer, x, platformTop - 2.0F * bagH, 5000);
+    drawStage2ScoreBox(renderer, x - 12.0F * scale, level3RowToY(118.0F), 5000);
   }
 }
 
@@ -8081,6 +8853,16 @@ void drawStage2Backdrop(SDL_Renderer* renderer, const Game& game,
 
   // The arena wall starts at the blue rail (source row 181).
   const float arenaTop = level3RowToY(181.0F);
+  if (assets.stage2Backdrop) {
+    // The big top behind the rope, scrolling at a third of the rope's pace.
+    const float tileWidth = static_cast<float>(kWorldWidth);
+    float offset = std::fmod(cameraX * 0.33F, tileWidth);
+    if (offset < 0.0F) offset += tileWidth;
+    for (float x = -offset; x < kWorldWidth; x += tileWidth) {
+      const SDL_FRect destination{x, kArenaTop, tileWidth, arenaTop - kArenaTop};
+      SDL_RenderCopyF(renderer, assets.stage2Backdrop, nullptr, &destination);
+    }
+  }
   if (assets.arena) {
     int textureWidth = 0;
     int textureHeight = 0;
@@ -8112,14 +8894,15 @@ void drawStage2Backdrop(SDL_Renderer* renderer, const Game& game,
                          platformRight);
     ropeFrom = std::max(0.0F, platformRight);
   }
-  const Level4Record& stand = game.level2Stand;
   float ropeTo = static_cast<float>(kWorldWidth);
-  if (stand.active != 0) {
-    ropeTo = std::min(ropeTo,
-                      static_cast<float>(stand.col - 8) * kSourceToWorldX -
-                          603.0F * 0.25F * 0.5F + 6.0F);
-  }
+  // The goal rig on the last page, placed by the stand record's column.
+  const float towerX = kStage2TowerColumn * kSourceToWorldX - cameraX;
+  const float lowLeft = towerX - 40.0F * kSourceToWorldX;
+  if (lowLeft < kWorldWidth + 20.0F) ropeTo = std::min(ropeTo, lowLeft);
   drawStage2Rope(renderer, cameraX, ropeFrom, ropeTo);
+  if (towerX > -260.0F && towerX < kWorldWidth + 260.0F) {
+    drawStage2GoalTower(renderer, assets, towerX);
+  }
 
   // $26C0-$26E0: the distance sign is three cells; the middle one names it.
   {
@@ -8144,18 +8927,26 @@ void drawStage2Monkeys(SDL_Renderer* renderer, const Game& game,
     const int pose = std::max(m.pose, 0);
     SDL_Texture* texture = assets.stage2BrownWalk;
     const SheetCells* cells = &assets.stage2BrownCells;
-    int frame = pose;
+    // The knuckle-walk (three poses, the middle one twice) faces left in
+    // the atlas, the way the apes come at Charlie, and plods at the
+    // cabinet's pace: a new pose every ten frames.  Only the turned one is
+    // mirrored.
+    const std::size_t index = static_cast<std::size_t>(&m - game.level2Monkeys.data());
+    const int walkFrames = std::max(1, static_cast<int>(cells->bounds.size()));
+    int frame = ((game.level2MonkeyAge + static_cast<int>(index) * 7) / 10) % walkFrames;
     SDL_RendererFlip flip = SDL_FLIP_NONE;
+    float scale = kStage2MonkeyV2UnitsPerPixel;
     if (m.kind != 0) {
       texture = assets.stage2PurpleWalk;
       cells = &assets.stage2PurpleCells;
     }
     switch (m.state) {
       case 8: {   // $89C2 leaping: the $EBE9 arc's three cells
+        // Crouch, flight and landing, at the walk's scale.
         texture = assets.stage2PurpleJump;
         cells = &assets.stage2PurpleJumpCells;
-        static constexpr std::array<int, 3> leap{1, 3, 4};
-        frame = leap[static_cast<std::size_t>(pose % 3)];
+        frame = pose % 3;
+        flip = SDL_FLIP_NONE;
         break;
       }
       case 1:     // $897F turned after being jumped: faces the other way
@@ -8165,8 +8956,8 @@ void drawStage2Monkeys(SDL_Renderer* renderer, const Game& game,
       default:
         break;
     }
-    drawStage2Pose(renderer, texture, *cells, frame, centerX, feetY,
-                   kStage2MonkeyUnitsPerPixel, flip);
+    drawStage2Pose(renderer, texture, *cells, frame, centerX, feetY, scale,
+                   flip);
   }
 }
 
@@ -8214,6 +9005,22 @@ void drawStage2Charlie(SDL_Renderer* renderer, const Game& game,
   const float feetY = level3RowToY(static_cast<float>(charlie.row) + 16.0F);
   const int pose = std::max(charlie.pose, 0);
   int frame = 0;
+  if (charlie.script == kLevel2ScriptWalking && assets.stage2CharlieWalk) {
+    // The nine-frame cycle advances with the walk; standing still holds.
+    frame = (game.level2WalkAge / 3) % 9;
+    drawStage2Pose(renderer, assets.stage2CharlieWalk,
+                   assets.stage2CharlieWalkCells, frame, centerX, feetY,
+                   kStage2CharlieV2UnitsPerPixel);
+    return;
+  }
+  if (charlie.script == kLevel2ScriptJumping && assets.stage2CharlieJump) {
+    // The 57-frame arc over the ten jump frames: crouch, launch, tuck, land.
+    frame = std::min(9, game.level2JumpAge * 10 / 57);
+    drawStage2Pose(renderer, assets.stage2CharlieJump,
+                   assets.stage2CharlieJumpCells, frame, centerX, feetY,
+                   kStage2CharlieV2UnitsPerPixel);
+    return;
+  }
   switch (charlie.script) {
     case kLevel2ScriptWalking: frame = pose & 1; break;
     case kLevel2ScriptJumping: frame = 4; break;       // $E9CF one cell
@@ -8263,13 +9070,15 @@ void drawStage2Scene(SDL_Renderer* renderer, const Game& game,
   drawStage2Backdrop(renderer, game, camera, assets, timeSeconds);
   const bool restarting =
       game.scene == Scene::Crashed && game.crashFrame >= 24;
+  // The cabinet's sprites lie over the score panel, so a high jump shows
+  // Charlie in front of its bulbs.
+  drawHud(renderer, game, assets.charlieLife);
   if (!restarting) {
     drawStage2Monkeys(renderer, game, assets);
     drawStage2Charlie(renderer, game, assets);
     drawStage2Popups(renderer, game);
     drawStage2Bird(renderer, game, assets);
   }
-  drawHud(renderer, game, assets.charlieLife);
 }
 
 void drawSheetFrame(SDL_Renderer* renderer, SDL_Texture* texture,
@@ -8372,9 +9181,11 @@ void drawLevel3Charlie(SDL_Renderer* renderer, const Game& game,
   int rows = 3;
   int frame = 0;
   SDL_RendererFlip flip = SDL_FLIP_NONE;
-  float width = 110.0F;
-  float height = 116.0F;
-  float baseline = feetY + 6.0F;
+  // The v2 bounce atlas is 297x307 cells at the old 0.34 units per pixel,
+  // the v3 vertical atlas 228x321 at 0.32; both keep the feet 8 px up.
+  float width = 101.0F;
+  float height = 104.4F;
+  float baseline = feetY + 3.0F;
   const int poseFrame = game.level3PoseFrame;
   switch (game.level3Pose) {
     case Level3Pose::MovingRight:
@@ -8387,6 +9198,8 @@ void drawLevel3Charlie(SDL_Renderer* renderer, const Game& game,
     }
     case Level3Pose::Stationary:
       texture = assets.stage3CharlieVertical;
+      width = 73.0F;
+      height = 102.7F;
       if (poseFrame < 24) {
         frame = std::min(poseFrame / 4, 3);
       } else {
@@ -8397,7 +9210,9 @@ void drawLevel3Charlie(SDL_Renderer* renderer, const Game& game,
       // $9173 lifts the celebration cells ten rows; the painted cheer keeps
       // its shoes on the drum instead.
       frame = ((poseFrame / 16) & 1) == 0 ? 11 : 10;
-      baseline += 10.0F * kLevel3RowScale;
+      // ... and the goal drum's painted top surface sits 22 units under the
+      // drum's top edge.
+      baseline += 10.0F * kLevel3RowScale + 22.0F;
       break;
     case Level3Pose::Fallen:
       frame = 9;
@@ -8457,6 +9272,114 @@ void drawLevel3BirdAndCoins(SDL_Renderer* renderer, const Game& game,
   }
 }
 
+// ---- The water round ($2207) ---------------------------------------------
+// The board swaps the grass below tile row 26 for water (tile $B6) with the
+// drums standing in it; the bank keeps two tile rows of grass above the
+// surface.  Board row 208 is the surface.
+constexpr float kStage3WaterSurfaceY = 208.0F * kLevel3RowScale + kLevel3RowOffset;  // 512
+constexpr int kStage3LadderColumn = 40;   // tile row 3 of every 256-column page
+
+void drawStage3WaterTiles(SDL_Renderer* renderer, const Assets& assets,
+                          float camera, double timeSeconds, Uint8 alpha) {
+  const float top = kStage3WaterSurfaceY;
+  const float height = kWorldHeight - top;
+  if (!assets.stage3WaterTile) {
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 36, 120, 210, alpha);
+    const SDL_FRect rect{0.0F, top, kWorldWidth, height};
+    SDL_RenderFillRectF(renderer, &rect);
+    return;
+  }
+  SDL_SetTextureBlendMode(assets.stage3WaterTile, SDL_BLENDMODE_BLEND);
+  SDL_SetTextureAlphaMod(assets.stage3WaterTile, alpha);
+  const float tileWidth = 256.0F;
+  const float drift = static_cast<float>(std::fmod(timeSeconds * 18.0, tileWidth));
+  float offset = std::fmod(camera * 0.85F + drift, tileWidth);
+  if (offset < 0.0F) offset += tileWidth;
+  for (float x = -offset; x < kWorldWidth; x += tileWidth) {
+    const SDL_FRect destination{x, top, tileWidth, height};
+    SDL_RenderCopyF(renderer, assets.stage3WaterTile, nullptr, &destination);
+  }
+  SDL_SetTextureAlphaMod(assets.stage3WaterTile, 255);
+}
+
+void drawStage3WaterSurface(SDL_Renderer* renderer, const Assets& assets,
+                            float camera, double timeSeconds) {
+  // The pool's coping along the bank.
+  fillRect(renderer, 0.0F, kStage3WaterSurfaceY - 10.0F, kWorldWidth, 10.0F,
+           color(214, 206, 178));
+  fillRect(renderer, 0.0F, kStage3WaterSurfaceY - 3.0F, kWorldWidth, 3.0F,
+           color(156, 146, 118));
+  if (!assets.stage3WaterSurface) return;
+  const float tileWidth = 256.0F;
+  const float drift = static_cast<float>(std::fmod(timeSeconds * 26.0, tileWidth));
+  float offset = std::fmod(camera * 0.85F - drift, tileWidth);
+  if (offset < 0.0F) offset += tileWidth;
+  for (float x = -offset; x < kWorldWidth; x += tileWidth) {
+    const SDL_FRect destination{x, kStage3WaterSurfaceY - 2.0F, tileWidth, 16.0F};
+    SDL_RenderCopyF(renderer, assets.stage3WaterSurface, nullptr, &destination);
+  }
+}
+
+void drawStage3Dolphin(SDL_Renderer* renderer, const Assets& assets,
+                       const Level3Performer& dolphin, float screenX) {
+  // The composite is 32 rows tall with its lower cells at the record row,
+  // so the body is centred on the row itself.
+  const float centerY = level3RowToY(static_cast<float>(dolphin.y));
+  // Nose along the swim: two columns a frame left, the velocity's high byte
+  // up (phases 1 and 4) or down (2 and 3) in rows.
+  const float rows = static_cast<float>(dolphin.velocity >> 8);
+  const bool up = dolphin.phase == 1 || dolphin.phase == 4;
+  const float dx = -2.0F * kSourceToWorldX;
+  const float dy = (up ? -rows : rows) * kLevel3RowScale;
+  double angle = 0.0;
+  if (dolphin.state == 3) {
+    angle = (std::atan2(dy, dx) - kPi) * 180.0 / kPi;
+    while (angle < -180.0) angle += 360.0;
+    while (angle > 180.0) angle -= 360.0;
+  }
+  if (!assets.stage3Dolphin) {
+    ellipse(renderer, screenX, centerY, 40.0F, 16.0F, color(120, 170, 210), 4);
+    return;
+  }
+  // Six painted poses along the arc (nose up ... nose down), each turned by
+  // the rest of the angle so the motion stays smooth.
+  static constexpr std::array<double, 6> poseAngles{70.0, 40.0, 5.0, -20.0, -60.0, -85.0};
+  int frame = 0;
+  double best = 1e9;
+  for (int index = 0; index < 6; ++index) {
+    const double distance = std::abs(angle - poseAngles[static_cast<std::size_t>(index)]);
+    if (distance < best) {
+      best = distance;
+      frame = index;
+    }
+  }
+  const double residual = angle - poseAngles[static_cast<std::size_t>(frame)];
+  // Cells are 246x248 with the body centred; 32 board columns wide on the
+  // board, which the square cell keeps in proportion.
+  // The painted sheet has the dolphins swimming right; they cross the pool
+  // leftward, so mirror the cell.
+  const float size = 32.0F * kSourceToWorldX * 1.35F;
+  drawSheetFrame(renderer, assets.stage3Dolphin, 6, 1, frame, screenX,
+                 centerY + size * 0.5F, size, size, SDL_FLIP_HORIZONTAL,
+                 residual);
+}
+
+void drawStage3Splash(SDL_Renderer* renderer, const Assets& assets,
+                      const Level3Flame& splash, float screenX) {
+  // Four painted crowns, growing over the first 24 frames and fading out.
+  const int frame = std::min(3, splash.age / 6);
+  const float width = 96.0F;
+  const float height = 59.0F;
+  if (!assets.stage3Splash) return;
+  const Uint8 alpha = static_cast<Uint8>(
+      splash.age < 20 ? 255 : std::max(0, 255 - (splash.age - 20) * 21));
+  SDL_SetTextureAlphaMod(assets.stage3Splash, alpha);
+  drawSheetFrame(renderer, assets.stage3Splash, 4, 1, frame, screenX,
+                 kStage3WaterSurfaceY + 8.0F, width, height);
+  SDL_SetTextureAlphaMod(assets.stage3Splash, 255);
+}
+
 void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
                      const Assets& assets, double timeSeconds,
                      double interpolation) {
@@ -8472,6 +9395,20 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
                                  (game.cameraX - game.previousCameraX) *
                                      static_cast<float>(interpolation);
   drawBackdrop(renderer, camera, false, assets, game, timeSeconds);
+  if (game.level3Water) {
+    drawStage3WaterTiles(renderer, assets, camera, timeSeconds, 255);
+    // Pool ladders on tile row 3 of every page.
+    for (int page = 0; page < 8; ++page) {
+      const float x = static_cast<float>(kStage3LadderColumn + 256 * page) *
+                          kSourceToWorldX - camera;
+      if (x < -40.0F || x > kWorldWidth + 40.0F) continue;
+      if (assets.stage3PoolLadder) {
+        const SDL_FRect destination{x - 17.0F, kStage3WaterSurfaceY - 60.0F,
+                                    34.0F, 85.0F};
+        SDL_RenderCopyF(renderer, assets.stage3PoolLadder, nullptr, &destination);
+      }
+    }
+  }
 
   // Drums: tile rows 6-11, 17-22 and 27-0 of every 256-column page.
   for (int index = 0; index < kLevel3DrumCount; ++index) {
@@ -8485,6 +9422,12 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
                          goal ? assets.stage3GoalTambourine
                               : assets.stage3Tambourine,
                          x, pressed ? 1.0F : 0.0F, goal);
+    if (game.level3Water && assets.stage3DrumRing) {
+      const float width = (goal ? 180.0F : 48.0F * kSourceToWorldX) + 16.0F;
+      const SDL_FRect destination{x - width * 0.5F, kStage3WaterSurfaceY - 8.0F,
+                                  width, 24.0F};
+      SDL_RenderCopyF(renderer, assets.stage3DrumRing, nullptr, &destination);
+    }
   }
 
   for (const auto& sign : kLevel3Signs) {
@@ -8531,17 +9474,30 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
     if (!performer.active || restarting) continue;
     const float x = level3ScreenX(progress, performer.x, camera);
     if (x < -80.0F || x > kWorldWidth + 80.0F) continue;
+    if (performer.state == 3 || performer.state == 4) {
+      // A dolphin; a moved one stays invisible until its first wrap ($EE66).
+      if (performer.offset) continue;
+      drawStage3Dolphin(renderer, assets, performer, x);
+      continue;
+    }
     const bool juggler = performer.type != 0;
     SDL_Texture* texture = juggler ? assets.stage3KnifeThrower
                                    : assets.stage3FlameThrower;
     const int frame = level3PerformerFrame(performer);
-    drawSheetFrame(renderer, texture, 4, 3, frame, x, kStage3GroundY,
-                   juggler ? 105.6F : 112.8F, juggler ? 134.4F : 139.2F);
+    // The v4 atlases (tools/import_sprites.py) are 189x268 and 200x309
+    // cells drawn at the sheets' old 0.42 / 0.435 units per pixel.
+    drawSheetFrame(renderer, texture, 4, 3, frame, x, kStage3GroundY + 3.0F,
+                   juggler ? 79.4F : 87.0F, juggler ? 112.6F : 134.4F);
   }
 
   // Flames: two cells, the lower one at the record row.
   for (const auto& flame : game.level3Flames) {
     if (!flame.active || restarting) continue;
+    if (flame.state == 3) {
+      drawStage3Splash(renderer, assets, flame,
+                       level3ScreenX(progress, flame.x, camera));
+      continue;
+    }
     const float x = level3ScreenX(progress, flame.x - 8, camera);
     const float centerY = level3RowToY(static_cast<float>(flame.y));
     const int frame = (flame.age / 4) & 3;
@@ -8566,6 +9522,12 @@ void drawStage3Scene(SDL_Renderer* renderer, const Game& game,
       fillRect(renderer, x - 3.0F, centerY - 16.0F, 6.0F, 32.0F,
                color(220, 220, 240));
     }
+  }
+
+  if (game.level3Water) {
+    // Everything drawn so far that reaches below the surface is under water.
+    drawStage3WaterTiles(renderer, assets, camera, timeSeconds, 110);
+    drawStage3WaterSurface(renderer, assets, camera, timeSeconds);
   }
 
   const float playerScreenX =
@@ -8643,11 +9605,15 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
 
   // The distance plaques ride the tilemap, so their board column is already
   // a screen column.
-  for (const auto& plaque : game.level4Plaques) {
-    const float x = static_cast<float>(plaque.col) * scale;
-    if (x < -80.0F || x > kWorldWidth + 80.0F) continue;
-    drawFloorPlaque(renderer, x, level4PlaqueText(plaque.cell),
-                    plaque.cell == 0xb8);
+  // The three records are the three cells of one sign; the middle one
+  // names it, so one plaque is drawn centred on that cell.
+  {
+    const Level4Plaque& middle = game.level4Plaques[1];
+    const std::string label = level4PlaqueText(middle.cell);
+    const float x = (static_cast<float>(middle.col) + 8.0F) * scale;
+    if (!label.empty() && x > -80.0F && x < kWorldWidth + 80.0F) {
+      drawLevel3Sign(renderer, x, label);
+    }
   }
 
   // The goal stand sits on the last page, 181 columns past the point where
@@ -8714,6 +9680,23 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
   // spin tells you which way he is rolling.  The painted cell carries a
   // transparent border, and his feet belong four rows into the ball's top
   // cell, where the board's own composite puts them.
+  if (charlie.script == kLevel4ScriptCheer && assets.stage6CharlieFloor) {
+    // On the goal stand: the $EAAA cheer alternates two cells every sixteen
+    // frames; his shoes stand on the platform's top.
+    const float feetY = level4RowToY(0xb4) + 6.0F;
+    const bool armsUp = (std::max(charlie.pose, 0) & 1) == 0;
+    // The stage-4 cells draw him 133 units tall on the ball; the standing
+    // atlases are about 230 px for the same figure.
+    const float unit = 96.0F / 230.0F;
+    if (armsUp) {
+      drawStage2Pose(renderer, assets.stage6CharlieFloor, assets.stage6CharlieFloorCells,
+                     2, playerX, feetY, unit);
+    } else {
+      drawStage2Pose(renderer, assets.stage5CharlieFall, assets.stage5CharlieFallCells,
+                     0, playerX, feetY, unit);
+    }
+    return;
+  }
   drawSheetFrame(renderer, assets.stage4Charlie, 4, 3, frame, playerX,
                  level4RowToY(static_cast<float>(charlie.row + 16)) + 18.0F,
                  133.0F, 133.0F, SDL_FLIP_NONE, 0.0);
@@ -8825,7 +9808,7 @@ void drawBootScreen(SDL_Renderer* renderer, const Game& game,
       static_cast<int>(static_cast<float>(game.bootFrame) *
                        kBootFramesPerSecond /
                        static_cast<float>(kBoardRefresh)),
-      0, kBootFrameCount - 1);
+      0, gBootFrameCount - 1);
   if (assets.bootFrameTextureIndex != frameIndex) {
     if (assets.bootFrameTexture) {
       SDL_DestroyTexture(assets.bootFrameTexture);
@@ -8843,6 +9826,39 @@ void drawBootScreen(SDL_Renderer* renderer, const Game& game,
   }
 }
 
+// One clip frame at a time, decoded as it comes up: the frames are the
+// playfield itself, so they fill the canvas.
+void drawAttractFrame(SDL_Renderer* renderer, const Game& game, const Assets& assets) {
+  const int fps = game.attractBetween ? kBetweenFps : kAttractFps;
+  const int frame = std::min(game.attractFrameCount - 1,
+                             game.attractTick * fps / static_cast<int>(kBoardRefresh));
+  const int clipKey = game.attractBetween ? -2 : game.attractClip;
+  if (assets.attractFrameClip != clipKey || assets.attractFrameIndex != frame) {
+    if (assets.attractFrame) SDL_DestroyTexture(assets.attractFrame);
+    const std::string path = game.attractBetween ? betweenFramePath(frame)
+                                                 : attractFramePath(game.attractClip, frame);
+    assets.attractFrame = loadAsset(renderer, path.c_str());
+    if (assets.attractFrame && game.attractBetween) {
+      SDL_SetTextureScaleMode(assets.attractFrame, SDL_ScaleModeNearest);
+    }
+    assets.attractFrameClip = clipKey;
+    assets.attractFrameIndex = frame;
+  }
+  fillRect(renderer, 0.0F, 0.0F, kWorldWidth, kWorldHeight, color(0, 0, 0));
+  if (assets.attractFrame) {
+    // A soft cut: each segment fades in from black and out to black over
+    // its first and last kAttractFadeFrames board frames.
+    const int total = game.attractFrameCount * static_cast<int>(kBoardRefresh) / fps;
+    const float in = static_cast<float>(game.attractTick) / kAttractFadeFrames;
+    const float out = static_cast<float>(total - game.attractTick) / kAttractFadeFrames;
+    const float alpha = std::clamp(std::min(in, out), 0.0F, 1.0F);
+    SDL_SetTextureAlphaMod(assets.attractFrame, static_cast<Uint8>(alpha * 255.0F));
+    const SDL_FRect destination{0.0F, 0.0F, kWorldWidth, kWorldHeight};
+    SDL_RenderCopyF(renderer, assets.attractFrame, nullptr, &destination);
+    SDL_SetTextureAlphaMod(assets.attractFrame, 255);
+  }
+}
+
 void renderScene(SDL_Renderer* renderer, const Game& game,
                  const RenderSurface& surface, const Assets& assets,
                  double timeSeconds, double interpolation) {
@@ -8854,6 +9870,14 @@ void renderScene(SDL_Renderer* renderer, const Game& game,
   if (game.scene == Scene::Title) {
     drawCoinWaitingScreen(renderer, game, assets, timeSeconds);
     if (game.debug) drawDebug(renderer, game, surface);
+    return;
+  }
+  if (game.scene == Scene::Attract) {
+    drawAttractFrame(renderer, game, assets);
+    return;
+  }
+  if (game.scene == Scene::GameOver) {
+    drawGameOverScreen(renderer, game, assets, timeSeconds);
     return;
   }
   if (game.scene == Scene::EventSelect) {
@@ -9043,6 +10067,17 @@ int main(int argc, char** argv) {
   Game game;
   const std::string highScorePath = highScoreMemoryPath();
   game.highScore = loadHighScore(highScorePath);
+  gBootFrameCount = std::max(1, countFrames([](int frame) {
+    std::array<char, 64> name{};
+    std::snprintf(name.data(), name.size(), "boot/boot-%04d.png", frame);
+    return std::string(name.data());
+  }));
+  gBetweenFrameCount = countFrames(betweenFramePath);
+  const std::string progressPath = progressMemoryPath(highScorePath);
+  // A test run (--event, --replay, --record) starts every event fresh.
+  if (options.startEvent == 0 && options.replayPath.empty() && options.recordDir.empty()) {
+    loadProgress(progressPath, game);
+  }
   game.eventSelectDurationFrames =
       audioDurationInBoardFrames(audio.eventSelectMusic);
   game.crashDurationFrames = audioDurationInBoardFrames(audio.fail);
@@ -9130,7 +10165,12 @@ int main(int argc, char** argv) {
       return 1;
     }
     game.selectedEvent = options.replayEvent;
-    game.level6.visits = options.replayVisits;   // $A8FB spawns at set-up
+    // startEvent derives the visit count from the plays so far ($A8FB spawns
+    // at set-up from it), so the capture's count is seeded through them.
+    game.playCount[static_cast<std::size_t>(options.replayEvent)] =
+        std::max(0, options.replayVisits - 1);
+    if (options.replayWater && options.replayEvent == 2) game.playCount[2] = 1;
+    game.level6.visits = options.replayVisits;
     startGame(game);
     // <$14 advances before the first update; the capture logs it after.
     game.level1BoardFrameByte = static_cast<std::uint8_t>(
@@ -9141,6 +10181,8 @@ int main(int argc, char** argv) {
     game.level5.visits = options.replayVisits;
     game.level6.visits = options.replayVisits;
     game.level3ClearProjectiles = options.replayClearProjectiles;
+    game.level3Water = options.replayWater;
+    if (options.replayWater) game.level3Visits = 2;
     if (!options.replayOutput.empty() && options.replayEvent == 1) {
       replayOutput.open(options.replayOutput);
       replayOutput << "frame,rel,input,state,y,x,half,phase,landvel,launch,dir,"
@@ -9247,6 +10289,14 @@ int main(int argc, char** argv) {
           replayOutput << ",bag" << index << '_' << name;
         }
       }
+      if (options.replayWater) {
+        for (int index = 0; index < 4; ++index) {
+          for (const char* name : {"st", "y", "x", "b7", "v17", "v18", "v23", "v25",
+                                   "v38", "v39", "v3b", "v3c", "spr"}) {
+            replayOutput << ",dol" << index << '_' << name;
+          }
+        }
+      }
       replayOutput << ",bird_state,bird_x,bird_bagx";
       for (int index = 0; index < 13; ++index) {
         replayOutput << ",coin" << index << "_y,coin" << index << "_x";
@@ -9338,6 +10388,10 @@ int main(int argc, char** argv) {
   }
   const bool replaying = !options.replayPath.empty();
   int replayFrame = 0;
+  int recordBoardFrame = 0;
+  int recordedFrames = 0;
+  bool recordSawEnd = false;
+  bool recordFinish = false;
   int replayPreviousInput = game.replayInitialInput;
   if (!options.capturePath.empty()) {
     if (options.captureScene == "start") {
@@ -9356,8 +10410,15 @@ int main(int argc, char** argv) {
                  options.captureScene == "stage3-transfer" ||
                  options.captureScene == "stage3-approach" ||
                  options.captureScene == "stage3-goal" ||
-                 options.captureScene == "stage3-roof") {
+                 options.captureScene == "stage3-roof" ||
+                 options.captureScene == "stage3-water" ||
+                 options.captureScene == "stage3-water-2") {
         game.selectedEvent = 2;
+        if (options.captureScene == "stage3-water" ||
+            options.captureScene == "stage3-water-2") {
+          game.level3Water = true;
+          game.level3Visits = 2;
+        }
       } else if (options.captureScene == "stage4" ||
                  options.captureScene == "stage4-jump" ||
                  options.captureScene == "stage4-fall" ||
@@ -9415,6 +10476,8 @@ int main(int argc, char** argv) {
                options.captureScene == "stage3-approach" ||
                options.captureScene == "stage3-roof" ||
                options.captureScene == "stage3-transfer" ||
+               options.captureScene == "stage3-water" ||
+               options.captureScene == "stage3-water-2" ||
                options.captureScene == "stage3") {
       // Run the board model with scripted joystick input so every capture
       // shows a state the arcade can actually reach.
@@ -9442,6 +10505,10 @@ int main(int argc, char** argv) {
         stepFrames(12, false);
       } else if (options.captureScene == "stage3-transfer") {
         stepFrames(304, true);
+      } else if (options.captureScene == "stage3-water") {
+        stepFrames(130, true);
+      } else if (options.captureScene == "stage3-water-2") {
+        stepFrames(420, true);
       } else {
         stepFrames(60, true);
         stepFrames(60, false);
@@ -9611,11 +10678,24 @@ int main(int argc, char** argv) {
     insertCoin(game);
     enterEventSelect(game);
     game.selectedEvent = options.startEvent - 1;
+    if (options.startWater && game.selectedEvent == 2) game.playCount[2] = 1;
     confirmEventSelection(game);
+    if (options.startWater && game.selectedEvent == 2) {
+      startEvent(game, 2, false, true);
+    }
   }
   if (game.scene == Scene::Boot) playBootAudio(audio);
   std::uint32_t observedJumpAudioSerial = game.jumpAudioSerial;
   std::uint32_t observedCrashAudioSerial = game.crashAudioSerial;
+  std::uint32_t observedStage6GoalAudioSerial = game.stage6GoalAudioSerial;
+  std::uint32_t observedBetweenAudioSerial = game.betweenAudioSerial;
+  bool attractAudioScene = false;
+  std::uint32_t observedStage6FloorAudioSerial = game.stage6FloorAudioSerial;
+  // Event 6's floor: the miss cue first, the fail piece once it has sounded
+  // (18 frames), and the restart when the piece ends.
+  constexpr int kStage6MissFrames = 18;
+  int stage6FailCountdown = 0;
+  bool stage6Cheering = false;
   std::uint32_t observedExtraCharlieAudioSerial =
       game.extraCharlieAudioSerial;
   std::uint32_t observedPrizeBagAudioSerial = game.prizeBagAudioSerial;
@@ -9726,7 +10806,12 @@ int main(int argc, char** argv) {
       } else if (event.type == SDL_KEYDOWN && !event.key.repeat) {
         switch (event.key.keysym.sym) {
           case SDLK_ESCAPE:
-            if (game.scene == Scene::Boot || game.scene == Scene::Title) {
+            if (game.scene == Scene::GameOver) {
+              game.scene = Scene::Title;
+              game.titleIdleFrames = 0;
+            } else if (game.scene == Scene::Attract || game.scene == Scene::Boot ||
+                       game.scene == Scene::Title) {
+              // Nothing in play: Esc switches the cabinet off.
               running = false;
             } else if (game.scene == Scene::EventSelect) {
               game.scene = Scene::Title;
@@ -9750,6 +10835,7 @@ int main(int argc, char** argv) {
           case SDLK_5:
           case SDLK_c:
             insertCoin(game);
+            if (game.scene == Scene::Attract) game.scene = Scene::Title;
             break;
           case SDLK_SPACE:
           case SDLK_z:
@@ -10097,9 +11183,15 @@ int main(int argc, char** argv) {
                            << performer.remaining << ',' << performer.type;
             }
           }
-          for (const auto& flame : game.level3Flames) {
+          for (std::size_t slot = 0; slot < 3; ++slot) {
+            const auto& flame = game.level3Flames[slot];
             if (!flame.active) {
               replayOutput << ",-1,0,0,0,0,0";
+            } else if (flame.state == 3) {
+              // A splash: $7:$8 are the launch bytes $9735 never touched,
+              // $9 and $3 stay zero.
+              replayOutput << ",3," << static_cast<int>(flame.y) << ','
+                           << static_cast<int>(flame.x) << ",0,0,0";
             } else {
               replayOutput << ',' << flame.state << ',' << static_cast<int>(flame.y)
                            << ',' << static_cast<int>(flame.x) << ',' << flame.velocity
@@ -10125,6 +11217,24 @@ int main(int argc, char** argv) {
               replayOutput << ',' << bag.state << ',' << static_cast<int>(bag.x) << ','
                            << static_cast<int>(bag.key) << ','
                            << static_cast<int>(bag.timer);
+            }
+          }
+          if (options.replayWater) {
+            constexpr std::array<int, 5> scriptBase{0xed9e, 0xedce, 0xedfe, 0xee2e, 0xee66};
+            for (const auto& dolphin : game.level3Performers) {
+              if (!dolphin.active) {
+                replayOutput << ",0,0,0,0,0,0,0,0,0,0,0,0,0";
+                continue;
+              }
+              const int pointer = scriptBase[static_cast<std::size_t>(dolphin.script)] +
+                                  9 * (dolphin.scriptIndex + 1);
+              replayOutput << ',' << dolphin.state << ',' << static_cast<int>(dolphin.y)
+                           << ',' << static_cast<int>(dolphin.x) << ',' << dolphin.phase
+                           << ',' << (dolphin.velocity >> 8) << ',' << (dolphin.velocity & 0xff)
+                           << ',' << (dolphin.counter & 0xff) << ',' << (dolphin.offset ? 1 : 0)
+                           << ',' << dolphin.remaining << ',' << static_cast<int>(dolphin.timer)
+                           << ',' << static_cast<int>(dolphin.key) << ',' << dolphin.type
+                           << ',' << pointer;
             }
           }
           if (!game.level3BirdActive) {
@@ -10314,7 +11424,7 @@ int main(int argc, char** argv) {
     const bool shouldPlayStageMusic =
         game.scene == Scene::Playing &&
         !(game.selectedEvent == 4 && game.level5.phase == 2) &&
-        !(game.selectedEvent == 5 && game.level6.ram[0x2800] == 3);
+        !(game.selectedEvent == 5 && game.level6.ram[0x2800] >= 2);
     const bool shouldUseFastStageMusic =
         shouldPlayStageMusic && game.bonus <= 499;
     if (!shouldPlayEventSelectMusic &&
@@ -10339,6 +11449,46 @@ int main(int argc, char** argv) {
     if (observedCrashAudioSerial != game.crashAudioSerial) {
       playFailMusic(audio);
       observedCrashAudioSerial = game.crashAudioSerial;
+    }
+    if (observedStage6FloorAudioSerial != game.stage6FloorAudioSerial) {
+      stopStageMusic(audio);
+      stageMusicPlaying = false;
+      playStage3OverjumpSound(audio);
+      stage6FailCountdown = kStage6MissFrames;
+      // The board waits $80 frames on the floor before the wipe; the rest
+      // of the piece runs through the crash scene.
+      // Replays and silent builds keep the board's own 96-frame restart.
+      if (audio.fail.data && !replaying) {
+        game.level6FloorRestartFrames = std::max(
+            1, kStage6MissFrames + audioDurationInBoardFrames(audio.fail) - 0x80);
+      }
+      observedStage6FloorAudioSerial = game.stage6FloorAudioSerial;
+    }
+    if (stage6FailCountdown > 0 && --stage6FailCountdown == 0) {
+      playFailMusic(audio);
+    }
+    if (observedBetweenAudioSerial != game.betweenAudioSerial) {
+      playBetweenAudio(audio);
+      observedBetweenAudioSerial = game.betweenAudioSerial;
+    }
+    if (game.scene != Scene::Attract && game.scene != Scene::Boot && attractAudioScene) {
+      stopStageMusic(audio);   // the footage's sound stops with the footage
+    }
+    attractAudioScene = game.scene == Scene::Attract;
+    if (observedStage6GoalAudioSerial != game.stage6GoalAudioSerial) {
+      // The landing on the plank: the piece stops and the crowd cheers
+      // for the whole celebration, until the stage is wiped.
+      stopStageMusic(audio);
+      stageMusicPlaying = false;
+      playCrowdCheer(audio, true);
+      stage6Cheering = true;
+      observedStage6GoalAudioSerial = game.stage6GoalAudioSerial;
+    }
+    if (stage6Cheering &&
+        !(game.selectedEvent == 5 && game.scene == Scene::Playing &&
+          game.level6.ram[0x2800] == 2)) {
+      stopCrowdCheer(audio);
+      stage6Cheering = false;
     }
     if (observedStage4BallCollisionAudioSerial !=
         game.stage4BallCollisionAudioSerial) {
@@ -10403,6 +11553,11 @@ int main(int argc, char** argv) {
       observedLevel3ShowerAudioSerial = game.level3ShowerAudioSerial;
     }
     if (game.scene != observedScene) {
+      if (std::getenv("CIRCUS_TRACE_SCENES")) {
+        std::cerr << "scene " << static_cast<int>(observedScene) << " -> "
+                  << static_cast<int>(game.scene) << " event " << game.selectedEvent
+                  << " credits " << game.credits << '\n';
+      }
       if (game.highScoreDirty &&
           (game.scene == Scene::Crashed || game.scene == Scene::Goal ||
            game.scene == Scene::Complete || game.scene == Scene::Title)) {
@@ -10412,6 +11567,12 @@ int main(int argc, char** argv) {
       }
       if (game.scene == Scene::Goal) playCrowdCheer(audio);
       if (game.scene == Scene::Tally) playBonusCount(audio);
+      if (game.scene == Scene::Playing || game.scene == Scene::EventSelect ||
+          game.scene == Scene::GameOver) {
+        if (!replaying && options.startEvent == 0 && options.recordDir.empty()) {
+          saveProgress(progressPath, game);
+        }
+      }
       observedScene = game.scene;
     }
     const int showerStart =
@@ -10435,6 +11596,49 @@ int main(int argc, char** argv) {
                        static_cast<float>(surface.height) / kWorldHeight);
     renderScene(renderer, game, surface, assets, timeSeconds, interpolation);
 
+    const bool recordingScene = game.scene == Scene::Playing ||
+                                game.scene == Scene::Crashed || game.scene == Scene::Goal;
+    if (!options.recordDir.empty() && recordingScene) {
+      // The playfield straight off the render target, one JPEG per clip
+      // frame, until the clip is long enough.
+      if (recordBoardFrame == 0) {
+        std::error_code error;
+        std::filesystem::create_directories(options.recordDir, error);
+      }
+      const int wanted = recordBoardFrame * options.recordFps / static_cast<int>(kBoardRefresh);
+      if (wanted >= recordedFrames) {
+        std::array<char, 64> name{};
+        std::snprintf(name.data(), name.size(), "/frame-%04d.jpg", recordedFrames);
+        SDL_Surface* shot = SDL_CreateRGBSurfaceWithFormat(0, surface.width, surface.height,
+                                                          32, SDL_PIXELFORMAT_RGBA32);
+        if (shot && SDL_RenderReadPixels(renderer, nullptr, SDL_PIXELFORMAT_RGBA32,
+                                         shot->pixels, shot->pitch) == 0) {
+          IMG_SaveJPG(shot, (options.recordDir + name.data()).c_str(), 88);
+        }
+        if (shot) SDL_FreeSurface(shot);
+        ++recordedFrames;
+      }
+      ++recordBoardFrame;
+      // The clip ends when the fall (or the goal) has played out: the scene
+      // leaves the crash for the restart, or the stage ends.
+      if (game.scene == Scene::Crashed || game.scene == Scene::Goal) recordSawEnd = true;
+      if (recordBoardFrame >= options.recordSeconds * static_cast<int>(kBoardRefresh)) {
+        recordSawEnd = true;
+        recordFinish = true;
+      }
+    } else if (!options.recordDir.empty() && recordSawEnd) {
+      recordFinish = true;
+    }
+    if (!options.recordDir.empty() && recordSawEnd && game.scene == Scene::Playing &&
+        recordBoardFrame > 0) {
+      recordFinish = true;   // the restart after the fall
+    }
+    if (recordFinish) {
+      std::cout << "Recorded " << recordedFrames << " frames ("
+                << recordBoardFrame / static_cast<int>(kBoardRefresh) << " s) to "
+                << options.recordDir << '\n';
+      running = false;
+    }
     SDL_RenderSetScale(renderer, 1.0F, 1.0F);
     SDL_SetRenderTarget(renderer, nullptr);
     setColor(renderer, color(0, 0, 0));
@@ -10442,6 +11646,22 @@ int main(int argc, char** argv) {
     SDL_RenderCopyEx(renderer, surface.texture, nullptr, &surface.destination,
                      static_cast<double>(rotation), nullptr,
                      SDL_FLIP_NONE);
+    if (!options.recordDir.empty()) {
+      // The clock of the clip, on the window only -- the frames were read
+      // off the render target above, so it never lands in the recording.
+      const int tenths = recordBoardFrame * 10 / static_cast<int>(kBoardRefresh);
+      std::array<char, 32> clock{};
+      std::snprintf(clock.data(), clock.size(), "REC %d.%d", tenths / 10, tenths % 10);
+      const float sx = static_cast<float>(surface.destination.w) / kWorldWidth;
+      const float sy = static_cast<float>(surface.destination.h) / kWorldHeight;
+      SDL_RenderSetScale(renderer, sx, sy);
+      const float ox = static_cast<float>(surface.destination.x) / sx;
+      const float oy = static_cast<float>(surface.destination.y) / sy;
+      fillRect(renderer, ox + 8.0F, oy + 8.0F, 118.0F, 26.0F, color(0, 0, 0, 180));
+      drawText(renderer, clock.data(), ox + 14.0F, oy + 13.0F, 2.4F,
+               game.scene == Scene::Playing ? color(255, 60, 60) : color(255, 220, 80));
+      SDL_RenderSetScale(renderer, 1.0F, 1.0F);
+    }
     if (!options.riderDiagnosticDir.empty() && movementTraceFrame > 0) {
       const int tracedFrame = movementTraceFrame - 1;
       const std::array<int, 12> captureFrames{

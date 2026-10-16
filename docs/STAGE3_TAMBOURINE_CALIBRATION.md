@@ -108,7 +108,7 @@ can kill Charlie. The final target is a separate double-width goal tambourine.
 - `assets/stage3-flame-projectile-4-v2.png`: four upright HD teardrop flame
   frames; the projectile never rotates or develops a sideways tail.
 
-Original chroma-key generations remain under `assets/source-art/`; runtime
+Original chroma-key generations remain under `art/source/`; runtime
 assets have transparent alpha and despilled edges.
 
 The performer animation phase is the same deterministic 150-frame clock used

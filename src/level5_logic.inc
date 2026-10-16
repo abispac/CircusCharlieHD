@@ -194,6 +194,7 @@ void level5Spring2(Game& game, std::size_t index) {   // $A3CB drawing
   s.vram = d;
   s.x = u8w(s.height << 2);
   s.x = u8w((s.col & 7) + 0xf3 - s.col + low - s.x);
+  s.hdX = s.x;
   s.row = u8w((s.type + 1) << 3);
   s.cols = 7;
   s.col = u8w(s.col + 0x38);
@@ -555,9 +556,11 @@ void level5Playing(Game& game, int input) {
     l5.scroll = (page << 8) | low;
   }
   // $A29F: everything on the field scrolls with the pace.
+  const int pace = L5V(0xb1) >= 0x80 ? L5V(0xb1) - 0x100 : L5V(0xb1);
   for (auto& s : l5.springs) {
     s.gap = u8w(s.gap + L5V(0xb1));
     s.x = u8w(s.x + L5V(0xb1));
+    s.hdX += pace;
   }
   for (auto& c : l5.plCol) c = u8w(c + L5V(0xb1));
   L5V(0xc2) = u8w(L5V(0xc2) + L5V(0xb1));
@@ -659,6 +662,14 @@ void updateLevel5(Game& game, const Uint8* keyboard, bool jumpPressed,
     l5.plCode = {0, 0, 0};
     l5.flashState = l5.flashTimer = l5.flashPhase = 0;   // $287D-$287F
   }
+  // HD animation bookkeeping for the leap frames.
+  if (l5.chCode == 0x29) {
+    ++l5.hdAir;
+  } else {
+    l5.hdAir = 0;
+  }
+  l5.hdRising = l5.chRow < l5.hdPrevRow;
+  l5.hdPrevRow = l5.chRow;
   syncLevel5World(game);
 }
 #undef L5V

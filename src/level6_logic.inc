@@ -32,7 +32,7 @@ inline void sound(Game& game, int code) {
   switch (code) {
     case 0x44: ++game.jumpAudioSerial; break;
     case 0x45: ++game.stage6BounceAudioSerial; break;
-    case 0x4f: ++game.crashAudioSerial; break;
+    case 0x4f: ++game.stage6FloorAudioSerial; break;   // the floor
     case 0x41: ++game.extraCharlieAudioSerial; break;
     default: break;
   }
@@ -397,7 +397,9 @@ inline void goalLanding(Game& game, Level6& l) {
   wr(l, 0x2426, 0xa8); wr(l, 0x2416, 0xb8); wr(l, 0x2406, 0xc8);
   wr16(l, 0x245e, 0x1000); wr16(l, 0x244e, 0x1100); wr16(l, 0x243e, 0x1200);
   wr16(l, 0x242e, 0x1300); wr16(l, 0x241e, 0x1400); wr16(l, 0x240e, 0x1500);
-  // $BB0A: the music stops and the clear jingle plays.
+  // $BB0A: the music stops and the clear jingle plays; the HD build has
+  // the crowd cheer instead.
+  ++game.stage6GoalAudioSerial;
   wr(l, 0x2800, rd(l, 0x2800) + 1);
 }
 
@@ -1293,6 +1295,7 @@ void syncLevel6World(Game& game) {
 void updateLevel6(Game& game, const Uint8* keyboard, bool jumpPressed,
                   float controllerAxis) {
   Level6& l = game.level6;
+  ++l.hdFrame;
   game.player.previous = game.player.position;
   game.previousCameraX = game.cameraX;
   const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
@@ -1359,7 +1362,10 @@ void updateLevel6(Game& game, const Uint8* keyboard, bool jumpPressed,
     l.died = false;
     game.scene = Scene::Crashed;
     game.crashFrame = 0;
-    game.crashDurationFrames = kLevel6RestartFrames;
+    game.crashDurationFrames = game.level6FloorRestartFrames > 0
+                                   ? game.level6FloorRestartFrames
+                                   : kLevel6RestartFrames;
+    game.level6FloorRestartFrames = 0;
     if (game.lives > 0) --game.lives;
     l6::wr(l, 0x2800, 0);
     for (int a = 0x2400; a < 0x2900; a++) l6::wr(l, a, 0);

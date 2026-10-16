@@ -85,6 +85,7 @@ struct Level6 {
   int curInput = 0;           // $2032 this frame
   int prevInput = 0;          // $2035 last frame
   int prizeFlag = 0;          // $226E
+  int hdFrame = 0;            // HD animation counter
   bool started = false;       // $2258: a restart takes the page's bonus
   bool died = false;
   bool finished = false;
