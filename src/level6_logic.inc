@@ -1298,10 +1298,8 @@ void updateLevel6(Game& game, const Uint8* keyboard, bool jumpPressed,
   ++l.hdFrame;
   game.player.previous = game.player.position;
   game.previousCameraX = game.cameraX;
-  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
-                        keyboard[SDL_SCANCODE_A] || controllerAxis < -0.35F;
-  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
-                         keyboard[SDL_SCANCODE_D] || controllerAxis > 0.35F;
+  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] || controllerAxis < -0.35F;
+  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] || controllerAxis > 0.35F;
   const bool button = jumpPressed || keyboard[SDL_SCANCODE_SPACE] ||
                       keyboard[SDL_SCANCODE_Z];
   l.curInput = (moveLeft ? 1 : 0) | (moveRight ? 2 : 0) | (button ? 0x10 : 0);

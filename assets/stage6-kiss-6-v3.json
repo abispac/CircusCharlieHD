@@ -1,0 +1,85 @@
+{
+ "source": "stage6-kiss-sheet-gemini-01.png",
+ "cell": [
+  294,
+  385
+ ],
+ "columns": 6,
+ "rows": 1,
+ "baseline": 8,
+ "anchor": "charlie centre on the cell middle",
+ "frames": [
+  {
+   "index": 0,
+   "size": [
+    217,
+    369
+   ],
+   "charlie_x": 104,
+   "feet": [
+    147,
+    377
+   ]
+  },
+  {
+   "index": 1,
+   "size": [
+    277,
+    319
+   ],
+   "charlie_x": 138,
+   "feet": [
+    441,
+    377
+   ]
+  },
+  {
+   "index": 2,
+   "size": [
+    242,
+    274
+   ],
+   "charlie_x": 120,
+   "feet": [
+    735,
+    377
+   ]
+  },
+  {
+   "index": 3,
+   "size": [
+    213,
+    369
+   ],
+   "charlie_x": 103,
+   "feet": [
+    1029,
+    377
+   ]
+  },
+  {
+   "index": 4,
+   "size": [
+    206,
+    369
+   ],
+   "charlie_x": 101,
+   "feet": [
+    1323,
+    377
+   ]
+  },
+  {
+   "index": 5,
+   "size": [
+    257,
+    337
+   ],
+   "charlie_x": 136,
+   "feet": [
+    1617,
+    377
+   ]
+  }
+ ]
+}

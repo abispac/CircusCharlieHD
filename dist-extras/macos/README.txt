@@ -9,7 +9,8 @@ Controls
 --------
   5 or C        insert a coin
   1 or Enter    START
-  Left / Right  move (A / D also work)
+  Left / Right  move
+  U / D         grow / shrink Charlie 2% a press (remembered)
   Space or Z    jump / release the bar
   R             restart the current event
   F10           rotate the picture 90 degrees (0 -> 90 -> 180 -> 270)

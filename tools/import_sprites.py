@@ -79,13 +79,30 @@ def despill(rgb, key, alpha=None):
         excess = out[..., 1] - limit
         mask = excess > 0
         if alpha is not None:
-            near = alpha < 0.98
-            for _ in range(3):
-                g = near.copy()
-                g[1:, :] |= near[:-1, :]; g[:-1, :] |= near[1:, :]
-                g[:, 1:] |= near[:, :-1]; g[:, :-1] |= near[:, 1:]
-                near = g
-            mask &= near
+            def grown(seed, steps):
+                near = seed.copy()
+                for _ in range(steps):
+                    g = near.copy()
+                    g[1:, :] |= near[:-1, :]; g[:-1, :] |= near[1:, :]
+                    g[:, 1:] |= near[:, :-1]; g[:, :-1] |= near[:, 1:]
+                    near = g
+                return near
+            fringe = alpha < 0.98
+            # The ink outline is drawn against the screen, so its dark
+            # pixels come out olive: neutralise dark greenish pixels within
+            # the outline's reach of the edge as well as the fringe itself.
+            dark = (np.max(out, axis=2) < 120) & (excess > 3)
+            mask &= grown(fringe, 3) | (dark & grown(fringe, 10))
+            out[..., 1][mask] = limit[mask]
+            # What is left of a screen-tinted outline is a dark olive (red
+            # and green alike, little blue): make those pixels plain dark
+            # grey so the edge reads as ink.
+            olive = grown(fringe, 10) & (np.max(out, axis=2) < 110) & \
+                    (out[..., 2] < np.minimum(out[..., 0], out[..., 1]) - 8)
+            grey = out.mean(axis=2) * 0.85
+            for c in range(3):
+                out[..., c][olive] = grey[olive]
+            return np.clip(out, 0, 255).astype(np.uint8)
         out[..., 1][mask] = limit[mask]
     return np.clip(out, 0, 255).astype(np.uint8)
 
@@ -420,6 +437,20 @@ def main():
     heights = [f.height for _, f in frames]
     cell_w = max(widths) + 2 * args.pad
     cell_h = max(heights) + 2 * args.pad
+
+    def hands_of(frame):
+        """The x of the hands: the middle of the frame's top rows."""
+        fa = np.array(frame)[..., 3]
+        head = fa[:max(1, frame.height // 10)]
+        cols = np.nonzero(head.max(axis=0) > 40)[0]
+        return (cols[0] + cols[-1]) / 2.0 if len(cols) else frame.width / 2.0
+
+    if args.anchor == "top":
+        # Hung by the hands, a frame reaches further to one side than the
+        # other (legs swung back): the cell must hold the longer reach on
+        # both sides or the overhang lands in the neighbouring cell.
+        reach = max(max(hands_of(f), f.width - hands_of(f)) for _, f in frames)
+        cell_w = int(math.ceil(2 * reach)) + 2 * args.pad
     baseline = args.baseline if args.baseline is not None else args.pad
     columns = args.columns or len(frames)
     rows = int(math.ceil(len(frames) / columns))
@@ -434,10 +465,7 @@ def main():
         elif args.anchor == "top":
             # Centre on the top rows of the frame (the hands), hang from the
             # cell top.
-            fa = np.array(frame)[..., 3]
-            head = fa[:max(1, frame.height // 10)]
-            cols = np.nonzero(head.max(axis=0) > 40)[0]
-            hands_x = (cols[0] + cols[-1]) / 2.0 if len(cols) else frame.width / 2.0
+            hands_x = hands_of(frame)
             cx = (index % columns) * cell_w + int(round(cell_w / 2.0 - hands_x))
             cy = (index // columns) * cell_h + args.pad
         else:

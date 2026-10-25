@@ -41,6 +41,24 @@ add_custom_command(TARGET circus_charlie_hd POST_BUILD
           $<TARGET_FILE_DIR:circus_charlie_hd>/assets
 )
 
+# The copy above only runs when the binary relinks; this target runs on
+# every build, so an asset-only change (a new atlas, a new WAV) reaches the
+# build tree and the bundle too.
+add_custom_target(sync_assets ALL
+  COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_BINARY_DIR}/assets
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets
+          ${CMAKE_BINARY_DIR}/assets
+  COMMENT "Syncing assets"
+)
+if(APPLE)
+  add_custom_command(TARGET sync_assets POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E rm -rf "${CMAKE_BINARY_DIR}/Circus Charlie HD.app/Contents/Resources/assets"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets
+            "${CMAKE_BINARY_DIR}/Circus Charlie HD.app/Contents/Resources/assets"
+  )
+endif()
+add_dependencies(sync_assets circus_charlie_hd)
+
 if(APPLE)
   set(APP_DIR "${CMAKE_BINARY_DIR}/Circus Charlie HD.app")
   add_custom_command(TARGET circus_charlie_hd POST_BUILD

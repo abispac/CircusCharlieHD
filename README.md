@@ -41,7 +41,8 @@ folder (`high-score.txt`, `progress.txt`). The first extra life comes at
 | --- | --- |
 | `5` or `C` | insert a coin |
 | `1` or `Enter` | START |
-| `Left` / `Right` (`A` / `D`) | move; on the pony, change pace; on the trapeze, pump the swing |
+| `Left` / `Right` | move; on the pony, change pace; on the trapeze, pump the swing |
+| `U` / `D` | grow / shrink the painted Charlie 2 % a press (remembered) |
 | `Space` or `Z` | jump / release the bar |
 | `R` | restart the current event |
 | `F10` | rotate the picture 90° (0 → 90 → 180 → 270) |
@@ -168,6 +169,21 @@ the fringe, so green and olive clothes survive. In the game,
 `drawStage2Pose`, `drawPoseFromTop` and friends place the frame by its feet
 or hands. Atlases are versioned (`-v2`, `-v3`): add a new version, point
 the source at it, keep the old one out of the repository.
+
+Charlie himself comes from short AI video clips of one painted still
+(`art/source/incoming/clips/`): `tools/clip_to_frames.py CLIP OUT_DIR
+--contact 0.1` dumps a contact sheet to pick moments from, then `--times
+a,b,c [--rope] [--crop x0,x1]` keys the green, erases the drawn rope or
+floor line and the watermark column and writes the frames plus a sheet for
+`import_sprites.py`. `tools/build_stage3_charlie.py` is that recipe for
+Event 3 (the two bounce atlases, with the tuck and fallen poses borrowed
+from the Stage 2 atlas so the face never changes). Every v4 atlas is scaled
+so the standing Charlie is 400 px from sole to pompom; the game's
+`kStage2CharlieV4UnitsPerPixel` turns that into his board size and the U/D
+keys scale it live. `tools/build_stage1_bird.py` writes the money bird's
+atlas (`stage1-bird-sheet-v2`): the bag is painted into every cell, and the
+fourth cell is a mid-flap copy of the pouring pose, since the arcade bird
+keeps hold of the bag while the coins fall.
 
 `tools/render_stage2_backdrop.py`, `tools/render_stage3_water_art.py` and
 `tools/render_stage6_scenery.py` draw the vector scenery (`pip install

@@ -174,6 +174,7 @@ void level5Spring1(Game& game, std::size_t index) {   // $A328 waiting
   next.state = u8w(next.state + 1);
   next.gap = gap;
   s.state = u8w(s.state + 1);
+  s.points = 0;
   l5.spawnCount = u8w(l5.spawnCount + 1);
 }
 
@@ -266,6 +267,7 @@ void level5Collide(Game& game, std::size_t index) {
                            ((total_lo >> 4) & 0xf) * 10 + (total_lo & 0xf);
         game.score += points;
         l5.score = points;
+        s.points = points;   // the board writes them into the tiles over the platform
         L5V(0xb8) = u8w(L5V(0xb8) + 1);
         // $A556: the pace is re-read on the landing frame.
         L5V(0xb1) = level5Speed(l5.curInput);
@@ -627,10 +629,8 @@ void updateLevel5(Game& game, const Uint8* keyboard, bool jumpPressed,
   Level5& l5 = game.level5;
   game.player.previous = game.player.position;
   game.previousCameraX = game.cameraX;
-  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
-                        keyboard[SDL_SCANCODE_A] || controllerAxis < -0.35F;
-  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
-                         keyboard[SDL_SCANCODE_D] || controllerAxis > 0.35F;
+  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] || controllerAxis < -0.35F;
+  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] || controllerAxis > 0.35F;
   const bool button = jumpPressed || keyboard[SDL_SCANCODE_SPACE] ||
                       keyboard[SDL_SCANCODE_Z];
   const int input = (moveLeft ? 1 : 0) | (moveRight ? 2 : 0) | (button ? 0x10 : 0);

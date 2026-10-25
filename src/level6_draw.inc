@@ -26,15 +26,26 @@ inline int rd(const Level6& l, int a) { return l.ram[static_cast<std::size_t>(a 
 
 constexpr float kHandsColumnOffset = 6.0F;
 constexpr float kHandsRowOffset = 1.0F;
-constexpr float kCharlieHangUnit = 28.0F * kLevel3RowScale / 262.0F;
+// The v3 hang set (Gemini, art/source/incoming/charlie-hang-sheet-gemini-01.jpeg)
+// is 594 px from fists to toes; at 31 rows his body keeps the size of the
+// other Event 6 poses with the arms added on top.
+constexpr float kCharlieHangUnit = 31.0F * kLevel3RowScale / 594.0F;
 constexpr float kCharlieStandUnit = 27.0F * kLevel3RowScale / 222.0F;
 // The catcher, knees on the bar to fingertips; the board hangs her 20 rows,
 // the painted one is a head taller so she reads at Charlie's scale.
 constexpr float kCatcherLengthRows = 30.0F;
-constexpr float kCatcherHandsFraction = 0.89F;
-// Her standing pose spans 31 board rows: a head shorter than Charlie's 32,
-// taller than the cabinet's 26-row sprite so she reads as his partner.
-constexpr float kPartnerRows = 31.0F;
+// v3 (art/source/incoming/stage6-catcher-twohands-gemini-01.jpeg): cell 0
+// reaches down with both arms, fists together, at 0.86 of her height.
+constexpr float kCatcherHandsFraction = 0.86F;
+// Where Charlie's hands go on her (units from the bar, measured on the v3
+// cells): the middle of her two fists less the four units from his own fist
+// tops to their middle, so both her hands close around his.
+constexpr float kCatcherFistsAcross = 5.9F;
+constexpr float kCatcherFistsDown = 64.2F;
+// Her standing pose spans 45 board rows: in the kiss painting she is 1307 of
+// its rows to Charlie's 924 (32 board rows), so she keeps that size when she
+// steps out of it to cheer, and on the truss and the plank before it.
+constexpr float kPartnerRows = 45.0F;
 constexpr float kPartnerUnit = kPartnerRows * kLevel3RowScale / 372.0F;
 
 struct Grip {
@@ -71,7 +82,9 @@ inline void drawCharlie(SDL_Renderer* renderer, const Assets& assets, int code,
   }
   switch (code) {
     case 0x25: case 0x39: case 0x3d: case 0x41: case 0xf0: case 0xf4: {
-      // Hanging: the hands on the bar, the body along the swing.
+      // Hanging: the hands on the bar, the body along the swing.  Cells:
+      // 0 straight, 1-2 legs forward (bent, tucked), 3 straight, 4-5 legs
+      // back (bent, tucked).
       int frame = 0;
       switch (code) {
         case 0x39: frame = 1; break;
@@ -134,10 +147,13 @@ inline void drawCharlie(SDL_Renderer* renderer, const Assets& assets, int code,
 // nine rows under the lower cell; $55/$5D and $5A/$7B on the plank, sixteen
 // rows under it), centred two columns past the record like Charlie.
 inline void drawPartner(SDL_Renderer* renderer, const Assets& assets, int frame,
-                        int lowerRow, int col, float feetOffsetRows) {
+                        int lowerRow, int col, float feetOffsetRows,
+                        float feetOverride = -1.0F) {
   const float scale = kSourceToWorldX;
   const float x = (static_cast<float>(col) + 2.0F) * scale;
-  const float feetY = level3RowToY(static_cast<float>(lowerRow) + feetOffsetRows);
+  const float feetY = feetOverride >= 0.0F
+                          ? feetOverride
+                          : level3RowToY(static_cast<float>(lowerRow) + feetOffsetRows);
   if (assets.stage6Girl && assets.stage6GirlCells.valid()) {
     // Her standing pose (the first cell) spans kPartnerRows.
     const float standing = static_cast<float>(assets.stage6GirlCells.bounds[0].h);
@@ -178,9 +194,14 @@ inline RopeShape ropeShape(const Level6& l, int slot) {
     if (col == 0 || code == 0 || code == 0xfe) continue;
     const Vec2 p{(static_cast<float>(col) + 8.0F) * scale,
                  level3RowToY(static_cast<float>(row) + 8.0F)};
-    if (code == 0x56) {
+    if (code == 0x56 && !shape.hasBar) {
+      // The first $56 after the rope is the bar.  The catcher's own cells
+      // can use $56 too (one of her poses swinging back flat), so a later
+      // one is part of her, not a second bar.
       shape.hasBar = true;
       shape.bar = p;
+    } else if (code == 0x56) {
+      shape.catcher = true;
     } else if (code == 0x55) {
       shape.beads.push_back({p, attr == 6});
     } else if (code >= 0x57 && code <= 0x7a) {
@@ -216,10 +237,15 @@ inline Grip charlieGrip(const Level6& l, int row, int col) {
   const auto gripOf = [&](const RopeShape& shape) {
     Vec2 grip = shape.bar;
     if (shape.catcher) {
-      const float radians = -shape.angle * kPi / 180.0F;
-      const float length = kCatcherLengthRows * kLevel3RowScale;
-      grip = Vec2{shape.bar.x + std::sin(radians) * length,
-                  shape.bar.y + std::cos(radians) * length};
+      // His fists go into hers: in the v3 catcher her two fists sit
+      // kCatcherFistsAcross to the side of the line through her knees and
+      // kCatcherFistsDown along it, his fist tops four units above their
+      // middle, turned with the swing.
+      const float radians = shape.angle * kPi / 180.0F;
+      const float across = kCatcherFistsAcross;
+      const float down = kCatcherFistsDown;
+      grip = Vec2{shape.bar.x + across * std::cos(radians) - down * std::sin(radians),
+                  shape.bar.y + across * std::sin(radians) + down * std::cos(radians)};
     }
     Grip g;
     g.valid = true;
@@ -288,8 +314,8 @@ inline void drawRope(SDL_Renderer* renderer, const Assets& assets,
       // hands twenty rows down the rope's line.
       if (assets.stage6Catcher && assets.stage6CatcherCells.valid()) {
         const SDL_Rect& source = assets.stage6CatcherCells.bounds[0];
-        // Her fingertips sit at 0.89 of the painted bounds; the ponytail
-        // hangs past them.
+        // Her fists sit at kCatcherHandsFraction of the painted bounds; the
+        // ponytail hangs past them.
         const float unit = kCatcherLengthRows * kLevel3RowScale /
                            (static_cast<float>(source.h) * kCatcherHandsFraction);
         drawPoseFromTop(renderer, assets.stage6Catcher, assets.stage6CatcherCells,
@@ -314,6 +340,8 @@ inline void drawTub(SDL_Renderer* renderer, const Assets& assets,
   const float width = 42.0F * scale;
   const float height = 18.0F * kLevel3RowScale;
   if (assets.stage6Tub) {
+    // The HD leather tub (the Event 3 drums' style), on the board's own
+    // 42 x 18 box.
     const SDL_FRect destination{centerX - width * 0.5F, bottomY - height, width, height};
     SDL_RenderCopyF(renderer, assets.stage6Tub, nullptr, &destination);
     return;
@@ -395,15 +423,9 @@ void drawStage6Scene(SDL_Renderer* renderer, const Game& game,
     SDL_QueryTexture(assets.arena, nullptr, nullptr, &textureWidth, &textureHeight);
     const int sourceTop = static_cast<int>(
         static_cast<float>(textureHeight) * kArenaContentSourceTop);
-    const SDL_Rect source{0, sourceTop, textureWidth, textureHeight - sourceTop};
-    const float tileWidth = static_cast<float>(kWorldWidth);
-    float scroll = std::fmod(camera, tileWidth);
-    if (scroll < 0.0F) scroll += tileWidth;
-    for (int tile = -1; tile <= 1; ++tile) {
-      const SDL_FRect destination{static_cast<float>(tile) * tileWidth - scroll,
-                                  railY, tileWidth, (kWorldHeight - railY) * 1.14F};
-      SDL_RenderCopyF(renderer, assets.arena, &source, &destination);
-    }
+    drawArenaBand(renderer, assets.arena, assets.elephantDoor, camera, railY,
+                  (kWorldHeight - railY) * 1.14F /
+                      static_cast<float>(textureHeight - sourceTop));
   } else {
     fillRect(renderer, 0.0F, railY, kWorldWidth, kWorldHeight - railY, color(36, 142, 49));
   }
@@ -451,8 +473,11 @@ void drawStage6Scene(SDL_Renderer* renderer, const Game& game,
     const int code = rd(l, 0x273e);
     const int col = rd(l, 0x2736);
     if (col != 0 && (code == 0x70 || code == 0x78)) {
+      // Her boots on the truss's top edge: the HD truss sits just under the
+      // score panel, a little lower than the board's row 82.
+      const float trussTop = std::max(level3RowToY(82.0F), kArenaTop);
       l6draw::drawPartner(renderer, assets, (l.hdFrame / 48) % 2 == 0 ? 0 : 1,
-                          rd(l, 0x2724), col, 9.0F);
+                          rd(l, 0x2724), col, 9.0F, trussTop + 2.0F);
     }
   }
 
@@ -503,17 +528,41 @@ void drawStage6Scene(SDL_Renderer* renderer, const Game& game,
                                                             rd(l, 0x2776))
                                       : l6draw::Grip{};
     if (kissRow >= 0 && assets.stage6Kiss && assets.stage6KissCells.valid()) {
-      // At the goal she is in his arms: the painted pair, Charlie hugging
-      // her while she kisses him, stands where his cells stand.  Charlie is
-      // 924 of the picture's rows and two fifths of the way across it.
+      // The goal, as the cabinet plays it: she lands behind him, his cells
+      // cover her for 34 frames, then he turns to the crowd blushing with
+      // her kiss on his cheek and waves.  The painted pair plays that out
+      // in six cells (tools/build_stage6_kiss.py): side by side, she leans
+      // in, the peck, the blush (two cells), both waving; every cell has
+      // Charlie's middle on its centre and both their feet on its baseline,
+      // and she stands kPartnerRows tall.
+      static int kissStart = -1;
+      static int kissLastFrame = -1;
+      if (kissStart < 0 || l.hdFrame < kissLastFrame || l.hdFrame - kissLastFrame > 10) {
+        kissStart = l.hdFrame;
+      }
+      kissLastFrame = l.hdFrame;
+      const int age = l.hdFrame - kissStart;
+      // Side by side, she leans in, the peck: the 34 frames the board hides
+      // her; then the blush, swapping with his $74/$76 cells as the board
+      // does, and both waving for the last of the celebration.
+      const int charlieCode = rd(l, 0x277e);
+      int cell = 0;
+      if (age < 10) cell = 0;
+      else if (age < 20) cell = 1;
+      else if (age < 46) cell = 2;
+      else if (age < 200) cell = charlieCode == 0x74 || charlieCode == 0x7c ? 4 : 3;
+      else cell = 5;
+      const SheetCells& cells = assets.stage6KissCells;
       const float scale = kSourceToWorldX;
-      const float unit = 32.0F * kLevel3RowScale / 924.0F;
-      const float width = static_cast<float>(assets.stage6KissCells.bounds[0].w) * unit;
-      const float centerX = (static_cast<float>(rd(l, 0x2776)) + 2.0F) * scale +
-                            (0.5F - 0.41F) * width;
+      const float standing = static_cast<float>(cells.bounds[0].h);   // her full height
+      const float unit = l6draw::kPartnerRows * kLevel3RowScale / standing;
+      const float centerX = (static_cast<float>(rd(l, 0x2776)) + 2.0F) * scale;
       const float feetY = level3RowToY(static_cast<float>(rd(l, 0x2774)) + 32.0F);
-      drawStage2Pose(renderer, assets.stage6Kiss, assets.stage6KissCells, 0, centerX,
-                     feetY, unit);
+      const SDL_Rect source{cell * cells.cellWidth, 0, cells.cellWidth, cells.cellHeight};
+      const float w = static_cast<float>(cells.cellWidth) * unit;
+      const float h = static_cast<float>(cells.cellHeight) * unit;
+      const SDL_FRect destination{centerX - w * 0.5F, feetY + 8.0F * unit - h, w, h};
+      SDL_RenderCopyF(renderer, assets.stage6Kiss, &source, &destination);
     } else {
       l6draw::drawCharlie(renderer, assets, code, rd(l, 0x2774), rd(l, 0x2776),
                           &grip);
@@ -543,18 +592,18 @@ void drawStage6Scene(SDL_Renderer* renderer, const Game& game,
              color(255, 236, 120), true);
   }
   // OH NO ($2780-$27B0) and GREAT / FAR OUT ($2400-$2450).
+  // The balloon callouts over their cells: two OH NO!!s on the fall, the
+  // right one eight rows lower; GREAT and FAR OUT at the goal, FAR OUT
+  // eight rows lower, their palette cycling every two frames.
   if (rd(l, 0x27be) == 0x16) {
-    const float y = level3RowToY(static_cast<float>(rd(l, 0x27b4)));
-    drawText(renderer, "OH", (static_cast<float>(rd(l, 0x27b6)) + 24.0F) * scale,
-             y, 2.0F, color(255, 255, 255), true);
-    drawText(renderer, "NO!", (static_cast<float>(rd(l, 0x2786)) + 24.0F) * scale,
-             y, 2.0F, color(255, 255, 255), true);
+    const int row = rd(l, 0x27b4);
+    drawCallout(renderer, assets.calloutOhNo, rd(l, 0x27b6), row, -1);
+    drawCallout(renderer, assets.calloutOhNo, rd(l, 0x2786), row + 8, -1);
   }
   if (rd(l, 0x245e) == 0x10 && rd(l, 0x2800) == 2) {
-    const float y = level3RowToY(static_cast<float>(rd(l, 0x2454)));
-    drawText(renderer, "GREAT", (static_cast<float>(rd(l, 0x2456)) + 24.0F) * scale,
-             y, 2.0F, color(255, 236, 120), true);
-    drawText(renderer, "FAR OUT", (static_cast<float>(rd(l, 0x2426)) + 24.0F) * scale,
-             y, 2.0F, color(255, 236, 120), true);
+    const int row = rd(l, 0x2454);
+    const int phase = (l.hdFrame / 2) & 7;
+    drawCallout(renderer, assets.calloutGreat, rd(l, 0x2456), row, phase);
+    drawCallout(renderer, assets.calloutFarOut, rd(l, 0x2426), row + 8, phase);
   }
 }

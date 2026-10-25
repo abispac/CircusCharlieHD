@@ -29,6 +29,9 @@ constexpr double kFixedDt = 1.0 / kBoardRefresh;
 // source y=230.  On the 480x640 logical canvas that places Charlie close to
 // the bottom instead of halfway up the playfield.
 constexpr float kGroundY = 590.0F;
+// The HD distance sign (assets/floor-sign-v1.png), shared by every event's
+// distance markers once it is loaded.
+SDL_Texture* gFloorSign = nullptr;
 // The rope is on source rows 152-153: row * 2.5 - 8.
 constexpr float kStage2RopeY = 372.0F;
 constexpr float kStage2MonkeySpeed = 52.0F;
@@ -113,6 +116,9 @@ constexpr std::array<std::pair<std::uint8_t, std::uint8_t>, 13> kLevel3CoinLanes
 // stage), exactly like Level 1.
 constexpr int kLevel3FallenFrames = 0x28;
 constexpr int kLevel3RestartFrames = 96;
+// Events 2, 3 and 4: the miss plays as Charlie lands on the floor and the
+// fail piece follows it this many board frames later.
+constexpr int kFloorMissFrames = 18;
 // Distance plaques are the three $26C0-$26E0 prop cells re-entering at
 // $2204 == $80/$70/$60 with the tile words of the next page ($EB5C+).
 struct Level3Sign {
@@ -214,6 +220,10 @@ constexpr float kHudHeight = 92.0F;
 constexpr float kArenaTop = kHudTop + kHudHeight;
 constexpr float kCrowdTop = 235.0F;
 constexpr float kGrassTop = 350.0F;
+// The elephant's door: the arcade draws it at tile column 80 of every
+// 256-column page; the HD wall shows it every third page.
+constexpr float kElephantDoorColumn = 80.0F;
+constexpr float kElephantDoorSpacingColumns = 768.0F;
 // Crop the reusable arena painting to crowd + grandstand fascia + grass.
 // The source's upper tents duplicate the fixed marquee and its lower front
 // curtain does not exist in the Stage 1 cabinet playfield.
@@ -888,6 +898,11 @@ struct Game {
   int level1GoalPhases = 0;
   int level1BirdPhase = 0;
   std::uint8_t level1BirdX = 0;
+  // Bumped when the bag tears open at column $31, which is when the arcade
+  // starts the coin-shower piece; the tally then waits for the piece to end.
+  std::uint32_t level1ShowerAudioSerial = 0;
+  int level1ShowerStartFrame = 0;
+  int level1ShowerHoldFrames = 0;
   struct RewardCoin {
     int timer = 0;
     std::int32_t yFixed = 0;
@@ -1003,6 +1018,10 @@ struct Game {
   int level2Visits = 1;                      // $220F
   int level2WalkAge = 0;      // HD animation: frames spent walking
   int level2JumpAge = 0;      // HD animation: frames spent in a jump
+  int level4JumpAge = 0;      // the same for the balls
+  float charlieScale = 1.0F;  // [ and ] tune the painted Charlie's size; kept in charlie-scale.txt
+  int charlieScaleNotice = 0; // frames left showing the size on screen
+  int level4WalkAge = 0;
   int level2MonkeyAge = 0;    // HD animation: frames the monkeys have walked
   bool level2Started = false;
   int level2RestartPage = 0;
@@ -1059,8 +1078,17 @@ struct Game {
   std::uint32_t stage6GoalAudioSerial = 0;     // $BB0A: the landing on the plank
   std::uint32_t stage6FloorAudioSerial = 0;    // $B857: the floor
   int level6FloorRestartFrames = 0;            // crash frames after a floor fall
+  // Event 2: the miss at a monkey hit ($8121), and the floor ($84F2/$85D2),
+  // where the fail piece plays out before the restart, as on the trapeze.
+  std::uint32_t stage2HitAudioSerial = 0;
+  // Events 2, 3 and 4 share the floor: the miss as Charlie lands, the fail
+  // piece after it, and the restart as the piece ends.
+  std::uint32_t floorFallAudioSerial = 0;
+  bool floorFallMiss = false;                // the floor also plays the miss (no hit before)
+  int failPieceFrames = 0;                   // frames of fail.wav; 0: the board's own timing
   std::uint32_t stage5FallAudioSerial = 0;     // $BA93 -> $4A
-  std::uint32_t stage3OverjumpAudioSerial = 0;
+  std::uint32_t stage3OverjumpAudioSerial = 0;   // the miss ($4F)
+  bool level3MissCued = false;                    // played at the hit already
   std::uint32_t level3ShowerAudioSerial = 0;
   std::uint32_t randomState = 0x6d2b79f5U;
   bool highScoreDirty = false;
@@ -1152,14 +1180,17 @@ struct Assets {
   SheetCells stage2CharlieCells;
   SDL_Texture* stage2CharlieWalk = nullptr;   // the nine-frame walk cycle
   SDL_Texture* stage2CharlieJump = nullptr;   // the ten-frame jump
+  SDL_Texture* stage2CharliePoses = nullptr;  // stand, cheer, fallen, tuck
   SheetCells stage2CharlieWalkCells;
   SheetCells stage2CharlieJumpCells;
+  SheetCells stage2CharliePosesCells;
   SheetCells stage2BrownCells;
   SheetCells stage2PurpleCells;
   SheetCells stage2PurpleJumpCells;
   SDL_Texture* stage3Charlie = nullptr;
-  SDL_Texture* stage3CharlieTuck = nullptr;
+  SheetCells stage3CharlieCells;              // v4: one row of 12, feet on the baseline
   SDL_Texture* stage3CharlieVertical = nullptr;
+  SheetCells stage3CharlieVerticalCells;
   SDL_Texture* stage3CharlieRoofHead = nullptr;
   SDL_Texture* stage3Tambourine = nullptr;
   SDL_Texture* stage3GoalTambourine = nullptr;
@@ -1172,6 +1203,7 @@ struct Assets {
   SDL_Texture* stage3WaterTile = nullptr;
   SDL_Texture* stage3WaterSurface = nullptr;
   SDL_Texture* stage3PoolLadder = nullptr;
+  SDL_Texture* elephantDoor = nullptr;   // the performers' entrance in the arena wall
   SDL_Texture* stage3DrumRing = nullptr;
   SDL_Texture* stage4Charlie = nullptr;
   SDL_Texture* stage4Ball = nullptr;
@@ -1190,6 +1222,12 @@ struct Assets {
   SDL_Texture* stage6CharlieTumble = nullptr;
   SDL_Texture* stage6CharlieFloor = nullptr;
   SDL_Texture* stage6Tub = nullptr;         // the "trampoline": a circus tub
+  SDL_Texture* floorSign = nullptr;         // the HD distance marker (Event 6)
+  // The board's balloon callouts as three tintable layers each (cloud,
+  // letters, outline; tools/build_callouts.py): GREAT, FAR OUT, OH NO!!.
+  std::array<SDL_Texture*, 3> calloutGreat{};
+  std::array<SDL_Texture*, 3> calloutFarOut{};
+  std::array<SDL_Texture*, 3> calloutOhNo{};
   SDL_Texture* stage6Plank = nullptr;       // the goal platform's plank
   SDL_Texture* stage6Lattice = nullptr;     // one bay of the goal tower
   SDL_Texture* stage6Truss = nullptr;       // one bay of the overhead truss
@@ -1253,6 +1291,10 @@ struct AudioEngine {
   AudioClip eventSelectConfirm;
   std::array<AudioVoice, 12> voices{};
   bool available = false;
+  // --record: the mixed output is kept while a clip is being recorded and
+  // written next to its frames as audio.wav, so the clip has its own sound.
+  bool capturing = false;
+  std::vector<Uint8> capture;
 };
 
 std::string highScoreMemoryPath() {
@@ -1291,6 +1333,26 @@ int loadHighScore(const std::string& path) {
 std::string progressMemoryPath(const std::string& highScorePath) {
   if (highScorePath.empty()) return {};
   return (std::filesystem::path(highScorePath).parent_path() / "progress.txt").string();
+}
+
+// The painted Charlie's size, tuned live with [ and ], kept next to the
+// high score so it survives a restart.
+std::string charlieScalePath(const std::string& highScorePath) {
+  if (highScorePath.empty()) return {};
+  return (std::filesystem::path(highScorePath).parent_path() / "charlie-scale.txt").string();
+}
+
+void loadCharlieScale(const std::string& path, Game& game) {
+  if (path.empty()) return;
+  std::ifstream input(path);
+  float value = 0.0F;
+  if (input >> value && value >= 0.5F && value <= 2.0F) game.charlieScale = value;
+}
+
+void saveCharlieScale(const std::string& path, const Game& game) {
+  if (path.empty()) return;
+  std::ofstream output(path);
+  output << game.charlieScale << '\n';
 }
 
 void loadProgress(const std::string& path, Game& game) {
@@ -1643,7 +1705,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.hoopFlare = loadAsset(renderer, "stage1-hoop-flare.png");
   assets.props = loadAsset(renderer, "stage1-props.png");
   assets.propsFlare = loadAsset(renderer, "stage1-props-flare.png");
-  assets.bird = loadAsset(renderer, "stage1-bird-sheet.png");
+  assets.bird = loadAsset(renderer, "stage1-bird-sheet-v2.png");
   assets.rewardBag = loadAsset(renderer, "stage1-reward-bag.png");
   assets.charlieLife = loadAsset(renderer, "stage1-charlie-life-v2.png");
   assets.extraCharlie =
@@ -1658,9 +1720,11 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.stage2Charlie =
       loadAsset(renderer, "stage2-charlie-sheet-v1.png");
   assets.stage2CharlieWalk =
-      loadAsset(renderer, "stage2-charlie-walk-9-v2.png");
+      loadAsset(renderer, "stage2-charlie-walk-9-v4.png");
   assets.stage2CharlieJump =
-      loadAsset(renderer, "stage2-charlie-jump-10-v2.png");
+      loadAsset(renderer, "stage2-charlie-jump-10-v4.png");
+  assets.stage2CharliePoses =
+      loadAsset(renderer, "stage2-charlie-poses-4-v4.png");
   assets.stage2BrownWalk =
       loadAsset(renderer, "stage2-brown-walk-4-v3.png");
   assets.stage2PurpleWalk =
@@ -1673,20 +1737,24 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.stage2CharlieCells =
       measureSheetCells("stage2-charlie-sheet-v1.png", 3, 2);
   assets.stage2CharlieWalkCells =
-      measureSheetCells("stage2-charlie-walk-9-v2.png", 9, 1);
+      measureSheetCells("stage2-charlie-walk-9-v4.png", 9, 1);
   assets.stage2CharlieJumpCells =
-      measureSheetCells("stage2-charlie-jump-10-v2.png", 10, 1);
+      measureSheetCells("stage2-charlie-jump-10-v4.png", 10, 1);
+  assets.stage2CharliePosesCells =
+      measureSheetCells("stage2-charlie-poses-4-v4.png", 4, 1);
   assets.stage2BrownCells = measureSheetCells("stage2-brown-walk-4-v3.png", 4, 1);
   assets.stage2PurpleCells =
       measureSheetCells("stage2-purple-walk-4-v3.png", 4, 1);
   assets.stage2PurpleJumpCells =
       measureSheetCells("stage2-purple-leap-3-v3.png", 3, 1);
   assets.stage3Charlie =
-      loadAsset(renderer, "stage3-charlie-bounce-12-v2.png");
-  assets.stage3CharlieTuck =
-      loadAsset(renderer, "stage3-charlie-wam-tuck-hd-v1.png");
+      loadAsset(renderer, "stage3-charlie-bounce-12-v4.png");
+  assets.stage3CharlieCells =
+      measureSheetCells("stage3-charlie-bounce-12-v4.png", 12, 1);
   assets.stage3CharlieVertical =
-      loadAsset(renderer, "stage3-charlie-vertical-12-v3.png");
+      loadAsset(renderer, "stage3-charlie-vertical-12-v4.png");
+  assets.stage3CharlieVerticalCells =
+      measureSheetCells("stage3-charlie-vertical-12-v4.png", 12, 1);
   assets.stage3CharlieRoofHead =
       loadAsset(renderer, "stage3-charlie-roof-head-4-v2.png");
   assets.stage3Tambourine =
@@ -1706,6 +1774,7 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.stage3WaterTile = loadAsset(renderer, "stage3-water-tile-v1.png");
   assets.stage3WaterSurface = loadAsset(renderer, "stage3-water-surface-v1.png");
   assets.stage3PoolLadder = loadAsset(renderer, "stage3-pool-ladder-v1.png");
+  assets.elephantDoor = loadAsset(renderer, "arena-elephant-door-v1.png");
   assets.stage3DrumRing = loadAsset(renderer, "stage3-drum-ring-v1.png");
   assets.stage4Charlie = loadAsset(renderer, "stage4-charlie-12-v2.png");
   assets.stage4CharlieCells = measureSheetCells("stage4-charlie-12-v2.png", 4, 3);
@@ -1719,25 +1788,35 @@ Assets loadAssets(SDL_Renderer* renderer) {
   assets.stage5CharlieFall = loadAsset(renderer, "stage5-charlie-fall-4-v1.png");
   assets.stage5CharlieSit = loadAsset(renderer, "stage5-charlie-sit-1-v2.png");
   assets.stage5CharlieSitCells = measureSheetCells("stage5-charlie-sit-1-v2.png", 1, 1);
-  assets.stage6CharlieHang = loadAsset(renderer, "stage6-charlie-hang-6-v2.png");
+  assets.stage6CharlieHang = loadAsset(renderer, "stage6-charlie-hang-6-v3.png");
   assets.stage6CharlieTumble = loadAsset(renderer, "stage6-charlie-tumble-6-v1.png");
   assets.stage6CharlieFloor = loadAsset(renderer, "stage6-charlie-floor-4-v1.png");
   assets.stage5CharlieRideCells = measureSheetCells("stage5-charlie-ride-4-v3.png", 4, 1);
   assets.stage5CharlieLeapCells = measureSheetCells("stage5-charlie-leap-6-v1.png", 6, 1);
   assets.stage5CharlieFallCells = measureSheetCells("stage5-charlie-fall-4-v1.png", 4, 1);
-  assets.stage6CharlieHangCells = measureSheetCells("stage6-charlie-hang-6-v2.png", 6, 1);
+  assets.stage6CharlieHangCells = measureSheetCells("stage6-charlie-hang-6-v3.png", 6, 1);
   assets.stage6CharlieTumbleCells = measureSheetCells("stage6-charlie-tumble-6-v1.png", 6, 1);
   assets.stage6CharlieFloorCells = measureSheetCells("stage6-charlie-floor-4-v1.png", 4, 1);
-  assets.stage6Tub = loadAsset(renderer, "stage6-tub-v1.png");
+  assets.stage6Tub = loadAsset(renderer, "stage6-tub-v2.png");
+  assets.floorSign = loadAsset(renderer, "floor-sign-v1.png");
+  {
+    const char* layers[3] = {"cloud", "letters", "outline"};
+    for (int i = 0; i < 3; ++i) {
+      assets.calloutGreat[i] = loadAsset(renderer, (std::string("callout-great-") + layers[i] + ".png").c_str());
+      assets.calloutFarOut[i] = loadAsset(renderer, (std::string("callout-farout-") + layers[i] + ".png").c_str());
+      assets.calloutOhNo[i] = loadAsset(renderer, (std::string("callout-ohno-") + layers[i] + ".png").c_str());
+    }
+  }
+  gFloorSign = assets.floorSign;
   assets.stage6Plank = loadAsset(renderer, "stage6-plank-v1.png");
   assets.stage6Lattice = loadAsset(renderer, "stage6-lattice-v1.png");
   assets.stage6Truss = loadAsset(renderer, "stage6-truss-v2.png");
-  assets.stage6Catcher = loadAsset(renderer, "stage6-catcher-3-v2.png");
+  assets.stage6Catcher = loadAsset(renderer, "stage6-catcher-3-v3.png");
   assets.stage6Girl = loadAsset(renderer, "stage6-girl-4-v2.png");
-  assets.stage6CatcherCells = measureSheetCells("stage6-catcher-3-v2.png", 3, 1);
+  assets.stage6CatcherCells = measureSheetCells("stage6-catcher-3-v3.png", 3, 1);
   assets.stage6GirlCells = measureSheetCells("stage6-girl-4-v2.png", 4, 1);
-  assets.stage6Kiss = loadAsset(renderer, "stage6-kiss-1-v2.png");
-  assets.stage6KissCells = measureSheetCells("stage6-kiss-1-v2.png", 1, 1);
+  assets.stage6Kiss = loadAsset(renderer, "stage6-kiss-6-v3.png");
+  assets.stage6KissCells = measureSheetCells("stage6-kiss-6-v3.png", 6, 1);
   if (!assets.arena || !assets.marquee || !assets.ferrisWheel ||
       !assets.ferrisGondola || !assets.riderRunA || !assets.riderRunB ||
       !assets.riderRunC ||
@@ -1750,7 +1829,6 @@ Assets loadAssets(SDL_Renderer* renderer) {
       !assets.stage2Charlie || !assets.stage2BrownWalk ||
       !assets.stage2PurpleWalk || !assets.stage2PurpleJump ||
       !assets.stage2GoalRig || !assets.stage3Charlie ||
-      !assets.stage3CharlieTuck ||
       !assets.stage3CharlieVertical ||
       !assets.stage3CharlieRoofHead ||
       !assets.stage3Tambourine || !assets.stage3GoalTambourine ||
@@ -1793,13 +1871,12 @@ void destroyAssets(Assets& assets) {
   if (assets.stage2Charlie) SDL_DestroyTexture(assets.stage2Charlie);
   if (assets.stage2CharlieWalk) SDL_DestroyTexture(assets.stage2CharlieWalk);
   if (assets.stage2CharlieJump) SDL_DestroyTexture(assets.stage2CharlieJump);
+  if (assets.stage2CharliePoses) SDL_DestroyTexture(assets.stage2CharliePoses);
   if (assets.stage2BrownWalk) SDL_DestroyTexture(assets.stage2BrownWalk);
   if (assets.stage2PurpleWalk) SDL_DestroyTexture(assets.stage2PurpleWalk);
   if (assets.stage2PurpleJump) SDL_DestroyTexture(assets.stage2PurpleJump);
   if (assets.stage2GoalRig) SDL_DestroyTexture(assets.stage2GoalRig);
   if (assets.stage3Charlie) SDL_DestroyTexture(assets.stage3Charlie);
-  if (assets.stage3CharlieTuck)
-    SDL_DestroyTexture(assets.stage3CharlieTuck);
   if (assets.stage3CharlieVertical)
     SDL_DestroyTexture(assets.stage3CharlieVertical);
   if (assets.stage3CharlieRoofHead)
@@ -1823,7 +1900,10 @@ void destroyAssets(Assets& assets) {
                                assets.stage6CharlieHang,
                                assets.stage6CharlieTumble, assets.stage6CharlieFloor,
                                assets.stage6Catcher, assets.stage6Girl,
-                               assets.stage6Kiss, assets.stage6Tub, assets.stage6Plank,
+                               assets.stage6Kiss, assets.stage6Tub, assets.floorSign, assets.stage6Plank,
+                               assets.calloutGreat[0], assets.calloutGreat[1], assets.calloutGreat[2],
+                               assets.calloutFarOut[0], assets.calloutFarOut[1], assets.calloutFarOut[2],
+                               assets.calloutOhNo[0], assets.calloutOhNo[1], assets.calloutOhNo[2],
                                assets.stage6Lattice, assets.stage6Truss}) {
     if (texture) SDL_DestroyTexture(texture);
   }
@@ -1907,6 +1987,40 @@ void audioCallback(void* userdata, Uint8* stream, int byteCount) {
       outputOffset += static_cast<int>(mixedBytes);
     }
   }
+  if (audio.capturing) {
+    audio.capture.insert(audio.capture.end(), stream, stream + byteCount);
+  }
+}
+
+void setAudioCapture(AudioEngine& audio, bool on) {
+  if (!audio.available) return;
+  SDL_LockAudioDevice(audio.device);
+  audio.capturing = on;
+  if (on) audio.capture.clear();
+  SDL_UnlockAudioDevice(audio.device);
+}
+
+// The captured mix as a WAV in the device's own PCM format.
+bool writeAudioCapture(const AudioEngine& audio, const std::string& path) {
+  if (!audio.available) return false;
+  const SDL_AudioSpec& spec = audio.deviceSpec;
+  const Uint16 bits = SDL_AUDIO_BITSIZE(spec.format);
+  const Uint16 channels = spec.channels;
+  const Uint16 blockAlign = static_cast<Uint16>(channels * bits / 8);
+  const Uint32 byteRate = static_cast<Uint32>(spec.freq) * blockAlign;
+  const Uint32 dataBytes = static_cast<Uint32>(audio.capture.size());
+  std::ofstream out(path, std::ios::binary);
+  if (!out) return false;
+  auto put16 = [&](Uint16 v) { out.put(static_cast<char>(v & 0xFF)); out.put(static_cast<char>(v >> 8)); };
+  auto put32 = [&](Uint32 v) { put16(static_cast<Uint16>(v & 0xFFFF)); put16(static_cast<Uint16>(v >> 16)); };
+  out.write("RIFF", 4); put32(36 + dataBytes); out.write("WAVE", 4);
+  out.write("fmt ", 4); put32(16);
+  put16(SDL_AUDIO_ISFLOAT(spec.format) ? 3 : 1);
+  put16(channels); put32(static_cast<Uint32>(spec.freq)); put32(byteRate);
+  put16(blockAlign); put16(bits);
+  out.write("data", 4); put32(dataBytes);
+  out.write(reinterpret_cast<const char*>(audio.capture.data()), dataBytes);
+  return static_cast<bool>(out);
 }
 
 bool loadAudio(AudioEngine& audio) {
@@ -2720,19 +2834,21 @@ void confirmEventSelection(Game& game) {
   // Events 1 through 4 are playable. Later selections remain routed to Event 1
   // until their own ROM-measured implementations are ready. Do not substitute
   // another effect for the still-unidentified arcade confirmation sound.
-  if (game.credits <= 0) {
-    game.scene = Scene::Title;
-    return;
-  }
   if (game.selectedEvent > 5) game.selectedEvent = 0;
   if (eventLocked(game, game.selectedEvent)) return;
-  ++game.eventSelectConfirmAudioSerial;
   if (game.selectContinuing) {
-    // Coming off a cleared trapeze: the same credit goes on.
+    // Coming off a cleared trapeze: the same game goes on with its lives
+    // and score, no credit needed.
+    ++game.eventSelectConfirmAudioSerial;
     game.selectContinuing = false;
     startEvent(game, game.selectedEvent, true);
     return;
   }
+  if (game.credits <= 0) {
+    game.scene = Scene::Title;
+    return;
+  }
+  ++game.eventSelectConfirmAudioSerial;
   --game.credits;
   startGame(game);
 }
@@ -2757,11 +2873,12 @@ void insertCoin(Game& game) {
 
 bool startWithCredit(Game& game) {
   if (game.credits <= 0) return false;
-  if (game.selectUnlocked) {
-    enterEventSelect(game);
-    game.selectContinuing = false;
-    return true;
-  }
+  // A new game is the cabinet's: every event back at its first visit and the
+  // run from Event 1 in order.  The event screen only opens again once this
+  // player clears the trapeze (advanceAfterClear).
+  game.playCount.fill(0);
+  game.selectUnlocked = false;
+  game.selectContinuing = false;
   --game.credits;
   game.selectedEvent = 0;
   startGame(game);
@@ -3119,6 +3236,7 @@ void syncLevel3World(Game& game) {
 void initializeLevel3Board(Game& game, int pageByte) {
   game.level3Scroll = static_cast<std::uint16_t>((pageByte & 0xff) << 8);
   game.level3State = 1;
+  game.level3MissCued = false;
   game.level3Y = kLevel3StandRow;
   game.level3X = kLevel3PlayerColumn;
   game.level3Phase = 1;
@@ -3164,7 +3282,13 @@ void level3Hit(Game& game, int kind) {
   game.level3DeathKind = kind;
   game.player.alive = false;
   game.deathOccurred = true;
-  ++game.crashAudioSerial;
+  // The music stops here and the knife or flame plays the miss at once;
+  // the fail piece waits for the floor.  The bonus running out is silent
+  // until the floor, where the miss plays first (as on Event 2).
+  if (kind != 4) {
+    ++game.stage3OverjumpAudioSerial;
+    game.level3MissCued = true;
+  }
 }
 
 // $8B3E/$8BA9: projectile collisions run before anything moves, so they use
@@ -3830,8 +3954,9 @@ void level3MovePlayer(Game& game) {
       game.level3DeathKind = 3;
       game.player.alive = false;
       game.deathOccurred = true;
-      ++game.stage3OverjumpAudioSerial;
-      ++game.crashAudioSerial;
+      // The roof is the floor of this fall: the miss, then the fail piece.
+      game.floorFallMiss = true;
+      ++game.floorFallAudioSerial;
     }
     return;
   }
@@ -3867,6 +3992,10 @@ void level3UpdateDeath(Game& game) {
       game.level3Countdown = kLevel3FallenFrames;
       game.level3Pose = Level3Pose::Fallen;
       game.level3PoseFrame = 0;
+      // The fail piece; the miss too unless the hit already played it.
+      game.floorFallMiss = !game.level3MissCued;
+      game.level3MissCued = false;
+      ++game.floorFallAudioSerial;
     }
     return;
   }
@@ -3883,7 +4012,15 @@ void level3UpdateDeath(Game& game) {
   game.level3Died = true;
   game.scene = Scene::Crashed;
   game.crashFrame = 0;
+  // The board's $28 frames on the floor are done; the rest of the miss and
+  // the fail piece run through the crash scene, so the stage restarts as
+  // the piece ends (the board's own 96 frames in replays and silent builds).
   game.crashDurationFrames = kLevel3RestartFrames;
+  if (game.failPieceFrames > 0) {
+    game.crashDurationFrames = std::max(
+        1, game.failPieceFrames + (game.floorFallMiss ? kFloorMissFrames : 0) -
+               kLevel3FallenFrames);
+  }
   --game.lives;
 }
 
@@ -3967,10 +4104,8 @@ void updateLevel3(Game& game, const Uint8* keyboard, float controllerAxis) {
   if (game.stage1ScorePopupFrame > 0) --game.stage1ScorePopupFrame;
 
   const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
-                        keyboard[SDL_SCANCODE_A] ||
                         controllerAxis < -0.35F;
   const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
-                         keyboard[SDL_SCANCODE_D] ||
                          controllerAxis > 0.35F;
 
   if (game.level3TileTimer > 0) --game.level3TileTimer;
@@ -4242,7 +4377,7 @@ void level4BallCollisions(Game& game) {
     charlie.velocity = 0;
     level4SetScript(charlie, kLevel4ScriptStruck);
     ++game.level4Falls;
-    ++game.crashAudioSerial;
+    // The music stops here; the miss and the fail piece wait for the floor.
     return;
   }
 }
@@ -4703,7 +4838,8 @@ void level4Charlie(Game& game, int stick, int button) {
         charlie.countdown = 0x28;
         level4SetScript(charlie, kLevel4ScriptFallen);
         level4SpawnCallouts(game, kLevel4FailCells, 2);
-        ++game.crashAudioSerial;
+        game.floorFallMiss = true;      // the miss on the floor, then the fail piece
+        ++game.floorFallAudioSerial;
       }
       break;
     }
@@ -4731,6 +4867,8 @@ void level4Charlie(Game& game, int stick, int button) {
         charlie.countdown = 0x28;
         level4SetScript(charlie, kLevel4ScriptFallen);
         level4SpawnCallouts(game, kLevel4FailCells, 2);
+        game.floorFallMiss = true;      // the miss on the floor, then the fail piece
+        ++game.floorFallAudioSerial;
       }
       break;
     case 8:  // $8509 the crowd's reaction, then the restart
@@ -4904,8 +5042,7 @@ void level4Bonus(Game& game) {
       continue;
     }
     if (before == 2 && game.level4Charlie.state == 1) {
-      game.level4Charlie.state = 7;
-      ++game.crashAudioSerial;
+      game.level4Charlie.state = 7;   // falls at once; the floor plays the rest
     }
   }
 }
@@ -4917,10 +5054,8 @@ void updateLevel4(Game& game, const Uint8* keyboard, bool jumpPressed,
   game.player.previous = game.player.position;
   game.previousCameraX = game.cameraX;
 
-  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
-                        keyboard[SDL_SCANCODE_A] || controllerAxis < -0.35F;
-  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
-                         keyboard[SDL_SCANCODE_D] || controllerAxis > 0.35F;
+  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] || controllerAxis < -0.35F;
+  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] || controllerAxis > 0.35F;
   // Without this, $9C55 would store a stick value of 3 as the ridden ball's
   // state -- the state a ball takes after being knocked away -- and the ball
   // would roll out from under Charlie and leave him riding thin air.
@@ -4937,6 +5072,9 @@ void updateLevel4(Game& game, const Uint8* keyboard, bool jumpPressed,
   level4BallState(game);           // $9BF8
   level4Objects(game);             // $7D65
   level4Bonus(game);               // $BB73
+  // HD animation counters.
+  if (game.level4Charlie.phase != 0) ++game.level4JumpAge; else game.level4JumpAge = 0;
+  if (game.level4Charlie.script == kLevel4ScriptWalking) ++game.level4WalkAge;
   if ((game.level4Flash != 0 || game.level4Charlie.state == 4) &&
       (game.level1BoardFrameByte & 3) == 0) {
     game.level4Flash = (game.level4Flash - 1) & 0xff;   // $81FA
@@ -4950,7 +5088,13 @@ void updateLevel4(Game& game, const Uint8* keyboard, bool jumpPressed,
     game.level4Died = false;
     game.scene = Scene::Crashed;
     game.crashFrame = 0;
+    // As in Event 2: the rest of the miss and the fail piece run through
+    // the crash scene after the board's $28 frames on the floor.
     game.crashDurationFrames = kLevel4RestartFrames;
+    if (game.failPieceFrames > 0) {
+      game.crashDurationFrames =
+          std::max(1, game.failPieceFrames + kFloorMissFrames - 0x28);
+    }
     if (game.lives > 0) --game.lives;
   }
   syncLevel4World(game);
@@ -5178,7 +5322,7 @@ void level2CharlieMonkeys(Game& game) {
     charlie.direction = 0;
     monkey.countdown = 7;
     monkey.state = 4;
-    ++game.crashAudioSerial;   // $8121 -> $BAAC, the miss ($4F)
+    ++game.stage2HitAudioSerial;   // $8121 -> $BAAC, the miss ($4F)
     game.level2CrashCued = true;
     return;
   }
@@ -5752,7 +5896,8 @@ void level2CharlieState(Game& game, int stick, int button) {
         charlie.countdown = 0x28;
         level2SetScript(charlie, kLevel2ScriptFallen);
         level2SpawnCallouts(game, kLevel2FailCells, 2);
-        ++game.crashAudioSerial;
+        game.floorFallMiss = true;      // nothing cued it before: miss, then fail
+        ++game.floorFallAudioSerial;
       }
       break;
     }
@@ -5781,12 +5926,14 @@ void level2CharlieState(Game& game, int stick, int button) {
       charlie.row = (charlie.row + (charlie.velocity >> 8)) & 0xff;
       if (charlie.row >= 0xd0) {
         charlie.state = 8;
+        // $8500 plays the miss here; a monkey hit already cued it at $8121.
+        // The fail piece then plays out before the restart (the board's own
+        // $28 frames in replays and silent builds).
+        game.floorFallMiss = !game.level2CrashCued;
         charlie.countdown = 0x28;
         level2SetScript(charlie, kLevel2ScriptFallen);
         level2SpawnCallouts(game, kLevel2FailCells, 2);
-        // $8500 plays the miss here; a monkey hit already cued it at $8121,
-        // a time-out drop has not.
-        if (!game.level2CrashCued) ++game.crashAudioSerial;
+        ++game.floorFallAudioSerial;
         game.level2CrashCued = false;
       }
       break;
@@ -6017,10 +6164,8 @@ void updateLevel2(Game& game, const Uint8* keyboard, bool jumpPressed,
   game.player.previous = game.player.position;
   game.previousCameraX = game.cameraX;
 
-  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
-                        keyboard[SDL_SCANCODE_A] || controllerAxis < -0.35F;
-  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
-                         keyboard[SDL_SCANCODE_D] || controllerAxis > 0.35F;
+  const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] || controllerAxis < -0.35F;
+  const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] || controllerAxis > 0.35F;
   const int stick = resolveStick((moveLeft ? 1 : 0) | (moveRight ? 2 : 0),
                                  game.level2Charlie.stick, game.level2BothStick);
   const bool button = jumpPressed || keyboard[SDL_SCANCODE_SPACE] ||
@@ -6061,7 +6206,15 @@ void updateLevel2(Game& game, const Uint8* keyboard, bool jumpPressed,
     game.level2Died = false;
     game.scene = Scene::Crashed;
     game.crashFrame = 0;
+    // The board's $28 frames on the floor are done; the rest of the fail
+    // piece (and the miss before it, on a time-out drop) runs through the
+    // crash scene, so the stage restarts as the piece ends.
     game.crashDurationFrames = 96;
+    if (game.failPieceFrames > 0) {
+      const int piece = game.failPieceFrames +
+                        (game.floorFallMiss ? kFloorMissFrames : 0);
+      game.crashDurationFrames = std::max(1, piece - 0x28);
+    }
     if (game.lives > 0) --game.lives;
   }
   syncLevel2World(game);
@@ -6073,10 +6226,8 @@ void updateStage2(Game& game, const Uint8* keyboard, bool jumpPressed,
   game.previousCameraX = game.cameraX;
 
   const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
-                        keyboard[SDL_SCANCODE_A] ||
                         controllerAxis < -0.35F;
   const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
-                         keyboard[SDL_SCANCODE_D] ||
                          controllerAxis > 0.35F;
   float targetSpeed = 0.0F;
   if (moveLeft != moveRight) {
@@ -6731,6 +6882,7 @@ void enterLevel1Goal(Game& game) {
   game.level1GoalCounter = 0;
   game.level1GoalPhases = 1;
   game.level1BirdPhase = 0;
+  game.level1ShowerStartFrame = 0;
   game.level1RewardCoinLaunches = 0;
   for (auto& coin : game.level1RewardCoins) coin = Game::RewardCoin{};
   if (game.perfectClear) {
@@ -6764,7 +6916,16 @@ void updateLevel1Goal(Game& game) {
   if (game.level1GoalCounter >= 0x100) {
     game.level1GoalCounter = 0;
     --game.level1GoalPhases;
-    if (game.level1GoalPhases <= 0) {
+  }
+  if (game.level1GoalPhases <= 0) {
+    // Keep the crowd on screen until the coin-shower piece has finished, so
+    // it never plays over the bonus count (the counter keeps the wings
+    // flapping meanwhile).
+    const bool holdForShower =
+        game.level1BirdPhase == 1 &&
+        game.goalFrame < game.level1ShowerStartFrame +
+                             game.level1ShowerHoldFrames;
+    if (!holdForShower) {
       game.scene = Scene::Tally;
       game.tallyFrame = 0;
       return;
@@ -6778,6 +6939,8 @@ void updateLevel1Goal(Game& game) {
     // The bag cell sits at bird X - $10 + $08; the tear starts at column $31.
     if (static_cast<std::uint8_t>(game.level1BirdX - 0x08U) != 0x31U) return;
     game.level1BirdPhase = 1;
+    game.level1ShowerStartFrame = game.goalFrame;
+    ++game.level1ShowerAudioSerial;
     return;
   }
   // $7BC9-$7C23: coin launches and flight.
@@ -6815,15 +6978,19 @@ void updateLevel1(Game& game, const Uint8* keyboard, bool jumpPressed,
                   float controllerAxis) {
   if (game.stage1ScorePopupFrame > 0) --game.stage1ScorePopupFrame;
   if (game.level1PotPopupTimer > 0) --game.level1PotPopupTimer;
+  if (std::getenv("CIRCUS_L1_GOAL_TEST") && game.scene == Scene::Playing) {
+    // Debug: jump straight to the perfect-clear goal to check the bird scene.
+    game.level1MissedRewards = 0;
+    enterLevel1Goal(game);
+    return;
+  }
 
   game.player.previous = game.player.position;
   game.previousCameraX = game.cameraX;
 
   const bool moveLeft = keyboard[SDL_SCANCODE_LEFT] ||
-                        keyboard[SDL_SCANCODE_A] ||
                         controllerAxis < -0.35F;
   const bool moveRight = keyboard[SDL_SCANCODE_RIGHT] ||
-                         keyboard[SDL_SCANCODE_D] ||
                          controllerAxis > 0.35F;
   const int liveDirection = moveLeft != moveRight ? (moveLeft ? -1 : 1) : 0;
 
@@ -7448,13 +7615,18 @@ void drawFerrisWheel(SDL_Renderer* renderer, SDL_Texture* wheelTexture,
 }
 
 void drawZeppelinBonus(SDL_Renderer* renderer, int bonus) {
-  constexpr float kZeppelinPanelCenterX = 92.0F;
+  // The zeppelin's cream panel (stage1-marquee-v2.png) sits between the
+  // light strings at 57-133 by 46-70 on the canvas: the number on its centre.
+  constexpr float kZeppelinPanelCenterX = 95.0F;
+  constexpr float kZeppelinPanelCenterY = 58.0F;
+  constexpr float kDigitScale = 1.45F;
   drawText(renderer, "BONUS", kZeppelinPanelCenterX, 34.0F, 1.0F,
            color(74, 111, 229), true);
   if (bonus < 0) return;
   std::ostringstream value;
   value << std::setw(4) << std::setfill('0') << bonus;
-  drawText(renderer, value.str(), kZeppelinPanelCenterX, 50.0F, 1.45F,
+  drawText(renderer, value.str(), kZeppelinPanelCenterX,
+           kZeppelinPanelCenterY - 7.0F * kDigitScale * 0.5F, kDigitScale,
            color(255, 255, 255), true);
 }
 
@@ -7492,6 +7664,57 @@ void drawMarqueeBand(SDL_Renderer* renderer, bool lowDetail,
   drawFerrisWheel(renderer, assets.ferrisWheel, assets.ferrisGondola,
                   timeSeconds);
   drawZeppelinBonus(renderer, game.bonus);
+}
+
+// The arcade wall has the performers' entrance (the elephant's door) in
+// every 256-column page; here it comes round every third page so it is a
+// landmark rather than wallpaper, standing from the top of the stands
+// (`top`) to the grass (`bottom`), in every event with the crowd wall.
+void drawElephantDoors(SDL_Renderer* renderer, SDL_Texture* door, float cameraX,
+                       float top, float bottom) {
+  if (!door) return;
+  int doorWidth = 0;
+  int doorHeight = 0;
+  SDL_QueryTexture(door, nullptr, nullptr, &doorWidth, &doorHeight);
+  const float height = bottom - top;
+  const float width = height * static_cast<float>(doorWidth) /
+                      static_cast<float>(std::max(1, doorHeight));
+  const float spacing = kElephantDoorSpacingColumns * kSourceToWorldX;
+  const float first = kElephantDoorColumn * kSourceToWorldX;
+  const int from = static_cast<int>(std::floor((cameraX - width - first) / spacing));
+  const int to = static_cast<int>(std::ceil((cameraX + kWorldWidth + width - first) / spacing));
+  for (int k = std::max(0, from); k <= to; ++k) {
+    const float x = first + static_cast<float>(k) * spacing - cameraX;
+    const SDL_FRect destination{x - width * 0.5F, top, width, height};
+    SDL_RenderCopyF(renderer, door, nullptr, &destination);
+  }
+}
+
+// The stands and the grass from the arena painting, without the valance
+// under the grass (the cabinet has none): the crowd at `scaleY` units per
+// painting row from `top`, then the grass strip stretched to the bottom.
+void drawArenaBand(SDL_Renderer* renderer, SDL_Texture* arena, SDL_Texture* door,
+                   float cameraX, float top, float scaleY) {
+  int textureWidth = 0;
+  int textureHeight = 0;
+  SDL_QueryTexture(arena, nullptr, nullptr, &textureWidth, &textureHeight);
+  const int sourceTop = static_cast<int>(static_cast<float>(textureHeight) * kArenaContentSourceTop);
+  const int grassTop = static_cast<int>(static_cast<float>(textureHeight) * kArenaGrassSourceTop);
+  const int grassBottom = static_cast<int>(static_cast<float>(textureHeight) * kArenaContentSourceBottom);
+  const SDL_Rect crowd{0, sourceTop, textureWidth, grassTop - sourceTop};
+  const SDL_Rect grass{0, grassTop, textureWidth, grassBottom - grassTop};
+  const float crowdBottom = top + static_cast<float>(grassTop - sourceTop) * scaleY;
+  const float tileWidth = static_cast<float>(kWorldWidth);
+  float scroll = std::fmod(cameraX, tileWidth);
+  if (scroll < 0.0F) scroll += tileWidth;
+  for (int tile = -1; tile <= 1; ++tile) {
+    const float x = static_cast<float>(tile) * tileWidth - scroll;
+    const SDL_FRect crowdDst{x, top, tileWidth, crowdBottom - top};
+    const SDL_FRect grassDst{x, crowdBottom, tileWidth, kWorldHeight - crowdBottom};
+    SDL_RenderCopyF(renderer, arena, &crowd, &crowdDst);
+    SDL_RenderCopyF(renderer, arena, &grass, &grassDst);
+  }
+  drawElephantDoors(renderer, door, cameraX, top, crowdBottom);
 }
 
 void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
@@ -7536,6 +7759,7 @@ void drawBackdrop(SDL_Renderer* renderer, float cameraX, bool lowDetail,
       SDL_RenderCopyF(renderer, assets.arena, &grassSource,
                       &grassDestination);
     }
+    drawElephantDoors(renderer, assets.elephantDoor, cameraX, kCrowdTop, kGrassTop);
     const bool brightCheer =
         game.scene == Scene::Goal && game.goalFrame > 30 &&
         ((game.goalFrame / 8) & 1) != 0;
@@ -7772,8 +7996,67 @@ void drawBonusRingForegrounds(SDL_Renderer* renderer, const Game& game,
   }
 }
 
+// The HD distance marker: a gilded sign on a brass foot, the distance
+// painted on its cream panel, its foot on `bottom`.
+void drawSignHD(SDL_Renderer* renderer, float screenX, float bottom,
+                std::string_view label, float widthColumns = 52.0F) {
+  int textureWidth = 0;
+  int textureHeight = 0;
+  SDL_QueryTexture(gFloorSign, nullptr, nullptr, &textureWidth, &textureHeight);
+  const float width = widthColumns * kSourceToWorldX;
+  const float height = width * static_cast<float>(textureHeight) /
+                       static_cast<float>(std::max(1, textureWidth));
+  const SDL_FRect destination{screenX - width * 0.5F, bottom - height, width, height};
+  SDL_RenderCopyF(renderer, gFloorSign, nullptr, &destination);
+  // The panel's middle is 42 % down the painting (above the brass foot).
+  const float textScale = 1.25F * widthColumns / 52.0F;
+  const float textY = bottom - height + height * 0.42F - 7.0F * textScale * 0.5F - 1.0F;
+  drawText(renderer, label, screenX + 1.0F, textY + 1.0F, textScale,
+           color(90, 40, 10), true);
+  drawText(renderer, label, screenX, textY, textScale, color(190, 30, 20), true);
+}
+
+// A balloon callout over its three 16x16 board cells (left edge `col - 16`,
+// top `row`): the outline, the cloud and the letters, each tinted.  The
+// board cycles GREAT / FAR OUT through eight palettes two frames at a time
+// ($EAFE); `phase` picks one, and the fixed OH NO!! colours are phase -1.
+void drawCallout(SDL_Renderer* renderer, const std::array<SDL_Texture*, 3>& layers,
+                 int col, int row, int phase) {
+  if (!layers[0] || !layers[1] || !layers[2]) return;
+  // (letters, cloud, outline) measured on the cabinet, frames 23767-23782
+  // of the stage 6 capture.
+  static constexpr SDL_Color kCycle[8][3] = {
+      {{184, 184, 174, 255}, {255, 71, 0, 255}, {33, 104, 255, 255}},
+      {{0, 222, 255, 255}, {33, 104, 255, 255}, {184, 0, 0, 255}},
+      {{255, 255, 255, 255}, {255, 71, 0, 255}, {184, 0, 0, 255}},
+      {{255, 71, 0, 255}, {255, 255, 81, 255}, {0, 0, 255, 255}},
+      {{184, 184, 174, 255}, {184, 0, 0, 255}, {184, 0, 0, 255}},
+      {{0, 222, 255, 255}, {184, 0, 0, 255}, {0, 0, 255, 255}},
+      {{255, 71, 0, 255}, {33, 104, 255, 255}, {184, 0, 0, 255}},
+      {{255, 255, 255, 255}, {255, 71, 0, 255}, {184, 184, 174, 255}},
+  };
+  static constexpr SDL_Color kOhNo[3] = {{255, 71, 0, 255}, {184, 255, 0, 255}, {184, 0, 0, 255}};
+  const SDL_Color* palette = phase < 0 ? kOhNo : kCycle[phase & 7];
+  const SDL_FRect destination{static_cast<float>(col - 16) * kSourceToWorldX,
+                              level3RowToY(static_cast<float>(row)),
+                              48.0F * kSourceToWorldX, 16.0F * kLevel3RowScale};
+  // outline under the cloud under the letters
+  const int order[3] = {2, 0, 1};
+  for (int k : order) {
+    SDL_SetTextureColorMod(layers[k], palette[k].r, palette[k].g, palette[k].b);
+    SDL_RenderCopyF(renderer, layers[k], nullptr, &destination);
+  }
+}
+
 void drawFloorPlaque(SDL_Renderer* renderer, float screenX,
                      std::string_view label, bool start) {
+  if (gFloorSign) {
+    // On the cabinet the floor plaque sits on the rows under a fire pot's
+    // base, so where the $EF07 signs land on a pot the two never overlap:
+    // the HD sign stands on the strip under the pots' feet (kGroundY + 22).
+    drawSignHD(renderer, screenX, kGroundY + 48.0F, label, 38.0F);
+    return;
+  }
   const float width = start ? 56.0F : 48.0F;
   const float left = screenX - width * 0.5F;
   const float top = kGroundY - 8.0F;
@@ -8009,6 +8292,7 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
                        &textureHeight);
       const int cellWidth = textureWidth / 4;
       // $7B72-$7B88: wing frames $44/$46/$48/$46 change every eight frames.
+      // Cells 0/1 carry the bag in the talons; 2/3 pour it out.
       const int flap = (game.level1GoalCounter / 8) & 3;
       const int cell = game.level1BirdPhase == 2 ? (flap & 1) : 2 + (flap & 1);
       const SDL_Rect source{cell * cellWidth, 0, cellWidth, textureHeight};
@@ -8017,11 +8301,9 @@ void drawGoalPresentation(SDL_Renderer* renderer, const Game& game,
       SDL_RenderCopyExF(renderer, birdTexture, &source, &destination, 0.0,
                         nullptr, SDL_FLIP_NONE);
     }
-    if (rewardBagTexture) {
-      const SDL_FRect bagDestination{birdCenterX - 24.0F, bagY - 10.0F, 48.0F,
-                                     59.0F};
-      SDL_RenderCopyF(renderer, rewardBagTexture, nullptr, &bagDestination);
-    } else {
+    if (!birdTexture) {
+      // The painted bird carries its bag in every cell; only the fallback
+      // shape needs a separate one.
       ellipse(renderer, birdCenterX, bagY + 20.0F, 18.0F, 24.0F,
               color(223, 158, 39), 4);
     }
@@ -8172,9 +8454,19 @@ void drawLionAndRider(SDL_Renderer* renderer, float screenX, float groundY,
     const float visualAnchorX = sourceAnchorX * kProductionPixelToWorld;
     const float visualAnchorY =
         kProductionAnchorY * kProductionPixelToWorld;
-    const SDL_FRect destination{screenX + 10.0F - visualAnchorX,
-                                groundY - visualAnchorY,
-                                kRenderWidth, kRenderHeight};
+    // The painted frames are not quite one size: Charlie's hat is 117 px
+    // tall in Run A and the two backing frames, 125 in Run B and C.  Grow
+    // the small ones about the lion's feet so he stays one size while he
+    // runs.
+    // The two backing frames were painted with a smaller lion under the
+    // same Charlie, so they get a further 9 % to keep the lion one size as
+    // he backs up (Run A, E, F in turn).
+    const bool backing = riderTexture == riderBackE || riderTexture == riderBackF;
+    const float grow = (riderTexture == riderRunA || backing ? 125.0F / 117.0F : 1.0F) *
+                       (backing ? 1.09F : 1.0F);
+    const SDL_FRect destination{screenX + 10.0F - visualAnchorX * grow,
+                                groundY - visualAnchorY * grow,
+                                kRenderWidth * grow, kRenderHeight * grow};
     SDL_SetTextureColorMod(riderTexture, 255, alive ? 255 : 128,
                            alive ? 255 : 58);
     SDL_RenderCopyExF(renderer, riderTexture, nullptr, &destination, 0.0,
@@ -8375,9 +8667,11 @@ void drawHud(SDL_Renderer* renderer, const Game& game,
   drawText(renderer, "HIGH SCORE", kWorldWidth * 0.5F, kHudTop + 8.0F,
            1.25F, color(245, 70, 37), true);
   drawHighScoreBulbs(renderer);
+  // Centred in the bulb frame (top kHudTop + 25, 31 tall): the digits are
+  // seven rows of 1.65.
   drawText(renderer, std::to_string(game.highScore),
-           kWorldWidth * 0.5F, kHudTop + 28.0F, 1.65F,
-           color(51, 213, 57), true);
+           kWorldWidth * 0.5F, kHudTop + 25.0F + 31.0F * 0.5F - 7.0F * 1.65F * 0.5F,
+           1.65F, color(51, 213, 57), true);
 
   const int waitingCharlies = std::clamp(game.lives - 1, 0, 5);
   for (int life = 0; life < waitingCharlies; ++life) {
@@ -8624,6 +8918,39 @@ void drawStage2Pose(SDL_Renderer* renderer, SDL_Texture* texture,
                     flip);
 }
 
+// The same, tilted about the feet (the balance wobble on the rope).
+void drawStage2PoseTilted(SDL_Renderer* renderer, SDL_Texture* texture,
+                          const SheetCells& cells, int frame, float centerX,
+                          float feetY, float unitsPerPixel, double angle) {
+  if (!texture || !cells.valid()) return;
+  frame = std::clamp(frame, 0, static_cast<int>(cells.bounds.size()) - 1);
+  const SDL_Rect& source = cells.bounds[static_cast<std::size_t>(frame)];
+  const float width = static_cast<float>(source.w) * unitsPerPixel;
+  const float height = static_cast<float>(source.h) * unitsPerPixel;
+  const SDL_FRect destination{centerX - width * 0.5F, feetY - height, width,
+                              height};
+  const SDL_FPoint pivot{width * 0.5F, height};
+  SDL_RenderCopyExF(renderer, texture, &source, &destination, angle, &pivot,
+                    SDL_FLIP_NONE);
+}
+
+// The same, centred on (centerX, centerY) and spun about that centre (the
+// trampoline somersault).
+void drawPoseSpinning(SDL_Renderer* renderer, SDL_Texture* texture,
+                      const SheetCells& cells, int frame, float centerX,
+                      float centerY, float unitsPerPixel, double angle,
+                      SDL_RendererFlip flip = SDL_FLIP_NONE) {
+  if (!texture || !cells.valid()) return;
+  frame = std::clamp(frame, 0, static_cast<int>(cells.bounds.size()) - 1);
+  const SDL_Rect& source = cells.bounds[static_cast<std::size_t>(frame)];
+  const float width = static_cast<float>(source.w) * unitsPerPixel;
+  const float height = static_cast<float>(source.h) * unitsPerPixel;
+  const SDL_FRect destination{centerX - width * 0.5F, centerY - height * 0.5F,
+                              width, height};
+  SDL_RenderCopyExF(renderer, texture, &source, &destination, angle, nullptr,
+                    flip);
+}
+
 // The same, hung from the top of its opaque bounds (hands on a bar).
 void drawPoseFromTop(SDL_Renderer* renderer, SDL_Texture* texture,
                      const SheetCells& cells, int frame, float centerX,
@@ -8653,6 +8980,17 @@ constexpr float kStage2MonkeyUnitsPerPixel = 45.0F / 228.0F;
 // The v2 atlases (tools/import_sprites.py): Charlie stands 250 px tall in
 // the walk cycle and the jump was scaled to match; a monkey is 160 px.
 constexpr float kStage2CharlieV2UnitsPerPixel = 66.0F / 250.0F;
+// The v3 atlases come from the Blender rig (art/blender/render_stage2.py,
+// 70 px per unit): 350 px from sole to pompom, 253 px of that is Charlie
+// himself, so the body keeps about its v2 size under the taller hat.
+constexpr float kStage2CharlieV3UnitsPerPixel = 74.0F / 350.0F;
+// The v4 atlases are cut from AI video clips of the painted Charlie
+// (tools/clip_to_frames.py; art/source/incoming/clips/): about 400 px from
+// sole to pompom in the walk, scaled to the same 74 units as v3.
+constexpr float kStage2CharlieV4UnitsPerPixel = 74.0F / 400.0F;
+// On the balls (80 units across) he stands a little taller, as the board's
+// 26-row sprite does next to its 32-row ball.
+constexpr float kStage4CharlieV4UnitsPerPixel = 80.0F / 400.0F;
 constexpr float kStage2MonkeyV2UnitsPerPixel = 45.0F / 160.0F;
 
 // The rope sits on source rows 152-153, the start platform on 147-153 over
@@ -8708,6 +9046,10 @@ void drawStage2StartTower(SDL_Renderer* renderer, float towerX,
 
 void drawStage2Marker(SDL_Renderer* renderer, float x,
                       std::string_view label) {
+  if (gFloorSign) {
+    drawSignHD(renderer, x, kStage2SignY + 29.0F, label);
+    return;
+  }
   fillRect(renderer, x - 27.0F, kStage2SignY, 54.0F, 25.0F,
            color(35, 122, 204));
   fillRect(renderer, x - 24.0F, kStage2SignY + 3.0F, 48.0F, 19.0F,
@@ -8870,16 +9212,8 @@ void drawStage2Backdrop(SDL_Renderer* renderer, const Game& game,
                      &textureHeight);
     const int sourceTop = static_cast<int>(
         static_cast<float>(textureHeight) * kArenaContentSourceTop);
-    const SDL_Rect source{0, sourceTop, textureWidth,
-                          textureHeight - sourceTop};
-    const float tileWidth = static_cast<float>(kWorldWidth);
-    const float scroll = std::fmod(cameraX, tileWidth);
-    for (int tile = -1; tile <= 1; ++tile) {
-      const SDL_FRect destination{
-          static_cast<float>(tile) * tileWidth - scroll, arenaTop, tileWidth,
-          kWorldHeight - arenaTop};
-      SDL_RenderCopyF(renderer, assets.arena, &source, &destination);
-    }
+    drawArenaBand(renderer, assets.arena, assets.elephantDoor, cameraX, arenaTop,
+                  (kWorldHeight - arenaTop) / static_cast<float>(textureHeight - sourceTop));
   } else {
     fillRect(renderer, 0.0F, arenaTop, kWorldWidth, kWorldHeight - arenaTop,
              color(36, 142, 49));
@@ -9010,7 +9344,7 @@ void drawStage2Charlie(SDL_Renderer* renderer, const Game& game,
     frame = (game.level2WalkAge / 3) % 9;
     drawStage2Pose(renderer, assets.stage2CharlieWalk,
                    assets.stage2CharlieWalkCells, frame, centerX, feetY,
-                   kStage2CharlieV2UnitsPerPixel);
+                   kStage2CharlieV4UnitsPerPixel * game.charlieScale);
     return;
   }
   if (charlie.script == kLevel2ScriptJumping && assets.stage2CharlieJump) {
@@ -9018,7 +9352,31 @@ void drawStage2Charlie(SDL_Renderer* renderer, const Game& game,
     frame = std::min(9, game.level2JumpAge * 10 / 57);
     drawStage2Pose(renderer, assets.stage2CharlieJump,
                    assets.stage2CharlieJumpCells, frame, centerX, feetY,
-                   kStage2CharlieV2UnitsPerPixel);
+                   kStage2CharlieV4UnitsPerPixel * game.charlieScale);
+    return;
+  }
+  if (assets.stage2CharliePoses) {
+    // The painted poses atlas: 0 stand, 1 arms up, 2 fallen, 3 tuck.
+    constexpr int kStand = 0, kArmsUp = 1, kFallen = 2, kTuck = 3;
+    double tilt = 0.0;
+    switch (charlie.script) {
+      case kLevel2ScriptJumping: frame = kTuck; break;              // $E9CF
+      case kLevel2ScriptGoalJump:                                   // $E9D8 the flip
+        frame = (pose % 6) == 5 ? kArmsUp : kTuck;
+        break;
+      case kLevel2ScriptCheer: frame = pose & 1 ? kStand : kArmsUp; break;   // $EAAA
+      case kLevel2ScriptFallen: frame = kFallen; break;             // $EA9E
+      default:                                                      // $E9FF standing
+        // The script's three cells are the balance wobble: upright, then
+        // leaning back and forward; the idle timer plays it faster and
+        // faster until he drops.
+        frame = kStand;
+        tilt = pose == 1 ? -12.0 : pose == 2 ? 12.0 : 0.0;
+        break;
+    }
+    drawStage2PoseTilted(renderer, assets.stage2CharliePoses,
+                         assets.stage2CharliePosesCells, frame, centerX, feetY,
+                         kStage2CharlieV4UnitsPerPixel * game.charlieScale, tilt);
     return;
   }
   switch (charlie.script) {
@@ -9131,6 +9489,10 @@ void drawStage3Tambourine(SDL_Renderer* renderer, SDL_Texture* texture,
 
 void drawLevel3Sign(SDL_Renderer* renderer, float screenX,
                     std::string_view label) {
+  if (gFloorSign) {
+    drawSignHD(renderer, screenX, level3RowToY(0xf0) + 34.0F, label);
+    return;
+  }
   // $26C0-$26E0 props: three 16-column cells at row $F0, the bottom of the
   // board's screen.
   const float width = 48.0F * kSourceToWorldX;
@@ -9176,30 +9538,42 @@ void drawLevel3Charlie(SDL_Renderer* renderer, const Game& game,
   // Poses: $EC93/$EC6C flip through five cells for twenty frames and then
   // hold the upright cell; $EC4E stays on one cell for 24 frames and then
   // alternates two cells every four frames; $EAAA alternates every sixteen.
+  // The v4 atlases (tools/build_stage3_charlie.py) hold the board's front
+  // view of the bounce and the Stage 2 tuck, at the Stage 2 v4 scale, so
+  // Charlie keeps his rope size here.
   SDL_Texture* texture = assets.stage3Charlie;
-  int columns = 4;
-  int rows = 3;
+  const SheetCells* cells = &assets.stage3CharlieCells;
+  const float unitsPerPixel = kStage2CharlieV4UnitsPerPixel * game.charlieScale;
   int frame = 0;
-  SDL_RendererFlip flip = SDL_FLIP_NONE;
-  // The v2 bounce atlas is 297x307 cells at the old 0.34 units per pixel,
-  // the v3 vertical atlas 228x321 at 0.32; both keep the feet 8 px up.
-  float width = 101.0F;
-  float height = 104.4F;
-  float baseline = feetY + 3.0F;
+  float baseline = feetY;
   const int poseFrame = game.level3PoseFrame;
-  switch (game.level3Pose) {
+  // $9015: seven frozen frames, then the fall.
+  const bool struck = game.level3State == 7 && game.level3Countdown == 0;
+  if (game.level3Pose == Level3Pose::Roof) return;
+  switch (struck ? Level3Pose::Fallen : game.level3Pose) {
     case Level3Pose::MovingRight:
     case Level3Pose::MovingLeft: {
-      constexpr std::array<int, 5> flipCells{3, 4, 5, 6, 7};
-      frame = poseFrame < 20 ? flipCells[static_cast<std::size_t>(poseFrame / 4)]
-                             : 0;
-      if (game.level3Pose == Level3Pose::MovingLeft) flip = SDL_FLIP_HORIZONTAL;
+      if (poseFrame < 20) {
+        // The board's five flip cells, four frames each, are one forward
+        // somersault in twenty frames (launch, dive, tipping over, the
+        // upside-down tuck, unrolling): cells 3-7, drawn about his middle
+        // and mirrored when he goes left.
+        if (!texture || !cells->valid()) break;
+        const float standing =
+            static_cast<float>(cells->bounds[0].h) * unitsPerPixel;
+        drawPoseSpinning(renderer, texture, *cells, 3 + poseFrame / 4, screenX,
+                         feetY - standing * 0.5F, unitsPerPixel, 0.0,
+                         game.level3Pose == Level3Pose::MovingLeft
+                             ? SDL_FLIP_HORIZONTAL
+                             : SDL_FLIP_NONE);
+        return;
+      }
+      frame = 0;
       break;
     }
     case Level3Pose::Stationary:
       texture = assets.stage3CharlieVertical;
-      width = 73.0F;
-      height = 102.7F;
+      cells = &assets.stage3CharlieVerticalCells;
       if (poseFrame < 24) {
         frame = std::min(poseFrame / 4, 3);
       } else {
@@ -9215,22 +9589,21 @@ void drawLevel3Charlie(SDL_Renderer* renderer, const Game& game,
       baseline += 10.0F * kLevel3RowScale + 22.0F;
       break;
     case Level3Pose::Fallen:
-      frame = 9;
+      frame = struck ? 10 : 9;
       break;
     case Level3Pose::Roof:
       return;
   }
-  if (game.level3State == 7) {
-    // $9015: seven frozen frames, then the fall.
-    if (game.level3Countdown == 0) frame = 10;
-  }
-  if (!texture) {
+  if (!texture || !cells->valid()) {
     fillRect(renderer, screenX - 20.0F, feetY - 80.0F, 40.0F, 80.0F,
              color(220, 40, 40));
     return;
   }
-  drawSheetFrame(renderer, texture, columns, rows, frame, screenX, baseline,
-                 width, height, flip, 0.0);
+  const SDL_RendererFlip flip = game.level3Pose == Level3Pose::MovingLeft
+                                    ? SDL_FLIP_HORIZONTAL
+                                    : SDL_FLIP_NONE;
+  drawStage2Pose(renderer, texture, *cells, frame, screenX, baseline,
+                 unitsPerPixel, flip);
 }
 
 // $7DF2/$7F3B: the perfect-clear bird, its bag and the coins it pours out.
@@ -9680,6 +10053,55 @@ void drawStage4Scene(SDL_Renderer* renderer, const Game& game,
   // spin tells you which way he is rolling.  The painted cell carries a
   // transparent border, and his feet belong four rows into the ball's top
   // cell, where the board's own composite puts them.
+  if (assets.stage2CharliePoses && assets.stage2CharlieWalk && assets.stage2CharlieJump) {
+    // The painted Charlie of the rope: the board's $E9B4/$E9FF cells map onto
+    // the same poses, and the 57-frame jump runs the ten jump frames.  His
+    // feet sit on the ball's top cell, row + 16.
+    const float feetY = charlie.script == kLevel4ScriptCheer
+                            ? level4RowToY(0xb4) + 6.0F
+                            : level4RowToY(static_cast<float>(charlie.row + 16));
+    const int pose = std::max(charlie.pose, 0);
+    constexpr int kStand = 0, kArmsUp = 1, kFallen = 2, kTuck = 3;
+    switch (charlie.script) {
+      case kLevel4ScriptWalking: {
+        // Stepping on top of the ball: the walk cycle, a step per script cell.
+        const int walkFrame = (game.level4WalkAge / 3) % 9;
+        drawStage2Pose(renderer, assets.stage2CharlieWalk, assets.stage2CharlieWalkCells,
+                       walkFrame, playerX, feetY, kStage4CharlieV4UnitsPerPixel * game.charlieScale);
+        return;
+      }
+      case kLevel4ScriptJumping: {
+        const int jumpFrame = std::min(9, game.level4JumpAge * 10 / 57);
+        drawStage2Pose(renderer, assets.stage2CharlieJump, assets.stage2CharlieJumpCells,
+                       jumpFrame, playerX, feetY, kStage4CharlieV4UnitsPerPixel * game.charlieScale);
+        return;
+      }
+      case kLevel4ScriptGoalJump:       // $E9D8: the flip onto the stand, then arms up
+        drawStage2Pose(renderer, assets.stage2CharliePoses, assets.stage2CharliePosesCells,
+                       pose >= 5 ? kArmsUp : kTuck, playerX, feetY,
+                       kStage4CharlieV4UnitsPerPixel * game.charlieScale);
+        return;
+      case kLevel4ScriptFallen:
+        drawStage2Pose(renderer, assets.stage2CharliePoses, assets.stage2CharliePosesCells,
+                       kFallen, playerX, feetY, kStage4CharlieV4UnitsPerPixel * game.charlieScale);
+        return;
+      case kLevel4ScriptCheer:          // $EAAA: arms up / stand every sixteen frames
+        drawStage2Pose(renderer, assets.stage2CharliePoses, assets.stage2CharliePosesCells,
+                       (pose & 1) == 0 ? kArmsUp : kStand, playerX, feetY,
+                       kStage4CharlieV4UnitsPerPixel * game.charlieScale);
+        return;
+      default: {
+        // Standing ($E9FF, cells 0/4/1/0) and the struck wobble ($EA1A,
+        // 0/4/1): upright, lean back, lean forward.
+        const int cell = frame;
+        const double tilt = cell == 4 ? -10.0 : cell == 1 ? 10.0 : 0.0;
+        drawStage2PoseTilted(renderer, assets.stage2CharliePoses,
+                             assets.stage2CharliePosesCells, kStand, playerX, feetY,
+                             kStage4CharlieV4UnitsPerPixel * game.charlieScale, tilt);
+        return;
+      }
+    }
+  }
   if (charlie.script == kLevel4ScriptCheer && assets.stage6CharlieFloor) {
     // On the goal stand: the $EAAA cheer alternates two cells every sixteen
     // frames; his shoes stand on the platform's top.
@@ -10074,6 +10496,8 @@ int main(int argc, char** argv) {
   }));
   gBetweenFrameCount = countFrames(betweenFramePath);
   const std::string progressPath = progressMemoryPath(highScorePath);
+  const std::string charlieScaleFile = charlieScalePath(highScorePath);
+  if (options.replayPath.empty()) loadCharlieScale(charlieScaleFile, game);
   // A test run (--event, --replay, --record) starts every event fresh.
   if (options.startEvent == 0 && options.replayPath.empty() && options.recordDir.empty()) {
     loadProgress(progressPath, game);
@@ -10081,6 +10505,13 @@ int main(int argc, char** argv) {
   game.eventSelectDurationFrames =
       audioDurationInBoardFrames(audio.eventSelectMusic);
   game.crashDurationFrames = audioDurationInBoardFrames(audio.fail);
+  if (audio.fail.data && options.replayPath.empty()) {
+    game.failPieceFrames = audioDurationInBoardFrames(audio.fail);
+  }
+  if (audio.birdCoinDrop.data && options.replayPath.empty()) {
+    game.level1ShowerHoldFrames =
+        audioDurationInBoardFrames(audio.birdCoinDrop);
+  }
   game.randomState ^=
       static_cast<std::uint32_t>(SDL_GetPerformanceCounter());
   game.debug = options.debug;
@@ -10691,6 +11122,9 @@ int main(int argc, char** argv) {
   std::uint32_t observedBetweenAudioSerial = game.betweenAudioSerial;
   bool attractAudioScene = false;
   std::uint32_t observedStage6FloorAudioSerial = game.stage6FloorAudioSerial;
+  std::uint32_t observedStage2HitAudioSerial = game.stage2HitAudioSerial;
+  std::uint32_t observedFloorFallAudioSerial = game.floorFallAudioSerial;
+  int floorFailCountdown = 0;
   // Event 6's floor: the miss cue first, the fail piece once it has sounded
   // (18 frames), and the restart when the piece ends.
   constexpr int kStage6MissFrames = 18;
@@ -10717,6 +11151,7 @@ int main(int argc, char** argv) {
       game.stage4BallCollisionAudioSerial;
   Scene observedScene = game.scene;
   int observedGoalFrame = game.goalFrame;
+  std::uint32_t observedLevel1ShowerAudioSerial = game.level1ShowerAudioSerial;
   double accumulator = 0.0;
   const Uint64 frequency = SDL_GetPerformanceFrequency();
   Uint64 previousCounter = SDL_GetPerformanceCounter();
@@ -10825,11 +11260,9 @@ int main(int argc, char** argv) {
             pressStart(game);
             break;
           case SDLK_LEFT:
-          case SDLK_a:
             moveEventSelection(game, -1);
             break;
           case SDLK_RIGHT:
-          case SDLK_d:
             moveEventSelection(game, 1);
             break;
           case SDLK_5:
@@ -10857,6 +11290,15 @@ int main(int argc, char** argv) {
             break;
           case SDLK_F2:
             game.lionOnlyTest = !game.lionOnlyTest;
+            break;
+          case SDLK_u:
+          case SDLK_d:
+            // U grows and D shrinks the painted Charlie by 2% a press, 50%-200%.
+            game.charlieScale = std::clamp(
+                game.charlieScale * (event.key.keysym.sym == SDLK_u ? 1.02F : 1.0F / 1.02F),
+                0.5F, 2.0F);
+            game.charlieScaleNotice = 150;
+            saveCharlieScale(charlieScaleFile, game);
             break;
           case SDLK_F10:
             // Turning a cabinet monitor on its side is easier to judge with
@@ -10975,7 +11417,9 @@ int main(int argc, char** argv) {
       }
     }
     bool jumpForStep = jumpQueued || traceJump;
+    int boardStepsThisFrame = 0;
     while (accumulator >= kFixedDt) {
+      ++boardStepsThisFrame;
       const float previousPlayerX = game.player.position.x;
       updateGame(game, keyboard, jumpForStep, controllerAxis);
       awardScoreLives(game);
@@ -11424,6 +11868,11 @@ int main(int argc, char** argv) {
     const bool shouldPlayStageMusic =
         game.scene == Scene::Playing &&
         !(game.selectedEvent == 4 && game.level5.phase == 2) &&
+        !(game.selectedEvent == 1 && (game.level2Charlie.state == 2 ||
+                                      game.level2Charlie.state >= 7)) &&
+        !(game.selectedEvent == 2 && game.level3State >= 7) &&
+        !(game.selectedEvent == 3 && (game.level4Charlie.state == 2 ||
+                                      game.level4Charlie.state >= 7)) &&
         !(game.selectedEvent == 5 && game.level6.ram[0x2800] >= 2);
     const bool shouldUseFastStageMusic =
         shouldPlayStageMusic && game.bonus <= 499;
@@ -11465,6 +11914,24 @@ int main(int argc, char** argv) {
       observedStage6FloorAudioSerial = game.stage6FloorAudioSerial;
     }
     if (stage6FailCountdown > 0 && --stage6FailCountdown == 0) {
+      playFailMusic(audio);
+    }
+    if (observedStage2HitAudioSerial != game.stage2HitAudioSerial) {
+      playStage3OverjumpSound(audio);     // the miss, at the hit
+      observedStage2HitAudioSerial = game.stage2HitAudioSerial;
+    }
+    if (observedFloorFallAudioSerial != game.floorFallAudioSerial) {
+      stopStageMusic(audio);
+      stageMusicPlaying = false;
+      if (game.floorFallMiss) {
+        playStage3OverjumpSound(audio);   // the miss on the floor...
+        floorFailCountdown = kFloorMissFrames;   // ...then the fail piece
+      } else {
+        playFailMusic(audio);
+      }
+      observedFloorFallAudioSerial = game.floorFallAudioSerial;
+    }
+    if (floorFailCountdown > 0 && --floorFailCountdown == 0) {
       playFailMusic(audio);
     }
     if (observedBetweenAudioSerial != game.betweenAudioSerial) {
@@ -11552,6 +12019,10 @@ int main(int argc, char** argv) {
       playBirdCoinDrop(audio);
       observedLevel3ShowerAudioSerial = game.level3ShowerAudioSerial;
     }
+    if (observedLevel1ShowerAudioSerial != game.level1ShowerAudioSerial) {
+      playBirdCoinDrop(audio);
+      observedLevel1ShowerAudioSerial = game.level1ShowerAudioSerial;
+    }
     if (game.scene != observedScene) {
       if (std::getenv("CIRCUS_TRACE_SCENES")) {
         std::cerr << "scene " << static_cast<int>(observedScene) << " -> "
@@ -11578,7 +12049,7 @@ int main(int argc, char** argv) {
     const int showerStart =
         kGoalArrivalFrames + kBirdArrivalFrames + kBagDropFrames;
     if (game.scene == Scene::Goal && game.perfectClear &&
-        game.selectedEvent != 2 &&
+        game.selectedEvent != 0 && game.selectedEvent != 2 &&
         observedGoalFrame < showerStart && game.goalFrame >= showerStart) {
       playBirdCoinDrop(audio);
     }
@@ -11604,21 +12075,26 @@ int main(int argc, char** argv) {
       if (recordBoardFrame == 0) {
         std::error_code error;
         std::filesystem::create_directories(options.recordDir, error);
+        setAudioCapture(audio, true);
       }
+      // Clip time is board time, so a display faster than the board (or a
+      // slow one) neither stretches nor skips the clip: this frame stands in
+      // for every clip frame the board steps since the last one call for.
+      recordBoardFrame += boardStepsThisFrame;
       const int wanted = recordBoardFrame * options.recordFps / static_cast<int>(kBoardRefresh);
-      if (wanted >= recordedFrames) {
-        std::array<char, 64> name{};
-        std::snprintf(name.data(), name.size(), "/frame-%04d.jpg", recordedFrames);
+      if (wanted > recordedFrames) {
         SDL_Surface* shot = SDL_CreateRGBSurfaceWithFormat(0, surface.width, surface.height,
                                                           32, SDL_PIXELFORMAT_RGBA32);
-        if (shot && SDL_RenderReadPixels(renderer, nullptr, SDL_PIXELFORMAT_RGBA32,
-                                         shot->pixels, shot->pitch) == 0) {
-          IMG_SaveJPG(shot, (options.recordDir + name.data()).c_str(), 88);
+        const bool read = shot && SDL_RenderReadPixels(renderer, nullptr, SDL_PIXELFORMAT_RGBA32,
+                                                       shot->pixels, shot->pitch) == 0;
+        while (recordedFrames < wanted) {
+          std::array<char, 64> name{};
+          std::snprintf(name.data(), name.size(), "/frame-%04d.jpg", recordedFrames);
+          if (read) IMG_SaveJPG(shot, (options.recordDir + name.data()).c_str(), 92);
+          ++recordedFrames;
         }
         if (shot) SDL_FreeSurface(shot);
-        ++recordedFrames;
       }
-      ++recordBoardFrame;
       // The clip ends when the fall (or the goal) has played out: the scene
       // leaves the crash for the restart, or the stage ends.
       if (game.scene == Scene::Crashed || game.scene == Scene::Goal) recordSawEnd = true;
@@ -11634,9 +12110,11 @@ int main(int argc, char** argv) {
       recordFinish = true;   // the restart after the fall
     }
     if (recordFinish) {
+      setAudioCapture(audio, false);
+      const bool wroteAudio = writeAudioCapture(audio, options.recordDir + "/audio.wav");
       std::cout << "Recorded " << recordedFrames << " frames ("
                 << recordBoardFrame / static_cast<int>(kBoardRefresh) << " s) to "
-                << options.recordDir << '\n';
+                << options.recordDir << (wroteAudio ? " with audio.wav" : "") << '\n';
       running = false;
     }
     SDL_RenderSetScale(renderer, 1.0F, 1.0F);
@@ -11660,6 +12138,20 @@ int main(int argc, char** argv) {
       fillRect(renderer, ox + 8.0F, oy + 8.0F, 118.0F, 26.0F, color(0, 0, 0, 180));
       drawText(renderer, clock.data(), ox + 14.0F, oy + 13.0F, 2.4F,
                game.scene == Scene::Playing ? color(255, 60, 60) : color(255, 220, 80));
+      SDL_RenderSetScale(renderer, 1.0F, 1.0F);
+    }
+    if (game.charlieScaleNotice > 0) {
+      --game.charlieScaleNotice;
+      std::array<char, 40> note{};
+      std::snprintf(note.data(), note.size(), "CHARLIE SIZE %d%%",
+                    static_cast<int>(std::lround(game.charlieScale * 100.0F)));
+      const float sx = static_cast<float>(surface.destination.w) / kWorldWidth;
+      const float sy = static_cast<float>(surface.destination.h) / kWorldHeight;
+      SDL_RenderSetScale(renderer, sx, sy);
+      const float ox = static_cast<float>(surface.destination.x) / sx;
+      const float oy = static_cast<float>(surface.destination.y) / sy;
+      fillRect(renderer, ox + 8.0F, oy + 40.0F, 236.0F, 26.0F, color(0, 0, 0, 180));
+      drawText(renderer, note.data(), ox + 14.0F, oy + 45.0F, 2.4F, color(255, 220, 80));
       SDL_RenderSetScale(renderer, 1.0F, 1.0F);
     }
     if (!options.riderDiagnosticDir.empty() && movementTraceFrame > 0) {

@@ -91,6 +91,7 @@ struct Level5Spring {
   int tileE = 0;
   int hdX = 0;      // HD only: the screen column unwrapped, so a board that
                     // has left by the left edge never reappears on the right
+  int points = 0;   // HD only: the points a landing scored, shown over the board
 };
 
 struct Level5 {

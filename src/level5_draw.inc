@@ -99,6 +99,12 @@ void drawStage5Springboard(SDL_Renderer* renderer, const Assets& assets,
   pillar(right - 5.0F * scale);
   stripedBar(topY);
   stripedBar(frameBottom - barHeight);
+  // $A4CC writes the points into the tile row over the platform's left end;
+  // they stay there and scroll off with the board.
+  if (spring.points > 0) {
+    drawText(renderer, std::to_string(spring.points), left,
+             topY - 10.0F * kLevel3RowScale, 2.0F, color(150, 225, 255));
+  }
 }
 
 void drawStage5Pony(SDL_Renderer* renderer, const Assets& assets,
@@ -157,11 +163,14 @@ void drawStage5Charlie(SDL_Renderer* renderer, const Assets& assets,
     return;
   }
   if (code == 0xad || code == 0xb1) {
-    // Cheering on the drum: $AD arms up, $B1 the other cell; the HD cheer
-    // and a wave alternate.
+    // Cheering on the drum, facing the crowd: $AD arms straight up, $B1 arms
+    // out, swapped by $A67A every 32 frames.  The Event 3 front cells (the
+    // stretched and the half-risen bounce poses) are those two.
     // The painted drum's top surface sits about 20 units under its top edge.
-    drawStage2Pose(renderer, assets.stage6CharlieFloor, assets.stage6CharlieFloorCells,
-                   2, centerX, feetY + 3.0F * kLevel3RowScale + 20.0F, unit);
+    const float cheerUnit = kStage2CharlieV4UnitsPerPixel * 0.9F;
+    drawStage2Pose(renderer, assets.stage3CharlieVertical, assets.stage3CharlieVerticalCells,
+                   code == 0xad ? 2 : 1, centerX,
+                   feetY + 3.0F * kLevel3RowScale + 20.0F, cheerUnit);
     return;
   }
   if (code == 0x31) {
@@ -225,7 +234,7 @@ void drawStage5Popups(SDL_Renderer* renderer, const Level5& l5) {
 }
 
 // The goal stand ($A707-$A795): drawn column by column from the top of page
-// $12; its column $C2 is where Charlie's feet must come down.
+// $12; $C2 is the column the landing test reads, near the drum's right end.
 void drawStage5GoalStand(SDL_Renderer* renderer, const Assets& assets,
                          const Level5& l5) {
   const int state = l5.v[0xbd - 0xb0];
@@ -244,9 +253,11 @@ void drawStage5GoalStand(SDL_Renderer* renderer, const Assets& assets,
   } else {
     column = l5.v[0xc2 - 0xb0];
   }
-  const float centerX = static_cast<float>(column) * scale;
+  // Measured on MAME (search-goal, stage frame 1800): the drum spans
+  // columns $C2 - 46 .. $C2 + 12, so its middle is 17 columns left of $C2.
+  const float centerX = (static_cast<float>(column) - 17.0F) * scale;
   if (centerX < -200.0F || centerX > kWorldWidth + 200.0F) return;
-  // The cabinet's goal is the pink-and-white drum (60 columns wide, rows
+  // The cabinet's goal is the pink-and-white drum (59 columns wide, rows
   // 170-212, Charlie's shoes on its top at row 170); the Event 3 goal
   // painting is that drum.
   const float topY = level3RowToY(170.0F);
